@@ -5,76 +5,79 @@ export const LampHeader = () => {
   return (
     // Aumentando a altura para garantir que as estrelas cubram mais área
     <div className="relative flex h-[20rem] md:h-[28rem] flex-col items-center justify-center w-full z-0">
-      <div className="relative flex w-full flex-1 scale-y-125 items-center justify-center isolate z-0 mt-[-4rem] md:mt-[-6rem]">
+      
+      {/* Container com Máscara de Fade Out na parte inferior */}
+      <div className="w-full h-full relative [mask-image:linear-gradient(to_bottom,white,white,transparent)]">
         
-        {/* Lamp Left Beam */}
-        <motion.div
-          initial={{ opacity: 0.5, width: "15rem" }}
-          whileInView={{ opacity: 1, width: "30rem" }}
-          transition={{
-            delay: 0.3,
-            duration: 0.8,
-            ease: "easeInOut",
-          }}
-          style={{
-            backgroundImage: `conic-gradient(var(--conic-position), var(--tw-gradient-stops))`,
-          }}
-          className="absolute inset-auto right-1/2 h-56 overflow-visible w-[30rem] bg-gradient-conic from-primary via-transparent to-transparent text-white [--conic-position:from_70deg_at_center_top]"
-        >
-          {/* Mantendo apenas a máscara lateral para evitar que o feixe se estenda para fora */}
-          <div className="absolute w-40 h-[100%] left-0 bg-background bottom-0 z-20 [mask-image:linear-gradient(to_right,white,transparent)]" />
-        </motion.div>
-        
-        {/* Lamp Right Beam */}
-        <motion.div
-          initial={{ opacity: 0.5, width: "15rem" }}
-          whileInView={{ opacity: 1, width: "30rem" }}
-          transition={{
-            delay: 0.3,
-            duration: 0.8,
-            ease: "easeInOut",
-          }}
-          style={{
-            backgroundImage: `conic-gradient(var(--conic-position), var(--tw-gradient-stops))`,
-          }}
-          className="absolute inset-auto left-1/2 h-56 w-[30rem] bg-gradient-conic from-transparent via-transparent to-primary text-white [--conic-position:from_290deg_at_center_top]"
-        >
-          {/* Mantendo apenas a máscara lateral para evitar que o feixe se estenda para fora */}
-          <div className="absolute w-40 h-[100%] right-0 bg-background bottom-0 z-20 [mask-image:linear-gradient(to_left,white,transparent)]" />
-        </motion.div>
-        
-        {/* Glow Effects (Aumentado o blur e a opacidade para maior difusão) */}
-        <div className="absolute top-1/2 z-50 h-48 w-full bg-transparent opacity-20 backdrop-blur-md"></div>
-        <div className="absolute inset-auto z-50 h-48 w-[32rem] -translate-y-1/2 rounded-full bg-primary opacity-60 blur-3xl"></div>
-        
-        {/* Lamp Core (Aumentado o tamanho e blur) */}
-        <motion.div
-          initial={{ width: "8rem" }}
-          whileInView={{ width: "20rem" }}
-          transition={{
-            delay: 0.3,
-            duration: 0.8,
-            ease: "easeInOut",
-          }}
-          className="absolute inset-auto z-30 h-48 w-80 -translate-y-[8rem] rounded-full bg-primary/80 blur-3xl"
-        ></motion.div>
-        
-        {/* Lamp Line REMOVIDA */}
-        
-      </div>
+        <div className="relative flex w-full flex-1 scale-y-125 items-center justify-center isolate z-0 mt-[-4rem] md:mt-[-6rem]">
+          
+          {/* Lamp Left Beam */}
+          <motion.div
+            initial={{ opacity: 0.5, width: "15rem" }}
+            whileInView={{ opacity: 1, width: "30rem" }}
+            transition={{
+              delay: 0.3,
+              duration: 0.8,
+              ease: "easeInOut",
+            }}
+            style={{
+              backgroundImage: `conic-gradient(var(--conic-position), var(--tw-gradient-stops))`,
+            }}
+            className="absolute inset-auto right-1/2 h-56 overflow-visible w-[30rem] bg-gradient-conic from-primary via-transparent to-transparent text-white [--conic-position:from_70deg_at_center_top]"
+          >
+            {/* Mantendo apenas a máscara lateral para evitar que o feixe se estenda para fora */}
+            <div className="absolute w-40 h-[100%] left-0 bg-background bottom-0 z-20 [mask-image:linear-gradient(to_right,white,transparent)]" />
+          </motion.div>
+          
+          {/* Lamp Right Beam */}
+          <motion.div
+            initial={{ opacity: 0.5, width: "15rem" }}
+            whileInView={{ opacity: 1, width: "30rem" }}
+            transition={{
+              delay: 0.3,
+              duration: 0.8,
+              ease: "easeInOut",
+            }}
+            style={{
+              backgroundImage: `conic-gradient(var(--conic-position), var(--tw-gradient-stops))`,
+            }}
+            className="absolute inset-auto left-1/2 h-56 w-[30rem] bg-gradient-conic from-transparent via-transparent to-primary text-white [--conic-position:from_290deg_at_center_top]"
+          >
+            {/* Mantendo apenas a máscara lateral para evitar que o feixe se estenda para fora */}
+            <div className="absolute w-40 h-[100%] right-0 bg-background bottom-0 z-20 [mask-image:linear-gradient(to_left,white,transparent)]" />
+          </motion.div>
+          
+          {/* Glow Effects (Aumentado o blur e a opacidade para maior difusão) */}
+          <div className="absolute top-1/2 z-50 h-48 w-full bg-transparent opacity-20 backdrop-blur-md"></div>
+          <div className="absolute inset-auto z-50 h-48 w-[32rem] -translate-y-1/2 rounded-full bg-primary opacity-60 blur-3xl"></div>
+          
+          {/* Lamp Core (Aumentado o tamanho e blur) */}
+          <motion.div
+            initial={{ width: "8rem" }}
+            whileInView={{ width: "20rem" }}
+            transition={{
+              delay: 0.3,
+              duration: 0.8,
+              ease: "easeInOut",
+            }}
+            className="absolute inset-auto z-30 h-48 w-80 -translate-y-[8rem] rounded-full bg-primary/80 blur-3xl"
+          ></motion.div>
+          
+        </div>
 
-      {/* Sparkles Integration (Preenche o contêiner, que agora é maior) */}
-      <div className="absolute z-40 w-full h-full top-0 left-0 pointer-events-none">
-        <SparklesCore
-          id="tsparticleslamp"
-          background="transparent"
-          minSize={0.4}
-          maxSize={1.2}
-          particleDensity={50}
-          className="w-full h-full"
-          particleColor="#FFFFFF"
-          speed={0.5}
-        />
+        {/* Sparkles Integration (Preenche o contêiner, que agora é maior) */}
+        <div className="absolute z-40 w-full h-full top-0 left-0 pointer-events-none">
+          <SparklesCore
+            id="tsparticleslamp"
+            background="transparent"
+            minSize={0.4}
+            maxSize={1.2}
+            particleDensity={50}
+            className="w-full h-full"
+            particleColor="#FFFFFF"
+            speed={0.5}
+          />
+        </div>
       </div>
 
       {/* Text Content - TITLE ONLY, GIANT */}
