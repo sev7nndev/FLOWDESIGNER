@@ -4,7 +4,7 @@ import { getSupabase } from './services/supabaseClient';
 import { LampHeader } from './components/Lamp';
 import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, Sparkles } from 'lucide-react';
 import { useGeneration } from './hooks/useGeneration';
 import { GenerationForm } from './components/GenerationForm';
 import { ResultDisplay } from './components/ResultDisplay';
@@ -40,7 +40,7 @@ export const App: React.FC = () => {
       });
 
       // Listen for Auth Changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data: { subscription } = { data: { subscription: { unsubscribe: () => {} } } } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
           handleUserSession(session.user);
         } else {
