@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GeneratedImage, UserRole } from '../types';
 import { getSupabase } from '../services/supabaseClient';
-import { api } from '../services/api';
 
 // URL do seu Backend Node.js local (ou deployado)
 const BACKEND_URL = "/api"; 

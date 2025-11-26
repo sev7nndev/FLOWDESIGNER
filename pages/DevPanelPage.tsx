@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code } from 'lucide-react';
+import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage } from '../types';
 import { useLandingImages } from '../hooks/useLandingImages';
@@ -100,7 +100,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUpload }) => {
 
 // --- Componente de Gerenciamento de Imagens Geradas ---
 const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole }) => {
-    const { allImages, isLoadingAllImages, errorAllImages, fetchAllImages, deleteImage } = useAdminGeneratedImages(userRole);
+    const { allImages, isLoadingAllImages, errorAllImages, deleteImage } = useAdminGeneratedImages(userRole);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [imagesWithSignedUrls, setImagesWithSignedUrls] = useState<GeneratedImage[]>([]);

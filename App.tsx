@@ -4,7 +4,7 @@ import { getSupabase } from './services/supabaseClient';
 import { LampHeader } from './components/Lamp';
 import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
-import { Sparkles, Code } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useGeneration } from './hooks/useGeneration';
 import { ResultDisplay } from './components/ResultDisplay';
 import { SettingsModal } from './components/Modals';
