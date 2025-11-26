@@ -97,6 +97,16 @@ export const App: React.FC = () => {
     }
   }, [user, loadHistory]);
 
+  // NEW: Auto-open Dev Panel if user is Admin/Dev after profile loads
+  useEffect(() => {
+    if (user && !isProfileLoading && (user.role === 'admin' || user.role === 'dev')) {
+        // Abrir o painel dev automaticamente, mas apenas se não estiver aberto
+        if (!showDevPanel) {
+            setShowDevPanel(true);
+        }
+    }
+  }, [user, isProfileLoading, showDevPanel]);
+
 
   const handleLogout = async () => {
     const supabase = getSupabase();
