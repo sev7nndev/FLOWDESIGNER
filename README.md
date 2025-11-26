@@ -15,6 +15,10 @@ View your app in AI Studio: https://ai.studio/apps/drive/1A8UVm-5tINifrUBgaDIc6f
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key (This key is used by the secure backend server).
+2. Set the following keys in [.env.local](.env.local) (These keys are used by the secure backend server):
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_KEY` (Crucial for server-side auth and storage access)
+   - `PERPLEXITY_API_KEY`
+   - `FREEPIK_API_KEY`
 3. Run the app:
    `npm run dev`
