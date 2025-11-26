@@ -69,6 +69,20 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   const { promptInfo } = req.body;
   const user = req.user;
 
+  // --- 2. Validação de Entrada (Implementação da Solução 2) ---
+  const MAX_DETAILS_LENGTH = 1000;
+  const MAX_COMPANY_NAME_LENGTH = 100;
+
+  if (!promptInfo.details || promptInfo.details.length > MAX_DETAILS_LENGTH) {
+      return res.status(400).json({ error: `O briefing (detalhes) é obrigatório e não pode exceder ${MAX_DETAILS_LENGTH} caracteres.` });
+  }
+  if (!promptInfo.companyName || promptInfo.companyName.length > MAX_COMPANY_NAME_LENGTH) {
+      return res.status(400).json({ error: `O nome da empresa é obrigatório e não pode exceder ${MAX_COMPANY_NAME_LENGTH} caracteres.` });
+  }
+  // A validação do logo (Base64) é complexa e deve ser movida para o Storage, mas por enquanto, 
+  // vamos focar na validação de texto.
+  // FIM da Validação de Entrada
+
   try {
     // 1.4. Buscar Role do Usuário
     const { data: profile, error: profileError } = await supabase
@@ -79,23 +93,14 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
 
     const userRole = profile?.role || 'client';
 
-    // 1.5. Verificar Autorização/Role (CORREÇÃO: Usar 'pro' em vez de 'pro_user' e bloquear 'client')
-    // Se o usuário for 'client', bloqueie. Permita 'admin' e 'pro'.
-    if (userRole === 'client') {
+    // 1.5. Verificar Autorização/Role (CORREÇÃO: Usar 'admin' ou 'pro')
+    const AUTHORIZED_ROLES = ['admin', 'pro'];
+    
+    if (!AUTHORIZED_ROLES.includes(userRole)) {
       return res.status(403).json({ error: 'Acesso negado. A geração de arte requer um plano pago (Pro).' });
     }
     
-    // Se o plano 'pro' for implementado, ele deve ser definido no DB.
     // Se for 'admin' ou 'pro', a execução continua.
-
-    // --- Validação de Entrada (CORREÇÃO: Adicionando validação básica de comprimento) ---
-    if (!promptInfo.details || promptInfo.details.length > 1000) {
-        return res.status(400).json({ error: 'O briefing (detalhes) é obrigatório e não pode exceder 1000 caracteres.' });
-    }
-    if (!promptInfo.companyName || promptInfo.companyName.length > 100) {
-        return res.status(400).json({ error: 'O nome da empresa é obrigatório e não pode exceder 100 caracteres.' });
-    }
-    // FIM da Validação de Entrada
 
     // 2. Gerar Prompt Detalhado (Perplexity/Gemini)
     // const detailedPrompt = await generateDetailedPrompt(promptInfo); 
@@ -107,8 +112,6 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
     const mockImageUrl = `${user.id}/mock-${Date.now()}.png`;
     
     // 4. Upload da Imagem (Simulação de upload)
-    // In a real scenario, the image generation service would return a buffer/stream, 
-    // which we would upload to Supabase Storage here.
     
     // 5. Salvar no Banco de Dados
     const { data: image, error: dbError } = await supabase

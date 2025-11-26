@@ -12,7 +12,8 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [dyadComponentTagger(), react()],
       define: {
-        // Removed GEMINI_API_KEY injection for security. It is only used server-side.
+        // Injeta a variável de ambiente VITE_BACKEND_URL
+        'import.meta.env.VITE_BACKEND_URL': JSON.stringify(env.VITE_BACKEND_URL || 'http://localhost:3001/api'),
       },
       resolve: {
         alias: {

@@ -10,9 +10,10 @@ interface InputFieldProps {
   placeholder: string;
   icon?: React.ReactNode;
   onChange: (field: keyof BusinessInfo, value: string) => void;
+  maxLength?: number; // Adicionado maxLength
 }
 
-const InputField: React.FC<InputFieldProps> = ({ label, value, field, placeholder, icon, onChange }) => (
+const InputField: React.FC<InputFieldProps> = ({ label, value, field, placeholder, icon, onChange, maxLength }) => (
   <div className="space-y-1.5 group">
     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 group-focus-within:text-primary transition-colors flex items-center gap-1.5">
       {icon} {label}
@@ -22,6 +23,7 @@ const InputField: React.FC<InputFieldProps> = ({ label, value, field, placeholde
       value={value}
       onChange={(e) => onChange(field, e.target.value)}
       placeholder={placeholder}
+      maxLength={maxLength} // Aplicado maxLength
       className="w-full bg-zinc-800/50 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-gray-500 focus:bg-zinc-800 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all outline-none backdrop-blur-sm"
     />
   </div>
@@ -71,7 +73,14 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <InputField label="Nome da Empresa" value={form.companyName} field="companyName" placeholder="Ex: Calors Automóveis" onChange={handleInputChange} />
+                        <InputField 
+                            label="Nome da Empresa" 
+                            value={form.companyName} 
+                            field="companyName" 
+                            placeholder="Ex: Calors Automóveis" 
+                            onChange={handleInputChange} 
+                            maxLength={100} // Limite de 100 caracteres
+                        />
                         <div className="space-y-1.5 group">
                             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                                 <Upload size={10} /> Logotipo (Opcional)
@@ -136,10 +145,11 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
                     onChange={(e) => handleInputChange('details', e.target.value)}
                     placeholder="Ex: Oficina especializada em importados. Promoção de troca de óleo. Cores escuras e neon."
                     className="w-full flex-grow min-h-[150px] bg-transparent border-0 text-white placeholder-gray-500 focus:ring-0 transition-all outline-none resize-none text-sm leading-relaxed"
+                    maxLength={1000} // Limite de 1000 caracteres
                 />
                 <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest">A I.A. vai ler isso</p>
-                    <span className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded">{form.details.length} caracteres</span>
+                    <span className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded">{form.details.length}/1000 caracteres</span>
                 </div>
             </div>
 

@@ -2,7 +2,8 @@ import { GeneratedImage, BusinessInfo } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // URL do seu Backend Node.js local (ou deployado)
-const BACKEND_URL = "http://localhost:3001/api";
+// Usa a variável de ambiente injetada pelo Vite, com fallback para localhost
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001/api";
 
 // Função auxiliar para gerar URL assinada (Signed URL)
 const getSignedUrl = async (path: string): Promise<string> => {
