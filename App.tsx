@@ -99,13 +99,12 @@ export const App: React.FC = () => {
 
   // NEW: Auto-open Dev Panel if user is Admin/Dev after profile loads
   useEffect(() => {
+    // Se o usuário for admin ou dev e o perfil tiver carregado, abra o painel.
+    // Removemos a verificação `!showDevPanel` para garantir que ele abra após o login.
     if (user && !isProfileLoading && (user.role === 'admin' || user.role === 'dev')) {
-        // Abrir o painel dev automaticamente, mas apenas se não estiver aberto
-        if (!showDevPanel) {
-            setShowDevPanel(true);
-        }
+        setShowDevPanel(true);
     }
-  }, [user, isProfileLoading, showDevPanel]);
+  }, [user, isProfileLoading]);
 
 
   const handleLogout = async () => {
