@@ -79,14 +79,24 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
 
     const userRole = profile?.role || 'client';
 
-    // 1.5. Verificar Autorização/Role (Issue 2 Fix)
-    const AUTHORIZED_ROLES = ['admin', 'pro_user']; 
-
-    if (!AUTHORIZED_ROLES.includes(userRole)) {
-      return res.status(403).json({ error: 'Acesso negado. A geração de arte está disponível apenas para usuários Pro.' });
+    // 1.5. Verificar Autorização/Role (CORREÇÃO: Usar 'pro' em vez de 'pro_user' e bloquear 'client')
+    // Se o usuário for 'client', bloqueie. Permita 'admin' e 'pro'.
+    if (userRole === 'client') {
+      return res.status(403).json({ error: 'Acesso negado. A geração de arte requer um plano pago (Pro).' });
     }
+    
+    // Se o plano 'pro' for implementado, ele deve ser definido no DB.
+    // Se for 'admin' ou 'pro', a execução continua.
 
-    // --- Placeholder for AI Logic ---
+    // --- Validação de Entrada (CORREÇÃO: Adicionando validação básica de comprimento) ---
+    if (!promptInfo.details || promptInfo.details.length > 1000) {
+        return res.status(400).json({ error: 'O briefing (detalhes) é obrigatório e não pode exceder 1000 caracteres.' });
+    }
+    if (!promptInfo.companyName || promptInfo.companyName.length > 100) {
+        return res.status(400).json({ error: 'O nome da empresa é obrigatório e não pode exceder 100 caracteres.' });
+    }
+    // FIM da Validação de Entrada
+
     // 2. Gerar Prompt Detalhado (Perplexity/Gemini)
     // const detailedPrompt = await generateDetailedPrompt(promptInfo); 
 
