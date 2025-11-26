@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+.env.local # Adicionado para proteger chaves de API
 
 # Editor directories and files
 .vscode/*

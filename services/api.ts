@@ -4,6 +4,25 @@ import { getSupabase } from "./supabaseClient";
 // URL do seu Backend Node.js local (ou deployado)
 const BACKEND_URL = "http://localhost:3001/api";
 
+// Função auxiliar para gerar URL assinada (Signed URL)
+const getSignedUrl = async (path: string): Promise<string> => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase not configured.");
+
+    // Gera uma URL válida por 60 segundos
+    const { data, error } = await supabase.storage
+        .from('generated-arts')
+        .createSignedUrl(path, 60); 
+
+    if (error) {
+        console.error("Error generating signed URL:", error);
+        // Fallback para URL pública se o bucket for acidentalmente público, mas isso deve ser evitado.
+        return supabase.storage.from('generated-arts').getPublicUrl(path).data.publicUrl;
+    }
+    return data.signedUrl;
+};
+
+
 export const api = {
   generate: async (businessInfo: BusinessInfo): Promise<GeneratedImage> => {
     const supabase = getSupabase();
@@ -36,9 +55,12 @@ export const api = {
       const data = await response.json();
       
       // Converte o formato do DB para o formato do frontend
+      // Gera a URL assinada imediatamente após a geração
+      const signedUrl = await getSignedUrl(data.image.image_url);
+
       return {
         id: data.image.id,
-        url: data.image.image_url,
+        url: signedUrl, // Usa a URL assinada
         prompt: data.image.prompt,
         businessInfo: data.image.business_info,
         createdAt: new Date(data.image.created_at).getTime()
@@ -57,20 +79,30 @@ export const api = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
+    // RLS garante que apenas os dados do usuário logado são retornados.
     const { data, error } = await supabase
       .from('images')
       .select('*')
-      .eq('user_id', user.id)
+      // Removido o filtro .eq('user_id', user.id) pois o RLS já o impõe.
       .order('created_at', { ascending: false });
 
     if (error || !data) return [];
 
-    return data.map((row: any) => ({
-      id: row.id,
-      url: row.image_url,
-      prompt: row.prompt,
-      businessInfo: row.business_info,
-      createdAt: new Date(row.created_at).getTime()
+    // Mapeia e gera a URL assinada para cada imagem
+    const historyWithUrls = await Promise.all(data.map(async (row: any) => {
+        const signedUrl = await getSignedUrl(row.image_url);
+        return {
+            id: row.id,
+            url: signedUrl, // Usa a URL assinada
+            prompt: row.prompt,
+            businessInfo: row.business_info,
+            createdAt: new Date(row.created_at).getTime()
+        };
     }));
-  }
+
+    return historyWithUrls;
+  },
+  
+  // Expõe a função de download para o hook
+  getDownloadUrl: getSignedUrl
 };

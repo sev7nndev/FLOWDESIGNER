@@ -101,7 +101,6 @@ app.post('/api/generate', async (req, res) => {
     // 4. Upload para Supabase Storage
     console.log("3. Salvando no Storage...");
     const buffer = Buffer.from(base64Image, 'base64');
-    // Ensure the file path is prefixed by the user ID for potential RLS enforcement
     const fileName = `${user.id}/${Date.now()}.png`;
     
     const { error: uploadError } = await supabase.storage
@@ -110,19 +109,15 @@ app.post('/api/generate', async (req, res) => {
 
     if (uploadError) throw uploadError;
 
-    // Gerar URL Pública
-    const { data: { publicUrl } } = supabase.storage
-      .from('generated-arts')
-      .getPublicUrl(fileName);
-
     // 5. Salvar Metadados no Banco
     console.log("4. Salvando Metadados...");
+    // Salva o caminho do arquivo, não a URL pública
     const { data: dbData, error: dbError } = await supabase
       .from('images')
       .insert({
         user_id: user.id,
         prompt: refinedPrompt,
-        image_url: publicUrl,
+        image_url: fileName, // Salva o caminho do arquivo (fileName)
         business_info: promptInfo
       })
       .select()
@@ -131,6 +126,8 @@ app.post('/api/generate', async (req, res) => {
     if (dbError) throw dbError;
 
     // 6. Retornar Sucesso
+    // Não retornamos a URL assinada aqui, pois ela será gerada no frontend (getHistory)
+    // para garantir que a URL seja fresca quando o usuário a solicitar.
     res.json({ success: true, image: dbData });
 
   } catch (error) {
