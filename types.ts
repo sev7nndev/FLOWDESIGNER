@@ -33,7 +33,7 @@ export interface GenerationState {
   debugPrompt?: string;
 }
 
-export type UserRole = 'admin' | 'dev' | 'client';
+export type UserRole = 'admin' | 'dev' | 'client' | 'free' | 'pro';
 
 export interface User {
   id: string;

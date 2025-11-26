@@ -14,6 +14,9 @@ const INITIAL_STATE: GenerationState = {
     history: [],
 };
 
+// Max Base64 length for logo (approx 30KB original file size)
+const MAX_LOGO_BASE64_LENGTH = 40000; 
+
 export const useGeneration = (user: User | null) => {
     const [form, setForm] = useState<BusinessInfo>(INITIAL_FORM);
     const [state, setState] = useState<GenerationState>(INITIAL_STATE);
@@ -25,7 +28,15 @@ export const useGeneration = (user: User | null) => {
     const handleLogoUpload = useCallback((file: File) => {
         if (file) {
             const reader = new FileReader();
-            reader.onloadend = () => setForm(prev => ({ ...prev, logo: reader.result as string }));
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                if (base64String.length > MAX_LOGO_BASE64_LENGTH) {
+                    alert(`O logo é muito grande. O tamanho máximo permitido é de ${Math.round(MAX_LOGO_BASE64_LENGTH / 1.33 / 1024)}KB.`);
+                    setForm(prev => ({ ...prev, logo: '' })); // Clear logo if too large
+                } else {
+                    setForm(prev => ({ ...prev, logo: base64String }));
+                }
+            };
             reader.readAsDataURL(file);
         }
     }, []);

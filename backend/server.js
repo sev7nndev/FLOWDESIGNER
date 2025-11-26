@@ -91,11 +91,13 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   const { promptInfo } = req.body;
   const user = req.user;
 
-  // --- Input Validation and Sanitization (Issue 3 Fix: Add sanitizeHtml) ---
+  // --- Input Validation and Sanitization ---
   const MAX_DETAILS_LENGTH = 1000;
   const MAX_COMPANY_NAME_LENGTH = 100;
   const MAX_ADDRESS_LENGTH = 100;
   const MAX_PHONE_LENGTH = 30;
+  // Issue 3 Fix: Drastically reduce max logo length (Base64 string)
+  const MAX_LOGO_LENGTH = 40000; 
 
   const sanitizeAndValidateString = (value, maxLength, fieldName) => {
     if (typeof value !== 'string') {
@@ -113,6 +115,19 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
 
     return sanitizedValue;
   };
+  
+  // Issue 4 Fix: Validation function for address number
+  const validateAddressNumber = (value) => {
+    const sanitizedValue = sanitizeAndValidateString(value, MAX_ADDRESS_LENGTH, 'addressNumber');
+    if (typeof sanitizedValue !== 'string') return sanitizedValue; // Return error message if sanitization failed
+
+    // Allow numbers, letters (for A, B, etc.), and hyphens/slashes
+    if (!/^[a-zA-Z0-9\s\-\/]*$/.test(sanitizedValue)) {
+        return "O número do endereço contém caracteres inválidos.";
+    }
+    return sanitizedValue;
+  };
+
 
   // Required fields check
   if (!promptInfo.details) return res.status(400).json({ error: "O briefing (detalhes) é obrigatório." });
@@ -122,17 +137,17 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   const sanitizedPromptInfo = {};
   
   const fieldsToValidate = [
-    { key: 'companyName', max: MAX_COMPANY_NAME_LENGTH, required: true },
-    { key: 'phone', max: MAX_PHONE_LENGTH, required: true },
-    { key: 'addressStreet', max: MAX_ADDRESS_LENGTH, required: true },
-    { key: 'addressNumber', max: MAX_ADDRESS_LENGTH, required: true },
-    { key: 'addressNeighborhood', max: MAX_ADDRESS_LENGTH, required: true },
-    { key: 'addressCity', max: MAX_ADDRESS_LENGTH, required: true },
-    { key: 'details', max: MAX_DETAILS_LENGTH, required: true },
-    { key: 'logo', max: 500000, required: false }, 
+    { key: 'companyName', max: MAX_COMPANY_NAME_LENGTH, required: true, validator: sanitizeAndValidateString },
+    { key: 'phone', max: MAX_PHONE_LENGTH, required: true, validator: sanitizeAndValidateString },
+    { key: 'addressStreet', max: MAX_ADDRESS_LENGTH, required: true, validator: sanitizeAndValidateString },
+    { key: 'addressNumber', max: MAX_ADDRESS_LENGTH, required: true, validator: validateAddressNumber }, // Using new validator
+    { key: 'addressNeighborhood', max: MAX_ADDRESS_LENGTH, required: true, validator: sanitizeAndValidateString },
+    { key: 'addressCity', max: MAX_ADDRESS_LENGTH, required: true, validator: sanitizeAndValidateString },
+    { key: 'details', max: MAX_DETAILS_LENGTH, required: true, validator: sanitizeAndValidateString },
+    { key: 'logo', max: MAX_LOGO_LENGTH, required: false, validator: sanitizeAndValidateString }, // Using reduced max length
   ];
 
-  for (const { key, max, required } of fieldsToValidate) {
+  for (const { key, max, required, validator } of fieldsToValidate) {
     const value = promptInfo[key];
     
     if (required && !value) {
@@ -140,8 +155,8 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
     }
 
     if (value) {
-      const validationResult = sanitizeAndValidateString(value, max, key);
-      if (typeof validationResult === 'string' && validationResult.startsWith('O campo')) {
+      const validationResult = validator(value, max, key);
+      if (typeof validationResult === 'string' && validationResult.startsWith('O campo') || validationResult.startsWith('O número')) {
         return res.status(400).json({ error: validationResult });
       }
       sanitizedPromptInfo[key] = validationResult;
@@ -165,7 +180,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
       return res.status(500).json({ error: 'Erro ao verificar o perfil do usuário.' });
     }
 
-    const userRole = profile?.role || 'client';
+    const userRole = profile?.role || 'free'; // Default to 'free' now
 
     // 1.5. Verificar Autorização/Role
     const AUTHORIZED_ROLES = ['admin', 'pro'];
