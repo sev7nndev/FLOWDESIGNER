@@ -99,9 +99,10 @@ export const App: React.FC = () => {
   }
 
   if (view === 'AUTH') {
-    // onSuccess now receives the Supabase user object from the AuthScreens component
-    // which is then passed to fetchUserRoleAndSetSession
-    return <AuthScreens onSuccess={fetchUserRoleAndSetSession} onBack={() => setView('LANDING')} />;
+    // When AuthScreens successfully completes a login/register attempt, 
+    // it triggers this function, which relies on the session listener above 
+    // to fetch the actual user data and transition to the 'APP' view.
+    return <AuthScreens onSuccess={() => {}} onBack={() => setView('LANDING')} />;
   }
   
   // MAIN APP UI (Protected)

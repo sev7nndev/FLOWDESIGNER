@@ -5,7 +5,9 @@ import { authService } from '../services/authService';
 import { User } from '../types';
 
 interface AuthScreensProps {
-  onSuccess: (user: User) => void;
+  // onSuccess is now triggered when the auth service call succeeds, 
+  // signaling App.tsx to wait for the session listener.
+  onSuccess: (user: any) => void; 
   onBack: () => void;
 }
 
@@ -25,25 +27,21 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
     setError('');
     setIsLoading(true);
 
-    // Simulate network delay (removed, as authService already handles async operations)
-
     try {
-      let user: User | null = null;
-      
       if (isLogin) {
-        user = await authService.login(formData.email, formData.password);
-        if (user) {
-          onSuccess(user);
-        } else {
-          setError('Email ou senha inválidos.');
-        }
+        // authService.login handles sign in and returns null, relying on App.tsx listener
+        await authService.login(formData.email, formData.password);
+        // If login succeeds (no error thrown), the session listener in App.tsx will fire.
+        // We call onSuccess to signal completion, although the user object passed is irrelevant here.
+        onSuccess(null); 
       } else {
         if (!formData.name) throw new Error("Nome é obrigatório");
-        user = await authService.register(formData.name, formData.email, formData.password);
-        onSuccess(user);
+        // authService.register handles sign up and returns null
+        await authService.register(formData.name, formData.email, formData.password);
+        // If register succeeds, the session listener in App.tsx will fire.
+        onSuccess(null);
       }
     } catch (err: any) {
-      // Check if err is an object with a message property
       const errorMessage = err.message || 'Ocorreu um erro desconhecido.';
       setError(errorMessage);
     } finally {

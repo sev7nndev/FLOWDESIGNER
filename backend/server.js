@@ -9,16 +9,26 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Supabase setup using SERVICE_KEY for secure backend operations
+// Supabase Keys (Anon Key is hardcoded here for JWT verification isolation)
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFreW5iaWl4eGNmdHhndmpwanh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjQ3MTcsImV4cCI6MjA3OTc0MDcxN30.FoIp7_p8gI_-JTuL4UU75mfyw1kjUxj0fDvtx6ZwVAI";
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error("FATAL: SUPABASE_URL or SUPABASE_SERVICE_KEY is missing.");
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+// Client 1: Service Role Client (High Privilege - used for DB operations bypassing RLS)
+const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
+
+// Client 2: Anon Client (Low Privilege - used ONLY for JWT verification)
+const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
@@ -29,7 +39,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 app.use(cors({ origin: 'http://localhost:3000' })); // Assuming frontend runs on 3000
 app.use(express.json());
 
-// --- Rate Limiting Middleware (Issue 3 Fix) ---
+// --- Rate Limiting Middleware ---
 const generationLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 5, // Limit each IP to 5 requests per windowMs
@@ -40,7 +50,7 @@ const generationLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// --- Auth Middleware ---
+// --- Auth Middleware (Issue 1 Fix: Using supabaseAnon for verification) ---
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -48,8 +58,8 @@ const authenticateToken = async (req, res, next) => {
   if (token == null) return res.status(401).json({ error: 'Token de autenticação ausente.' });
 
   try {
-    // Verify token using Supabase's built-in JWT verification
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    // Verify token using the low-privilege Anon client
+    const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
 
     if (error || !user) {
       return res.status(403).json({ error: 'Token inválido ou expirado.' });
@@ -69,41 +79,87 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   const { promptInfo } = req.body;
   const user = req.user;
 
-  // --- 2. Validação de Entrada (Implementação da Solução 2) ---
+  // --- Issue 2 Fix: Comprehensive Input Validation and Sanitization ---
   const MAX_DETAILS_LENGTH = 1000;
   const MAX_COMPANY_NAME_LENGTH = 100;
+  const MAX_ADDRESS_LENGTH = 100;
+  const MAX_PHONE_LENGTH = 30;
 
-  if (!promptInfo.details || promptInfo.details.length > MAX_DETAILS_LENGTH) {
-      return res.status(400).json({ error: `O briefing (detalhes) é obrigatório e não pode exceder ${MAX_DETAILS_LENGTH} caracteres.` });
+  const validateString = (value, maxLength, fieldName) => {
+    if (typeof value !== 'string') {
+      return `O campo ${fieldName} deve ser uma string.`;
+    }
+    if (value.length > maxLength) {
+      return `O campo ${fieldName} não pode exceder ${maxLength} caracteres.`;
+    }
+    // Simple sanitization: trim whitespace
+    return value.trim();
+  };
+
+  // Required fields check
+  if (!promptInfo.details) return res.status(400).json({ error: "O briefing (detalhes) é obrigatório." });
+  if (!promptInfo.companyName) return res.status(400).json({ error: "O nome da empresa é obrigatório." });
+
+  // Validate and sanitize all fields
+  const sanitizedPromptInfo = {};
+  
+  const fieldsToValidate = [
+    { key: 'companyName', max: MAX_COMPANY_NAME_LENGTH, required: true },
+    { key: 'phone', max: MAX_PHONE_LENGTH, required: true },
+    { key: 'addressStreet', max: MAX_ADDRESS_LENGTH, required: true },
+    { key: 'addressNumber', max: MAX_ADDRESS_LENGTH, required: true },
+    { key: 'addressNeighborhood', max: MAX_ADDRESS_LENGTH, required: true },
+    { key: 'addressCity', max: MAX_ADDRESS_LENGTH, required: true },
+    { key: 'details', max: MAX_DETAILS_LENGTH, required: true },
+    { key: 'logo', max: 500000, required: false }, // Assuming logo is a base64 string, setting a large limit
+  ];
+
+  for (const { key, max, required } of fieldsToValidate) {
+    const value = promptInfo[key];
+    
+    if (required && !value) {
+      return res.status(400).json({ error: `O campo ${key} é obrigatório.` });
+    }
+
+    if (value) {
+      const validationResult = validateString(value, max, key);
+      if (typeof validationResult === 'string' && validationResult.startsWith('O campo')) {
+        return res.status(400).json({ error: validationResult });
+      }
+      sanitizedPromptInfo[key] = validationResult;
+    } else if (!required) {
+      sanitizedPromptInfo[key] = value; // Keep null/undefined if optional
+    }
   }
-  if (!promptInfo.companyName || promptInfo.companyName.length > MAX_COMPANY_NAME_LENGTH) {
-      return res.status(400).json({ error: `O nome da empresa é obrigatório e não pode exceder ${MAX_COMPANY_NAME_LENGTH} caracteres.` });
-  }
-  // A validação do logo (Base64) é complexa e deve ser movida para o Storage, mas por enquanto, 
-  // vamos focar na validação de texto.
   // FIM da Validação de Entrada
 
   try {
-    // 1.4. Buscar Role do Usuário
-    const { data: profile, error: profileError } = await supabase
+    // 1.4. Buscar Role do Usuário (Using the Service Role Client)
+    const { data: profile, error: profileError } = await supabaseService
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
 
+    if (profileError) {
+      console.error("Profile Fetch Error:", profileError);
+      // Do not expose internal DB errors to the client
+      return res.status(500).json({ error: 'Erro ao verificar o perfil do usuário.' });
+    }
+
     const userRole = profile?.role || 'client';
 
-    // 1.5. Verificar Autorização/Role (CORREÇÃO: Usar 'admin' ou 'pro')
+    // 1.5. Verificar Autorização/Role
     const AUTHORIZED_ROLES = ['admin', 'pro'];
     
     if (!AUTHORIZED_ROLES.includes(userRole)) {
       return res.status(403).json({ error: 'Acesso negado. A geração de arte requer um plano pago (Pro).' });
     }
     
-    // Se for 'admin' ou 'pro', a execução continua.
+    // If 'admin' or 'pro', execution continues.
 
     // 2. Gerar Prompt Detalhado (Perplexity/Gemini)
-    // const detailedPrompt = await generateDetailedPrompt(promptInfo); 
+    // const detailedPrompt = await generateDetailedPrompt(sanitizedPromptInfo); 
 
     // 3. Gerar Imagem (Freepik/DALL-E)
     // const imageUrl = await generateImage(detailedPrompt); 
@@ -113,14 +169,14 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
     
     // 4. Upload da Imagem (Simulação de upload)
     
-    // 5. Salvar no Banco de Dados
-    const { data: image, error: dbError } = await supabase
+    // 5. Salvar no Banco de Dados (Using the Service Role Client)
+    const { data: image, error: dbError } = await supabaseService
       .from('images')
       .insert({
         user_id: user.id,
-        prompt: "Mock Prompt: " + promptInfo.details,
+        prompt: "Mock Prompt: " + sanitizedPromptInfo.details,
         image_url: mockImageUrl,
-        business_info: promptInfo,
+        business_info: sanitizedPromptInfo, // Use sanitized data
       })
       .select()
       .single();
