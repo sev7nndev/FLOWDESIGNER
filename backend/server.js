@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
 const rateLimit = require('express-rate-limit');
+const sanitizeHtml = require('sanitize-html'); // New dependency
 
 dotenv.config();
 
@@ -13,6 +14,9 @@ const port = process.env.PORT || 3001;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFreW5iaWl4eGNmdHhndmpwanh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjQ3MTcsImV4cCI6MjA3OTc0MDcxN30.FoIp7_p8gI_-JTuL4UU75mfyw1kjUxj0fDvtx6ZwVAI";
+
+// CORS Configuration (Issue 4 Fix: Use environment variable for production URL)
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error("FATAL: SUPABASE_URL or SUPABASE_SERVICE_KEY is missing.");
@@ -36,13 +40,21 @@ const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:3000' })); // Assuming frontend runs on 3000
+// Issue 4 Fix: Use FRONTEND_URL for CORS origin
+app.use(cors({ origin: FRONTEND_URL })); 
 app.use(express.json());
 
-// --- Rate Limiting Middleware ---
+// Issue 2 Fix: Configure Express to trust proxy headers (important for user-based limiting behind load balancers)
+app.set('trust proxy', 1); 
+
+// --- Rate Limiting Middleware (Issue 2 Fix: Limit by User ID) ---
 const generationLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 5, // Limit each IP to 5 requests per windowMs
+  max: 5, // Limit each user to 5 requests per windowMs
+  keyGenerator: (req, res) => {
+    // Use the authenticated user ID as the key
+    return req.user.id; 
+  },
   message: {
     error: "Muitas requisições de geração. Tente novamente em um minuto."
   },
@@ -50,7 +62,7 @@ const generationLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// --- Auth Middleware (Issue 1 Fix: Using supabaseAnon for verification) ---
+// --- Auth Middleware ---
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -79,21 +91,27 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   const { promptInfo } = req.body;
   const user = req.user;
 
-  // --- Issue 2 Fix: Comprehensive Input Validation and Sanitization ---
+  // --- Input Validation and Sanitization (Issue 3 Fix: Add sanitizeHtml) ---
   const MAX_DETAILS_LENGTH = 1000;
   const MAX_COMPANY_NAME_LENGTH = 100;
   const MAX_ADDRESS_LENGTH = 100;
   const MAX_PHONE_LENGTH = 30;
 
-  const validateString = (value, maxLength, fieldName) => {
+  const sanitizeAndValidateString = (value, maxLength, fieldName) => {
     if (typeof value !== 'string') {
       return `O campo ${fieldName} deve ser uma string.`;
     }
     if (value.length > maxLength) {
       return `O campo ${fieldName} não pode exceder ${maxLength} caracteres.`;
     }
-    // Simple sanitization: trim whitespace
-    return value.trim();
+    
+    // Issue 3 Fix: Sanitize the input to remove potentially malicious HTML/scripts
+    const sanitizedValue = sanitizeHtml(value.trim(), {
+      allowedTags: [], // Allow no HTML tags
+      allowedAttributes: {}, // Allow no attributes
+    });
+
+    return sanitizedValue;
   };
 
   // Required fields check
@@ -111,7 +129,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
     { key: 'addressNeighborhood', max: MAX_ADDRESS_LENGTH, required: true },
     { key: 'addressCity', max: MAX_ADDRESS_LENGTH, required: true },
     { key: 'details', max: MAX_DETAILS_LENGTH, required: true },
-    { key: 'logo', max: 500000, required: false }, // Assuming logo is a base64 string, setting a large limit
+    { key: 'logo', max: 500000, required: false }, 
   ];
 
   for (const { key, max, required } of fieldsToValidate) {
@@ -122,7 +140,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
     }
 
     if (value) {
-      const validationResult = validateString(value, max, key);
+      const validationResult = sanitizeAndValidateString(value, max, key);
       if (typeof validationResult === 'string' && validationResult.startsWith('O campo')) {
         return res.status(400).json({ error: validationResult });
       }
@@ -131,7 +149,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
       sanitizedPromptInfo[key] = value; // Keep null/undefined if optional
     }
   }
-  // FIM da Validação de Entrada
+  // END Input Validation and Sanitization
 
   try {
     // 1.4. Buscar Role do Usuário (Using the Service Role Client)
@@ -165,7 +183,8 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
     // const imageUrl = await generateImage(detailedPrompt); 
     
     // --- MOCK DATA FOR DEMO ---
-    const mockImageUrl = `${user.id}/mock-${Date.now()}.png`;
+    // The image path must start with the user ID for RLS to work (Issue 1 Fix)
+    const mockImageUrl = `${user.id}/mock-${Date.now()}.png`; 
     
     // 4. Upload da Imagem (Simulação de upload)
     
