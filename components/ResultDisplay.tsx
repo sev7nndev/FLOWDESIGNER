@@ -26,9 +26,9 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ state, downloadIma
     const renderContent = () => {
         if (state.status === GenerationStatus.GENERATING) {
             return (
-                <div className="flex flex-col items-center justify-center h-96 bg-zinc-900/50 rounded-2xl border border-white/10 p-8">
-                    <Loader2 size={32} className="animate-spin text-primary mb-4" />
-                    <p className="text-white font-medium">Gerando arte profissional...</p>
+                <div className="flex flex-col items-center justify-center h-96 bg-zinc-900/50 rounded-3xl border border-white/10 p-8 shadow-xl">
+                    <Loader2 size={40} className="animate-spin text-primary mb-4" />
+                    <p className="text-white font-medium text-lg">Gerando arte profissional...</p>
                     <p className="text-gray-500 text-sm mt-1">Isso pode levar até 30 segundos.</p>
                 </div>
             );
@@ -42,16 +42,26 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ state, downloadIma
                         <h2 className="text-3xl font-bold text-white mb-2">Sua Arte Profissional</h2>
                     </div>
                     <ImageResult image={state.currentImage} onDownload={() => downloadImage(state.currentImage!)} />
+                    
+                    {/* Adicionando botão de histórico após o resultado */}
+                    <div className="mt-6 text-center">
+                        <Button variant="secondary" onClick={() => setShowGallery(true)} className="text-sm">
+                            <History size={16} className="mr-2" /> Ver Histórico Completo ({state.history.length})
+                        </Button>
+                    </div>
                 </section>
             );
         }
 
+        // Initial Empty State
         return (
-            <div className="flex flex-col items-center justify-center h-96 bg-zinc-900/50 rounded-2xl border border-white/10 p-8 text-center">
+            <div className="flex flex-col items-center justify-center h-96 bg-zinc-900/50 rounded-3xl border border-white/10 p-8 text-center shadow-xl">
                 <Sparkles size={48} className="text-primary/50 mb-4" />
-                <p className="text-gray-400 font-medium">Preencha os dados ao lado e clique em GERAR ARTE FLOW para começar.</p>
-                <Button variant="ghost" onClick={() => setShowGallery(true)} className="mt-4 text-xs">
-                    <History size={14} className="mr-2" /> Ver Histórico ({state.history.length})
+                <p className="text-gray-400 font-medium mb-6">Preencha os dados ao lado e clique em GERAR ARTE FLOW para começar.</p>
+                
+                {/* Botão de Histórico mais proeminente */}
+                <Button variant="secondary" onClick={() => setShowGallery(true)} className="text-sm">
+                    <History size={16} className="mr-2" /> Ver Histórico ({state.history.length})
                 </Button>
             </div>
         );

@@ -24,7 +24,8 @@ const InputField: React.FC<InputFieldProps> = ({ label, value, field, placeholde
       onChange={(e) => onChange(field, e.target.value)}
       placeholder={placeholder}
       maxLength={maxLength} // Aplicado maxLength
-      className="w-full bg-zinc-800/50 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-gray-500 focus:bg-zinc-800 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all outline-none backdrop-blur-sm"
+      // Refined input styling: darker background, subtle focus ring
+      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-primary focus:ring-2 focus:ring-primary/30 transition-all outline-none"
     />
   </div>
 );
@@ -53,22 +54,22 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
     return (
         <div className="space-y-6">
             {/* Section 1: Identity */}
-            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+            <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
                 
                 <div className="relative space-y-6">
                     <div className="flex items-center justify-between border-b border-white/5 pb-4">
                         <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                                <Building2 size={16} />
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                                <Building2 size={18} />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-white text-base">1. Identidade Visual</h3>
+                                <h3 className="font-semibold text-white text-lg">1. Identidade Visual</h3>
                                 <p className="text-xs text-gray-500">Dados principais do negócio</p>
                             </div>
                         </div>
-                        <button onClick={loadExample} className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
-                            <Wand2 size={12} /> Exemplo
+                        <button onClick={loadExample} className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 font-medium px-3 py-1 rounded-full bg-primary/10">
+                            <Wand2 size={14} /> Usar Exemplo
                         </button>
                     </div>
 
@@ -87,9 +88,9 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
                             </label>
                             <div className="relative">
                                 <input type="file" accept="image/*" onChange={onFileChange} className="hidden" id="logo-upload" />
-                                <label htmlFor="logo-upload" className={`w-full bg-zinc-800/50 border border-white/10 rounded-lg px-4 py-3 text-sm cursor-pointer transition-all flex items-center justify-between hover:bg-zinc-800 hover:border-white/20 ${form.logo ? 'text-green-400 border-green-500/30 bg-green-500/10' : 'text-gray-500'}`}>
-                                    <span className="truncate">{form.logo ? 'Logo Carregada' : 'Enviar Imagem'}</span>
-                                    {form.logo ? <CheckCircle2 size={16} /> : <Upload size={16} />}
+                                <label htmlFor="logo-upload" className={`w-full bg-zinc-900 border rounded-xl px-4 py-3 text-sm cursor-pointer transition-all flex items-center justify-between hover:border-white/20 ${form.logo ? 'text-green-400 border-green-500/30 bg-green-900/30' : 'text-gray-500 border-white/10'}`}>
+                                    <span className="truncate">{form.logo ? 'Logo Carregada' : 'Enviar Imagem (Max 30KB)'}</span>
+                                    {form.logo ? <CheckCircle2 size={16} className="text-green-400" /> : <Upload size={16} />}
                                 </label>
                             </div>
                         </div>
@@ -98,14 +99,14 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
             </div>
 
             {/* Section 2: Contact */}
-            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+            <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
                 <div className="relative space-y-6">
                     <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                        <div className="h-8 w-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-                            <MapPin size={16} />
+                        <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20">
+                            <MapPin size={18} />
                         </div>
                         <div>
-                            <h3 className="font-semibold text-white text-base">2. Endereço & Contato</h3>
+                            <h3 className="font-semibold text-white text-lg">2. Endereço & Contato</h3>
                             <p className="text-xs text-gray-500">Para o cliente te encontrar</p>
                         </div>
                     </div>
@@ -130,13 +131,13 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
             </div>
 
             {/* Section 3: Briefing */}
-            <div className="bg-gradient-to-b from-zinc-800/60 to-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl flex-grow flex flex-col group hover:border-primary/30 transition-colors">
+            <div className="bg-gradient-to-b from-zinc-900/80 to-zinc-950/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl flex-grow flex flex-col group hover:border-primary/30 transition-colors">
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-4">
-                    <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center text-accent">
-                        <Layers size={16} />
+                    <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
+                        <Layers size={18} />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-white text-base">3. O Pedido (Briefing)</h3>
+                        <h3 className="font-semibold text-white text-lg">3. O Pedido (Briefing)</h3>
                         <p className="text-xs text-gray-500">Descreva o que você precisa que a I.A. crie</p>
                     </div>
                 </div>
@@ -144,12 +145,13 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
                     value={form.details}
                     onChange={(e) => handleInputChange('details', e.target.value)}
                     placeholder="Ex: Oficina especializada em importados. Promoção de troca de óleo. Cores escuras e neon."
-                    className="w-full flex-grow min-h-[150px] bg-transparent border-0 text-white placeholder-gray-500 focus:ring-0 transition-all outline-none resize-none text-sm leading-relaxed"
+                    // Refined textarea styling
+                    className="w-full flex-grow min-h-[150px] bg-transparent border-0 text-white placeholder-gray-600 focus:ring-0 transition-all outline-none resize-none text-sm leading-relaxed"
                     maxLength={1000} // Limite de 1000 caracteres
                 />
                 <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest">A I.A. vai ler isso</p>
-                    <span className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded">{form.details.length}/1000 caracteres</span>
+                    <span className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded-full">{form.details.length}/1000</span>
                 </div>
             </div>
 
@@ -158,7 +160,7 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
                 <Button 
                     onClick={handleGenerate} 
                     isLoading={isGenerating}
-                    className="w-full h-16 text-lg font-bold tracking-wide rounded-xl shadow-[0_0_40px_-10px_rgba(139,92,246,0.5)] bg-gradient-to-r from-primary via-purple-600 to-secondary hover:brightness-110 active:scale-[0.98] transition-all border border-white/20 relative overflow-hidden group"
+                    className="w-full h-16 text-lg font-bold tracking-wide rounded-2xl shadow-[0_0_40px_-10px_rgba(139,92,246,0.5)] bg-gradient-to-r from-primary via-purple-600 to-secondary hover:brightness-110 active:scale-[0.98] transition-all border border-white/20 relative overflow-hidden group"
                     disabled={!canGenerate}
                 >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out" />
@@ -168,7 +170,7 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
                     </span>
                 </Button>
                 {error && (
-                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 animate-fade-in">
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 animate-fade-in">
                         <span className="h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />
                         <p>{error}</p>
                     </div>

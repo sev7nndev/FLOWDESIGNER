@@ -4,12 +4,13 @@ import { getSupabase } from './services/supabaseClient';
 import { LampHeader } from './components/Lamp';
 import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
-import { LogOut, Settings, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useGeneration } from './hooks/useGeneration';
 import { ResultDisplay } from './components/ResultDisplay';
 import { SettingsModal } from './components/Modals';
 import { useProfile } from './hooks/useProfile'; // Import useProfile
 import { GenerationForm } from './components/GenerationForm';
+import { AppHeader } from './components/AppHeader'; // Import new header
 
 // Define a minimal structure for the authenticated user before profile is loaded
 interface AuthUser {
@@ -114,34 +115,19 @@ export const App: React.FC = () => {
     return <AuthScreens onSuccess={() => {}} onBack={() => setView('LANDING')} />;
   }
   
+  const profileRole = (profile?.role || 'free') as UserRole;
+
   // MAIN APP UI (Protected)
   return (
     <div className="min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
       <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
       
-      <header className="border-b border-white/5 bg-background/50 backdrop-blur-xl sticky top-0 z-[100]">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/20 p-1.5 rounded-lg border border-primary/20">
-              <Sparkles size={16} className="text-primary" />
-            </div>
-            <span className="font-bold text-sm tracking-tight text-white/90">Flow<span className="text-primary">Designer</span></span>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400 hidden sm:block">
-              Olá, {user?.firstName || user?.email}!
-            </span>
-            <button onClick={() => setShowSettings(true)} className="p-2 text-gray-400 hover:text-white transition-colors" title="Configurações Pessoais">
-              <Settings size={18} />
-            </button>
-            <div className="h-4 w-px bg-white/10 mx-1" />
-            <button onClick={handleLogout} className="text-xs font-medium text-gray-400 hover:text-red-400 flex items-center gap-2">
-              <LogOut size={14} /> Sair
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader 
+        user={user} 
+        profileRole={profileRole} 
+        onLogout={handleLogout} 
+        onShowSettings={() => setShowSettings(true)} 
+      />
 
       <div className="relative z-10 -mt-8 md:-mt-10">
         <LampHeader />
@@ -175,7 +161,7 @@ export const App: React.FC = () => {
         </div>
       </main>
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={(profile?.role || 'free') as UserRole} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profileRole} />}
     </div>
   );
 };
