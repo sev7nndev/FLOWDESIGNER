@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, UserRole } from './types';
 import { getSupabase } from './services/supabaseClient';
 import { LampHeader } from './components/Lamp';
@@ -26,7 +26,7 @@ export const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   
   // Profile Hook
-  const { profile, isLoading: isProfileLoading, fetchProfile, updateProfile } = useProfile(authUser?.id);
+  const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
 
   // Combined User State (passed to hooks/components)
   const user: User | null = authUser && profile ? {
@@ -40,7 +40,7 @@ export const App: React.FC = () => {
 
   // Generation Logic Hook
   const { 
-    form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage, setForm, setState
+    form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage
   } = useGeneration(user);
 
   const fetchAuthUser = (supabaseUser: any) => {
@@ -67,7 +67,7 @@ export const App: React.FC = () => {
       });
 
       // Listen for Auth Changes
-      const { data: { subscription } = { data: { subscription: { unsubscribe: () => {} } } } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
           fetchAuthUser(session.user);
         } else {
@@ -76,6 +76,7 @@ export const App: React.FC = () => {
         }
       });
 
+      // Corrigindo TS18048: subscription é garantido existir aqui.
       return () => subscription.unsubscribe();
     }
   }, []);
@@ -174,7 +175,7 @@ export const App: React.FC = () => {
         </div>
       </main>
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profile?.role as UserRole || 'free'} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={(profile?.role || 'free') as UserRole} />}
     </div>
   );
 };

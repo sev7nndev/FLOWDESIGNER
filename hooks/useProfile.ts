@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react';
-import { User } from '../types';
 import { getSupabase } from '../services/supabaseClient';
 
 interface ProfileData {

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Button } from './Button';
 import { Sparkles, ArrowLeft } from 'lucide-react';
 import { authService } from '../services/authService';
-import { User } from '../types';
 
 interface AuthScreensProps {
   // onSuccess is now triggered when the auth service call succeeds, 

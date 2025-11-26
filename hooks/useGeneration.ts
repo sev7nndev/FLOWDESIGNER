@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User } from '../types';
 import { api } from '../services/api';
 import { PLACEHOLDER_EXAMPLES } from '../constants';

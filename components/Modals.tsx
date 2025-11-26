@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GeneratedImage, User, UserRole } from '../types';
-import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, Loader2, CheckCircle2 } from 'lucide-react';
+import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2 } from 'lucide-react';
 import { Button } from './Button';
 
 // --- Generic Modal Wrapper ---

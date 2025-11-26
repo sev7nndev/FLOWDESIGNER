@@ -46,7 +46,7 @@ serve(async (req) => {
         throw new Error("Missing or invalid 'path' in request body.")
     }
     filePath = path;
-  } catch (e) {
+  } catch (e: any) { // Explicitly typing 'e' as 'any' to access 'e.message'
     return new Response(JSON.stringify({ error: e.message || 'Invalid request body' }), { 
       status: 400, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

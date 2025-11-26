@@ -1,4 +1,4 @@
-import { User, UserRole } from "../types";
+import { User } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // We no longer store the full user object in localStorage, relying on Supabase SDK for session management.

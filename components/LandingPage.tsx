@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from './Button';
 import { LampHeader } from './Lamp';
-import { ChevronRight, Sparkles, ShieldCheck, Zap, Check, Star, MessageSquare, Image as ImageIcon, CreditCard, ChevronDown, Phone, MapPin, Clock, Shield } from 'lucide-react';
+import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { FlyerMockup } from './FlyerMockup';
 import { PricingCard } from './PricingCard';
@@ -179,7 +179,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
                 viewport={{ once: true, amount: 0.3 }}
                 custom={1}
               >
-                 <div className="bg-secondary/20 w-fit p-3 rounded-xl mb-4 text-secondary group-hover:scale-110 transition-transform"><ImageIcon size={24} /></div>
+                 <div className="bg-secondary/20 w-fit p-3 rounded-xl mb-4 text-secondary"><ImageIcon size={24} /></div>
                  <h4 className="text-xl font-bold text-white mb-2">Imagens 8K</h4>
                  <p className="text-gray-400 text-sm">Resolução ultra-alta pronta para impressão ou web.</p>
               </motion.div>
@@ -193,7 +193,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
                 viewport={{ once: true, amount: 0.3 }}
                 custom={2}
               >
-                 <div className="bg-accent/20 w-fit p-3 rounded-xl mb-4 text-accent group-hover:scale-110 transition-transform"><ShieldCheck size={24} /></div>
+                 <div className="bg-accent/20 w-fit p-3 rounded-xl mb-4 text-accent"><ShieldCheck size={24} /></div>
                  <h4 className="text-xl font-bold text-white mb-2">Uso Comercial</h4>
                  <p className="text-gray-400 text-sm">Artes livres de direitos autorais para você vender.</p>
               </motion.div>
