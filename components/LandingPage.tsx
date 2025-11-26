@@ -159,12 +159,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
         </div>
       </nav>
 
-      <main className="relative z-10">
-        {/* Hero Section */}
-        <section className="pt-24 pb-12 md:pt-32 md:pb-20 relative overflow-hidden">
-          <LampHeader />
+      {/* Lamp Header (Visual Effect) */}
+      <div className="relative z-10 -mt-16 md:-mt-20">
+        <LampHeader />
+      </div>
+
+      <main className="relative z-20">
+        {/* Hero Section (Content) */}
+        <section className="pt-12 pb-12 md:pt-20 md:pb-20 relative overflow-hidden mt-[-12rem] md:mt-[-16rem] min-h-[400px] flex items-center">
           
-          <div className="relative z-50 -mt-4 md:-mt-10 max-w-4xl mx-auto text-center px-6">
+          <div className="relative z-50 max-w-4xl mx-auto text-center px-6">
+            <h1 className="bg-gradient-to-br from-white to-gray-400 py-4 bg-clip-text text-center text-5xl md:text-7xl font-bold tracking-tighter text-transparent leading-[0.9] md:leading-[0.9] mb-6">
+                Flow <span className="text-white drop-shadow-[0_0_25px_rgba(139,92,246,0.6)]">Designer</span>
+            </h1>
             <p className="text-lg md:text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">
               Sua agência de design particular. Crie artes comerciais de nível de estúdio em segundos.
             </p>
