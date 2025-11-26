@@ -61,7 +61,7 @@ export const authService = {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin // Redireciona de volta para o app após a autenticação
+        // redirectTo: window.location.origin // Removido para usar a URL padrão configurada no Supabase, que está autorizada no Google.
       }
     });
 
