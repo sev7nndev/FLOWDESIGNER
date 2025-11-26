@@ -160,14 +160,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
       </nav>
 
       {/* Lamp Header (Visual Effect) */}
-      <div className="relative z-10 -mt-16 md:-mt-20">
+      {/* Reduced negative margin to prevent overlap with fixed navbar */}
+      <div className="relative z-10 -mt-8 md:-mt-10">
         <LampHeader />
       </div>
 
       <main className="relative z-20">
         {/* Hero Section (Content) */}
-        {/* Ajustando o margin-top para que o conteúdo comece logo abaixo do título do LampHeader */}
-        <section className="pt-12 pb-12 md:pt-20 md:pb-20 relative overflow-hidden mt-[-8rem] md:mt-[-10rem] min-h-[400px] flex items-center">
+        {/* Adjusted negative margin to position content correctly below the title */}
+        <section className="pt-12 pb-12 md:pt-20 md:pb-20 relative overflow-hidden mt-[-6rem] md:mt-[-8rem] min-h-[400px] flex items-center">
           
           <div className="relative z-50 max-w-4xl mx-auto text-center px-6 mt-10 md:mt-12">
             {/* Título removido daqui, pois já está no LampHeader */}
@@ -323,7 +324,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
                         role="Esteticista" 
                         text="Minha clínica precisava de uma identidade mais premium. O Flow Designer capturou exatamente o estilo 'clean' que eu queria. Recomendo!" 
                         stars={5}
-                        image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop"
+                        image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto-format&fit=crop"
                       />
                     </div>
                     <div className="w-[300px] md:w-[400px] flex-shrink-0">
@@ -332,7 +333,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
                         role="Lojista de Moda" 
                         text="As vendas da minha loja aumentaram muito depois que comecei a usar os templates de oferta. É muito rápido e profissional." 
                         stars={5}
-                        image="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop"
+                        image="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto-format&fit=crop"
                       />
                     </div>
                  </React.Fragment>
