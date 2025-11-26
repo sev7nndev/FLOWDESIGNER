@@ -191,6 +191,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
     }
   ];
 
+  const featureVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: i * 0.1,
+        duration: 0.5,
+        ease: "easeOut"
+      }
+    })
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden scroll-smooth">
       {/* Background Gradients */}
@@ -260,38 +273,66 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[250px]">
               {/* Feature 1 - Large */}
-              <div className="md:col-span-2 row-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl">
+              <motion.div 
+                className="md:col-span-2 row-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl"
+                variants={featureVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.3 }}
+                custom={0}
+              >
                 <div className="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent" />
                 <div className="relative z-10 max-w-sm">
                   <div className="bg-primary/20 w-fit p-3 rounded-xl mb-4 text-primary"><Zap size={24} /></div>
                   <h4 className="text-2xl font-bold text-white mb-2">Prompt Engineering Automático</h4>
                   <p className="text-gray-400">Você digita "Oficina Mecânica" e nossa I.A. escreve um comando de 500 palavras detalhando iluminação, texturas e ângulos para a melhor foto possível.</p>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Feature 2 - Small */}
-              <div className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center group hover:border-secondary/50 transition-colors hover:shadow-secondary/10 shadow-xl">
+              <motion.div 
+                className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center group hover:border-secondary/50 transition-colors hover:shadow-secondary/10 shadow-xl"
+                variants={featureVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.3 }}
+                custom={1}
+              >
                  <div className="bg-secondary/20 w-fit p-3 rounded-xl mb-4 text-secondary group-hover:scale-110 transition-transform"><ImageIcon size={24} /></div>
                  <h4 className="text-xl font-bold text-white mb-2">Imagens 8K</h4>
                  <p className="text-gray-400 text-sm">Resolução ultra-alta pronta para impressão ou web.</p>
-              </div>
+              </motion.div>
 
                {/* Feature 3 - Small */}
-               <div className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center group hover:border-accent/50 transition-colors hover:shadow-accent/10 shadow-xl">
+               <motion.div 
+                className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center group hover:border-accent/50 transition-colors hover:shadow-accent/10 shadow-xl"
+                variants={featureVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.3 }}
+                custom={2}
+              >
                  <div className="bg-accent/20 w-fit p-3 rounded-xl mb-4 text-accent group-hover:scale-110 transition-transform"><ShieldCheck size={24} /></div>
                  <h4 className="text-xl font-bold text-white mb-2">Uso Comercial</h4>
                  <p className="text-gray-400 text-sm">Artes livres de direitos autorais para você vender.</p>
-              </div>
+              </motion.div>
 
               {/* Feature 4 - Large */}
-              <div className="md:col-span-2 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl">
+              <motion.div 
+                className="md:col-span-2 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl"
+                variants={featureVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.3 }}
+                custom={3}
+              >
                  <div className="absolute right-0 bottom-0 w-2/3 h-full bg-gradient-to-tl from-primary/10 to-transparent" />
                  <div className="relative z-10">
                    <div className="bg-primary/20 w-fit p-3 rounded-xl mb-4 text-primary"><CreditCard size={24} /></div>
                    <h4 className="text-2xl font-bold text-white mb-2">Custo Zero por Arte</h4>
                    <p className="text-gray-400">Diferente de designers que cobram por peça, aqui você tem geração ilimitada no plano Pro. Crie 10 variações e escolha a melhor.</p>
                  </div>
-              </div>
+              </motion.div>
             </div>
           </div>
         </section>
@@ -498,7 +539,7 @@ const TestimonialCard = ({ name, role, text, stars, image }: any) => (
     <p className="text-gray-300 text-sm italic mb-4">"{text}"</p>
     <div className="flex items-center gap-3">
       {/* User Photo */}
-      <img src={image} alt={name} className="h-10 w-10 rounded-full object-cover border border-white/10" />
+      <img src={image} alt={name} className="h-10 w-10 rounded-full object-cover border border-primary/50 p-[2px]" />
       <div>
         <h5 className="text-white text-sm font-bold">{name}</h5>
         <span className="text-gray-500 text-xs">{role}</span>
