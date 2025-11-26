@@ -31,7 +31,7 @@ const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   },
 });
 
-// Client 2: Anon Client (Low Privilege - used ONLY for JWT verification)
+// Client 2: Anon Client (Low Privilege - used ONLY for JWT verification and RLS-protected reads)
 const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     autoRefreshToken: false,
@@ -79,7 +79,8 @@ const authenticateToken = async (req, res, next) => {
       return res.status(403).json({ error: 'Token inválido ou expirado.' });
     }
 
-    req.user = user;
+    // Store the token for RLS-protected reads (Issue 1 Fix)
+    req.user = { ...user, token }; 
     next();
   } catch (e) {
     console.error("JWT verification failed:", e);
@@ -104,6 +105,8 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   const REGEX_ALPHANUMERIC_SPACES = /^[a-zA-Z0-9\s\u00C0-\u00FF.,\-&]*$/; // Allows basic punctuation and accents
   const REGEX_PHONE = /^[0-9\s\-\(\)\+]*$/; // Allows numbers, spaces, hyphens, parentheses, plus sign
   const REGEX_ADDRESS_NUMBER = /^[a-zA-Z0-9\s\-\/]*$/; // Allows numbers, letters, spaces, hyphens, slashes
+  // Issue 2 Fix: Stricter Base64 body regex (A-Z, a-z, 0-9, +, /, =)
+  const REGEX_BASE64_BODY = /^[A-Za-z0-9+/=]*$/; 
 
   const sanitizeAndValidateString = (value, maxLength, fieldName, regex = REGEX_ALPHANUMERIC_SPACES) => {
     if (typeof value !== 'string') {
@@ -137,14 +140,34 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
     return sanitizeAndValidateString(value, MAX_PHONE_LENGTH, 'phone', REGEX_PHONE);
   };
   
-  // Validation function for logo (Base64 check is implicit via length limit and sanitization)
+  // Validation function for logo (Base64 check)
   const validateLogo = (value) => {
       if (!value) return null;
+      
       // Check if it looks like a Base64 string (starts with data:image/...)
       if (!value.startsWith('data:image/')) {
           return "O logo não está no formato Base64 esperado.";
       }
-      return sanitizeAndValidateString(value, MAX_LOGO_LENGTH, 'logo', /.*/); // Allow all characters in Base64 string
+      
+      // Extract the Base64 body (after the header, e.g., data:image/png;base64,)
+      const parts = value.split(',');
+      if (parts.length !== 2) {
+          return "Formato Base64 inválido.";
+      }
+      const base64Body = parts[1];
+      
+      // Check length
+      if (base64Body.length > MAX_LOGO_LENGTH) {
+          return `O logo não pode exceder ${MAX_LOGO_LENGTH} caracteres (aprox. 30KB).`;
+      }
+      
+      // Issue 2 Fix: Check Base64 body against strict Base64 character set
+      if (!REGEX_BASE64_BODY.test(base64Body)) {
+          return "O logo contém caracteres Base64 inválidos.";
+      }
+
+      // Return the original value (which is now validated for format and content)
+      return value;
   };
 
 
@@ -155,13 +178,14 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   // Validate and sanitize all fields
   const sanitizedPromptInfo = {};
   
+  // Issue 4 Fix: Set address fields and phone to required: false
   const fieldsToValidate = [
     { key: 'companyName', max: MAX_COMPANY_NAME_LENGTH, required: true, validator: sanitizeAndValidateString },
-    { key: 'phone', max: MAX_PHONE_LENGTH, required: true, validator: validatePhone },
-    { key: 'addressStreet', max: MAX_ADDRESS_LENGTH, required: true, validator: sanitizeAndValidateString },
-    { key: 'addressNumber', max: MAX_ADDRESS_LENGTH, required: true, validator: validateAddressNumber },
-    { key: 'addressNeighborhood', max: MAX_ADDRESS_LENGTH, required: true, validator: sanitizeAndValidateString },
-    { key: 'addressCity', max: MAX_ADDRESS_LENGTH, required: true, validator: sanitizeAndValidateString },
+    { key: 'phone', max: MAX_PHONE_LENGTH, required: false, validator: validatePhone },
+    { key: 'addressStreet', max: MAX_ADDRESS_LENGTH, required: false, validator: sanitizeAndValidateString },
+    { key: 'addressNumber', max: MAX_ADDRESS_LENGTH, required: false, validator: validateAddressNumber },
+    { key: 'addressNeighborhood', max: MAX_ADDRESS_LENGTH, required: false, validator: sanitizeAndValidateString },
+    { key: 'addressCity', max: MAX_ADDRESS_LENGTH, required: false, validator: sanitizeAndValidateString },
     { key: 'details', max: MAX_DETAILS_LENGTH, required: true, validator: sanitizeAndValidateString },
     { key: 'logo', max: MAX_LOGO_LENGTH, required: false, validator: validateLogo },
   ];
@@ -175,7 +199,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
 
     if (value) {
       const validationResult = validator(value, max, key);
-      if (typeof validationResult === 'string' && validationResult.startsWith('O campo') || validationResult.startsWith('O número') || validationResult.startsWith('O logo')) {
+      if (typeof validationResult === 'string' && (validationResult.startsWith('O campo') || validationResult.startsWith('O logo') || validationResult.startsWith('Formato Base64'))) {
         return res.status(400).json({ error: validationResult });
       }
       sanitizedPromptInfo[key] = validationResult;
@@ -186,17 +210,23 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   // END Input Validation and Sanitization
 
   try {
-    // 1.4. Buscar Role do Usuário (Using the Service Role Client)
-    const { data: profile, error: profileError } = await supabaseService
+    // Issue 1 Fix: Use a client initialized with the user's JWT token for RLS-protected reads.
+    // This ensures RLS is enforced when reading the profile/role.
+    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${user.token}` } }
+    });
+
+    // 1.4. Buscar Role do Usuário (Using the RLS-protected client)
+    const { data: profile, error: profileError } = await supabaseAuth
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
 
     if (profileError) {
-      console.error("Profile Fetch Error:", profileError);
-      // Do not expose internal DB errors to the client
-      return res.status(500).json({ error: 'Erro ao verificar o perfil do usuário.' });
+      // If RLS fails or profile doesn't exist, it will throw an error here.
+      console.error("Profile Fetch Error (RLS enforced):", profileError);
+      return res.status(403).json({ error: 'Acesso negado ou perfil não encontrado.' });
     }
 
     const userRole = profile?.role || 'free'; // Default to 'free' now
@@ -222,7 +252,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
     
     // 4. Upload da Imagem (Simulação de upload)
     
-    // 5. Salvar no Banco de Dados (Using the Service Role Client)
+    // 5. Salvar no Banco de Dados (Using the Service Role Client - RLS bypass needed for INSERT)
     const { data: image, error: dbError } = await supabaseService
       .from('images')
       .insert({

@@ -22,28 +22,15 @@ export const App: React.FC = () => {
     form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage, setForm, setState
   } = useGeneration(user);
 
-  const fetchUserRoleAndSetSession = async (supabaseUser: any) => {
-    const supabase = getSupabase();
-    let role = 'client';
+  const fetchUserAndSetSession = async (supabaseUser: any) => {
+    // We no longer fetch the role here, as it is sensitive and only needed server-side.
+    // We only extract the name for display purposes.
     let name = supabaseUser.user_metadata?.name || 'Usuário';
-
-    if (supabase) {
-      // Fetch the user's profile data (including role and first_name) from the secure DB
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, first_name')
-        .eq('id', supabaseUser.id)
-        .single();
-      
-      if (profile?.role) role = profile.role;
-      if (profile?.first_name) name = profile.first_name;
-    }
 
     const newUser: User = {
       id: supabaseUser.id,
       email: supabaseUser.email || '',
       name: name,
-      role: role as User['role'],
       createdAt: Date.now()
     };
     setUser(newUser);
@@ -57,7 +44,7 @@ export const App: React.FC = () => {
       // Check Session
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
-          fetchUserRoleAndSetSession(session.user);
+          fetchUserAndSetSession(session.user);
         } else {
           // If no session, ensure view is LANDING
           setView('LANDING');
@@ -67,7 +54,7 @@ export const App: React.FC = () => {
       // Listen for Auth Changes
       const { data: { subscription } = { data: { subscription: { unsubscribe: () => {} } } } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
-          fetchUserRoleAndSetSession(session.user);
+          fetchUserAndSetSession(session.user);
         } else {
           setUser(null);
           setView('LANDING');
