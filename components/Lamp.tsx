@@ -3,8 +3,8 @@ import { SparklesCore } from "./Sparkles";
 
 export const LampHeader = () => {
   return (
-    // Aumentando a altura para garantir que as estrelas cubram mais área
-    <div className="relative flex h-[20rem] md:h-[28rem] flex-col items-center justify-center w-full z-0">
+    // Reduzindo a altura total do container
+    <div className="relative flex h-[16rem] md:h-[24rem] flex-col items-center justify-center w-full z-0">
       
       {/* Container com Máscara de Fade Out na parte inferior */}
       <div className="w-full h-full relative [mask-image:linear-gradient(to_bottom,white,white,transparent)]">
@@ -65,7 +65,7 @@ export const LampHeader = () => {
           
         </div>
 
-        {/* Sparkles Integration (Preenche o contêiner, que agora é maior) */}
+        {/* Sparkles Integration (Preenche o contêiner, que agora é menor) */}
         <div className="absolute z-40 w-full h-full top-0 left-0 pointer-events-none">
           <SparklesCore
             id="tsparticleslamp"
