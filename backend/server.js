@@ -42,7 +42,9 @@ const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Middleware
 // Issue 4 Fix: Use FRONTEND_URL for CORS origin
 app.use(cors({ origin: FRONTEND_URL })); 
-app.use(express.json());
+
+// --- FIX 2: Set strict JSON body limit (50kb) to prevent DoS from large Base64 payloads ---
+app.use(express.json({ limit: '50kb' }));
 
 // Issue 2 Fix: Configure Express to trust proxy headers (important for user-based limiting behind load balancers)
 app.set('trust proxy', 1); 
