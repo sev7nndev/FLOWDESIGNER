@@ -13,16 +13,10 @@ import { SettingsModal } from './components/Modals';
 export const App: React.FC = () => {
   // Auth State
   const [user, setUser] = useState<User | null>(null);
-  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'ADMIN'>('LANDING');
+  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP'>('LANDING'); // Removed 'ADMIN' view
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   
-  // Global Settings (Simulated)
-  const [appSettings, setAppSettings] = useState(() => {
-    const stored = localStorage.getItem('flow_global_settings');
-    return stored ? JSON.parse(stored) : {};
-  });
-
   // Generation Logic Hook
   const { 
     form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage, setForm, setState
@@ -94,13 +88,6 @@ export const App: React.FC = () => {
     setView('LANDING');
   };
 
-  const handleSaveSettings = (newSettings: any) => {
-    setAppSettings(newSettings);
-    localStorage.setItem('flow_global_settings', JSON.stringify(newSettings));
-    // Force refresh Supabase client initialization
-    window.location.reload(); 
-  };
-
   // --- RENDER VIEWS ---
 
   if (view === 'LANDING') {
@@ -111,12 +98,6 @@ export const App: React.FC = () => {
     return <AuthScreens onSuccess={fetchUserRoleAndSetSession} onBack={() => setView('LANDING')} />;
   }
   
-  if (view === 'ADMIN') {
-    // Import AdminDashboard only if needed
-    const { AdminDashboard } = require('./components/AdminDashboard');
-    return <AdminDashboard settings={appSettings} onSaveSettings={handleSaveSettings} onBack={() => setView('APP')} />;
-  }
-
   // MAIN APP UI (Protected)
   return (
     <div className="min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
@@ -132,11 +113,7 @@ export const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-3">
-            {user?.role === 'admin' && (
-                <button onClick={() => setView('ADMIN')} className="p-2 text-gray-400 hover:text-yellow-400 transition-colors text-xs font-medium flex items-center gap-1" title="Admin Panel">
-                    <Settings size={16} /> Admin
-                </button>
-            )}
+            {/* Removed Admin button as client-side role check is insecure for configuration */}
             <button onClick={() => setShowSettings(true)} className="p-2 text-gray-400 hover:text-white transition-colors" title="Configurações Pessoais">
               <Settings size={18} />
             </button>
@@ -180,7 +157,7 @@ export const App: React.FC = () => {
         </div>
       </main>
 
-      {showSettings && <SettingsModal settings={appSettings} onSave={handleSaveSettings} onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 };

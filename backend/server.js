@@ -21,9 +21,15 @@ const supabase = createClient(
 // --- ENDPOINT SEGURO: GERAÇÃO COMPLETA ---
 app.post('/api/generate', async (req, res) => {
   try {
-    const { promptInfo, userToken } = req.body;
+    const { promptInfo } = req.body;
+    
+    // 1. Extrair e Verificar Usuário (Auth Guard)
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Token de autenticação ausente ou inválido.' });
+    }
+    const userToken = authHeader.split(' ')[1];
 
-    // 1. Verificar Usuário (Auth Guard)
     const { data: { user }, error: authError } = await supabase.auth.getUser(userToken);
     if (authError || !user) {
       return res.status(401).json({ error: 'Usuário não autenticado.' });
@@ -39,7 +45,7 @@ app.post('/api/generate', async (req, res) => {
     const userRole = profile?.role || 'client';
 
     // For this example, only 'admin' users are authorized to generate (simulating a paid tier)
-    // In a real app, this would check for credits or subscription status.
+    // This check is now securely enforced server-side.
     if (userRole !== 'admin') {
       return res.status(403).json({ error: 'Acesso negado. A geração de arte está disponível apenas para usuários Pro (Admin).' });
     }
@@ -95,6 +101,7 @@ app.post('/api/generate', async (req, res) => {
     // 4. Upload para Supabase Storage
     console.log("3. Salvando no Storage...");
     const buffer = Buffer.from(base64Image, 'base64');
+    // Ensure the file path is prefixed by the user ID for potential RLS enforcement
     const fileName = `${user.id}/${Date.now()}.png`;
     
     const { error: uploadError } = await supabase.storage

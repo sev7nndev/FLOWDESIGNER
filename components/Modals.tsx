@@ -1,6 +1,6 @@
 import React from 'react';
-import { GeneratedImage, AppSettings } from '../types';
-import { X, Image as ImageIcon, Trash2, Info } from 'lucide-react';
+import { GeneratedImage } from '../types';
+import { X, Image as ImageIcon, Info } from 'lucide-react';
 import { Button } from './Button';
 
 // --- Generic Modal Wrapper ---
@@ -64,22 +64,17 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({ history, onClose, on
 
 // --- User Settings Modal ---
 interface SettingsModalProps {
-  settings: AppSettings;
-  onSave: (s: AppSettings) => void;
   onClose: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
-  // Settings are now only Supabase keys, which are managed by AdminDashboard.
-  // Personal AI keys are removed for security.
-
   return (
     <ModalWrapper title="Configurações Pessoais" onClose={onClose}>
       <div className="max-w-xl mx-auto space-y-6">
         <div className="p-6 bg-zinc-800/50 border border-white/10 rounded-lg text-gray-300 text-sm flex items-start gap-3">
           <Info size={20} className="text-primary flex-shrink-0 mt-0.5" />
           <p>
-            As configurações de chaves de API de Inteligência Artificial foram movidas para o servidor seguro. 
+            As configurações de chaves de API de Inteligência Artificial e de Banco de Dados foram movidas para o servidor seguro. 
             Este painel agora é usado apenas para configurações futuras do usuário.
           </p>
         </div>

@@ -1,4 +1,3 @@
-
 import { GeneratedImage, BusinessInfo } from "../types";
 import { getSupabase } from "./supabaseClient";
 
@@ -19,11 +18,13 @@ export const api = {
       const response = await fetch(`${BACKEND_URL}/generate`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          // Envia o token no cabeçalho Authorization: Bearer
+          "Authorization": `Bearer ${session.access_token}` 
         },
         body: JSON.stringify({
           promptInfo: businessInfo,
-          userToken: session.access_token // Envia o token para validação
+          // userToken removido do body
         })
       });
 

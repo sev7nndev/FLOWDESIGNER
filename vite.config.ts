@@ -12,8 +12,7 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [dyadComponentTagger(), react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        // Removed GEMINI_API_KEY injection for security. It is only used server-side.
       },
       resolve: {
         alias: {
