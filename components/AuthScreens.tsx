@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from './Button';
 import { Sparkles, ArrowLeft } from 'lucide-react';
 import { authService } from '../services/authService';
+import { GoogleIcon } from './GoogleIcon';
 
 interface AuthScreensProps {
   // onSuccess is now triggered when the auth service call succeeds, 
@@ -13,6 +14,7 @@ interface AuthScreensProps {
 export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
@@ -46,6 +48,18 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
       setError(errorMessage);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setIsGoogleLoading(true);
+    try {
+      await authService.loginWithGoogle();
+      // O listener do Supabase no App.tsx cuidará do redirecionamento e da sessão.
+    } catch (err: any) {
+      setError(err.message || 'Ocorreu um erro desconhecido.');
+      setIsGoogleLoading(false);
     }
   };
 
@@ -125,6 +139,27 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
             {isLogin ? 'Entrar' : 'Cadastrar'}
           </Button>
         </form>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-white/10" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-zinc-900 px-2 text-gray-500">OU</span>
+          </div>
+        </div>
+
+        <div>
+          <Button 
+            variant="secondary" 
+            className="w-full h-12 rounded-lg"
+            onClick={handleGoogleLogin}
+            isLoading={isGoogleLoading}
+            icon={<GoogleIcon className="h-5 w-5" />}
+          >
+            {isLogin ? 'Entrar com Google' : 'Cadastrar com Google'}
+          </Button>
+        </div>
 
         <div className="mt-6 text-center">
           <button 

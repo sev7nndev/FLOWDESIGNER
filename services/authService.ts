@@ -51,4 +51,22 @@ export const authService = {
     const supabase = getSupabase();
     if (supabase) await supabase.auth.signOut();
   },
+
+  loginWithGoogle: async (): Promise<void> => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin // Redireciona de volta para o app após a autenticação
+      }
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Falha ao autenticar com o Google.');
+    }
+  },
 };
