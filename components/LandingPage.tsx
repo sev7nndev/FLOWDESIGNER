@@ -21,7 +21,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
   
   const flyers: FlyerData[] = [
     {
-      bg: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=1000&auto-format&fit=crop",
+      bg: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=1000&auto=format&fit=crop",
       title: "AUTO CENTER",
       subtitle: "REVISÃO • FREIOS • SUSPENSÃO",
       phone: "(11) 9998-2020",
@@ -168,7 +168,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
       <main className="relative z-20">
         {/* Hero Section (Content) */}
         {/* Ajustando padding-top e padding-bottom para subir o conteúdo */}
-        <section className="pt-4 pb-12 md:pt-8 md:pb-16 relative overflow-hidden mt-[-6rem] md:mt-[-8rem] min-h-[400px] flex items-center">
+        <section className="pt-4 pb-12 md:pt-8 md:pb-16 relative overflow-hidden mt-[-8rem] md:mt-[-10rem] min-h-[400px] flex items-center">
           
           <div className="relative z-50 max-w-4xl mx-auto text-center px-6 mt-0">
             {/* Título removido daqui, pois já está no LampHeader */}
