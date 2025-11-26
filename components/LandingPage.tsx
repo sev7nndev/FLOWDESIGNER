@@ -260,7 +260,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[250px]">
               {/* Feature 1 - Large */}
-              <div className="md:col-span-2 row-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-primary/30 transition-colors">
+              <div className="md:col-span-2 row-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl">
                 <div className="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent" />
                 <div className="relative z-10 max-w-sm">
                   <div className="bg-primary/20 w-fit p-3 rounded-xl mb-4 text-primary"><Zap size={24} /></div>
@@ -270,24 +270,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
               </div>
 
               {/* Feature 2 - Small */}
-              <div className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center group hover:border-secondary/30 transition-colors">
+              <div className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center group hover:border-secondary/50 transition-colors hover:shadow-secondary/10 shadow-xl">
                  <div className="bg-secondary/20 w-fit p-3 rounded-xl mb-4 text-secondary group-hover:scale-110 transition-transform"><ImageIcon size={24} /></div>
                  <h4 className="text-xl font-bold text-white mb-2">Imagens 8K</h4>
                  <p className="text-gray-400 text-sm">Resolução ultra-alta pronta para impressão ou web.</p>
               </div>
 
                {/* Feature 3 - Small */}
-               <div className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center group hover:border-green-400/30 transition-colors">
-                 <div className="bg-green-400/20 w-fit p-3 rounded-xl mb-4 text-green-400 group-hover:scale-110 transition-transform"><ShieldCheck size={24} /></div>
+               <div className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center group hover:border-accent/50 transition-colors hover:shadow-accent/10 shadow-xl">
+                 <div className="bg-accent/20 w-fit p-3 rounded-xl mb-4 text-accent group-hover:scale-110 transition-transform"><ShieldCheck size={24} /></div>
                  <h4 className="text-xl font-bold text-white mb-2">Uso Comercial</h4>
                  <p className="text-gray-400 text-sm">Artes livres de direitos autorais para você vender.</p>
               </div>
 
               {/* Feature 4 - Large */}
-              <div className="md:col-span-2 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-accent/30 transition-colors">
-                 <div className="absolute right-0 bottom-0 w-2/3 h-full bg-gradient-to-tl from-accent/10 to-transparent" />
+              <div className="md:col-span-2 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl">
+                 <div className="absolute right-0 bottom-0 w-2/3 h-full bg-gradient-to-tl from-primary/10 to-transparent" />
                  <div className="relative z-10">
-                   <div className="bg-accent/20 w-fit p-3 rounded-xl mb-4 text-accent"><CreditCard size={24} /></div>
+                   <div className="bg-primary/20 w-fit p-3 rounded-xl mb-4 text-primary"><CreditCard size={24} /></div>
                    <h4 className="text-2xl font-bold text-white mb-2">Custo Zero por Arte</h4>
                    <p className="text-gray-400">Diferente de designers que cobram por peça, aqui você tem geração ilimitada no plano Pro. Crie 10 variações e escolha a melhor.</p>
                  </div>
@@ -303,7 +303,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
            <div className="max-w-7xl mx-auto relative z-10">
             <div className="text-center mb-16">
               <span className="text-primary text-xs font-bold uppercase tracking-widest">Investimento</span>
-              <h3 className="text-3xl md:text-4xl font-bold text-white mt-2">Planos Flexíveis</h3> {/* Reduced from 4xl to 3xl/4xl */}
+              <h3 className="text-3xl md:text-4xl font-bold text-white mt-2">Planos Flexíveis</h3>
               <p className="text-gray-400 mt-4">Cancele a qualquer momento. Sem fidelidade.</p>
             </div>
 
@@ -459,7 +459,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
       <div className="mb-6">
         <h4 className={`text-lg font-bold mb-2 ${highlight ? 'text-primary' : 'text-white'}`}>{name}</h4>
         <div className="flex items-baseline gap-1">
-          <span className="text-3xl md:text-4xl font-bold text-white">{price}</span> {/* Adjusted size here */}
+          <span className="text-3xl md:text-4xl font-bold text-white">{price}</span>
           {period && <span className="text-gray-500 text-sm">{period}</span>}
         </div>
         <p className="text-gray-400 text-sm mt-2">{description}</p>
