@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from './types';
 import { getSupabase } from './services/supabaseClient';
-import { LampHeader } from './components/Lamp';
+import { AppTitleHeader } from './components/AppTitleHeader';
 import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
 import { Sparkles } from 'lucide-react';
@@ -161,7 +161,7 @@ export const App: React.FC = () => {
       />
 
       <div className="relative z-10 -mt-8 md:-mt-10">
-        <LampHeader />
+        <AppTitleHeader />
       </div>
 
       {/* Margem negativa ajustada para o novo LampHeader mais simples */}

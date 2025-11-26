@@ -1,13 +1,12 @@
 import React from 'react';
 import { Button } from './Button';
-import { LampHeader } from './Lamp';
+import { HeroSection } from './Hero';
 import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
 import { FlyerMockupProps, FlyerMockup } from './FlyerMockup'; // Importando o tipo para tipagem local
-import { SparklesCore } from './Sparkles'; // Importando SparklesCore
 import { LandingImage } from '../types';
 
 interface LandingPageProps {
@@ -139,22 +138,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden scroll-smooth">
       {/* Background Gradients */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-zinc-950/0 to-zinc-950/0 pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
       
-      {/* Sparkles Background (New Full Screen Position) */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <SparklesCore
-          id="tsparticles-full"
-          background="transparent"
-          minSize={0.4}
-          maxSize={1.2}
-          particleDensity={50}
-          className="w-full h-full"
-          particleColor="#FFFFFF"
-          speed={0.5}
-        />
-      </div>
-
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -175,30 +160,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
         </div>
       </nav>
 
-      {/* Lamp Header (Visual Effect) */}
-      {/* Reduced negative margin to prevent overlap with fixed navbar */}
-      <div className="relative z-10 -mt-8 md:-mt-10">
-        <LampHeader />
-      </div>
-
-      <main className="relative z-20">
-        {/* Hero Section (Content) */}
-        {/* Ajustando padding-top e padding-bottom para subir o conteúdo */}
-        <section className="pt-4 pb-12 md:pt-8 md:pb-16 relative overflow-hidden mt-[-8rem] md:mt-[-10rem] min-h-[400px] flex items-center">
-          
-          <div className="relative z-50 max-w-4xl mx-auto text-center px-6 mt-0">
-            {/* Título removido daqui, pois já está no LampHeader */}
-            <p className="text-lg md:text-xl text-gray-400 mb-4 max-w-2xl mx-auto leading-relaxed">
-              Sua agência de design particular. Crie artes comerciais de nível de estúdio em segundos.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button onClick={onGetStarted} className="h-14 px-8 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20">
-                Começar Agora <ChevronRight className="ml-2" />
-              </Button>
-            </div>
-          </div>
-        </section>
+      <main>
+        <HeroSection onGetStarted={onGetStarted} />
 
         {/* Marquee Gallery (Infinite Scroll) */}
         <section className="py-10 border-y border-white/5 bg-black/30 overflow-hidden relative">

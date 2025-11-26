@@ -1,13 +1,7 @@
-// Otimizado para performance: removido framer-motion e animações complexas.
-export const LampHeader = () => {
+export const AppTitleHeader = () => {
   return (
-    // Altura reduzida pois o efeito complexo da lâmpada foi removido.
     <div className="relative flex h-[12rem] md:h-[16rem] flex-col items-center justify-center w-full z-0 overflow-hidden">
-      
-      {/* Efeito de brilho simplificado */}
       <div className="absolute top-0 z-0 h-48 w-[32rem] rounded-full bg-primary/50 blur-3xl" />
-
-      {/* Conteúdo de Texto - Sem animação, layout simplificado */}
       <div className="relative z-10 flex flex-col items-center px-5">
         <h1 className="bg-gradient-to-br from-white to-gray-400 py-4 bg-clip-text text-center text-5xl md:text-7xl font-bold tracking-tighter text-transparent leading-[0.9] md:leading-[0.9]">
           Flow <span className="text-white drop-shadow-[0_0_25px_rgba(139,92,246,0.6)]">Designer</span>
