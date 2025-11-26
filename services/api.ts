@@ -1,4 +1,4 @@
-import { GeneratedImage, BusinessInfo } from "../types";
+import { GeneratedImage, BusinessInfo, LandingImage } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // URL do seu Backend Node.js local (ou deployado)
@@ -127,6 +127,110 @@ export const api = {
     return historyWithUrls;
   },
   
+  // --- Funções para Gerenciamento de Imagens da Landing Page ---
+  
+  getLandingImages: async (): Promise<LandingImage[]> => {
+    const supabase = getSupabase();
+    if (!supabase) return [];
+
+    // RLS permite SELECT público
+    const { data, error } = await supabase
+      .from('landing_carousel_images')
+      .select('id, image_url, sort_order')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: false });
+
+    if (error || !data) {
+        console.error("Error fetching landing images:", error);
+        return [];
+    }
+
+    // Converte o path do storage para URL pública (assumindo bucket 'landing-carousel' é público)
+    const imagesWithUrls: LandingImage[] = data.map(row => {
+        const { data: { publicUrl } } = supabase.storage
+            .from('landing-carousel')
+            .getPublicUrl(row.image_url);
+            
+        return {
+            id: row.id,
+            url: publicUrl,
+            sortOrder: row.sort_order
+        };
+    });
+
+    return imagesWithUrls;
+  },
+  
+  uploadLandingImage: async (file: File, userId: string): Promise<LandingImage> => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase not configured.");
+    
+    const fileExtension = file.name.split('.').pop();
+    // Armazena no formato: userId/timestamp.ext
+    const filePath = `${userId}/${Date.now()}.${fileExtension}`;
+    
+    // 1. Upload para o bucket público (RLS deve permitir INSERT para admin/dev)
+    const { error: uploadError } = await supabase.storage
+      .from('landing-carousel')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      throw new Error(`Falha no upload: ${uploadError.message}`);
+    }
+    
+    // 2. Inserir o path no banco de dados (RLS deve permitir INSERT para admin/dev)
+    const { data: dbData, error: dbError } = await supabase
+      .from('landing_carousel_images')
+      .insert({ image_url: filePath, created_by: userId })
+      .select('id, image_url, sort_order')
+      .single();
+
+    if (dbError || !dbData) {
+      // Tenta remover o arquivo se a inserção falhar
+      await supabase.storage.from('landing-carousel').remove([filePath]);
+      throw new Error(`Falha ao registrar imagem: ${dbError?.message || 'Erro desconhecido'}`);
+    }
+    
+    // 3. Retorna a URL pública
+    const { data: { publicUrl } } = supabase.storage
+        .from('landing-carousel')
+        .getPublicUrl(dbData.image_url);
+        
+    return {
+        id: dbData.id,
+        url: publicUrl,
+        sortOrder: dbData.sort_order
+    };
+  },
+  
+  deleteLandingImage: async (id: string, path: string): Promise<void> => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase not configured.");
+    
+    // 1. Deletar do banco de dados (RLS deve permitir DELETE para admin/dev)
+    const { error: dbError } = await supabase
+      .from('landing_carousel_images')
+      .delete()
+      .eq('id', id);
+
+    if (dbError) {
+      throw new Error(`Falha ao deletar registro: ${dbError.message}`);
+    }
+    
+    // 2. Deletar do Storage (RLS deve permitir DELETE para admin/dev)
+    const { error: storageError } = await supabase.storage
+      .from('landing-carousel')
+      .remove([path]);
+      
+    if (storageError) {
+        // Loga o erro, mas não lança exceção, pois o registro do DB já foi removido.
+        console.error("Falha ao deletar arquivo do storage:", storageError);
+    }
+  },
+
   // Expõe a função de download para o hook
   getDownloadUrl: getSignedUrl
 };

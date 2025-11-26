@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Settings, Sparkles, User as UserIcon } from 'lucide-react';
+import { LogOut, Settings, Sparkles, User as UserIcon, Code } from 'lucide-react';
 import { User, UserRole } from '../types';
 
 interface AppHeaderProps {
@@ -7,9 +7,10 @@ interface AppHeaderProps {
   profileRole: UserRole;
   onLogout: () => void;
   onShowSettings: () => void;
+  onShowDevPanel: () => void; // New prop
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel }) => {
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Admin', color: 'bg-red-600' },
     dev: { name: 'Dev', color: 'bg-cyan-600' },
@@ -20,6 +21,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
 
   const currentRole = roleDisplay[profileRole] || roleDisplay.free;
   const displayName = user?.firstName || user?.email?.split('@')[0] || 'Usuário';
+  const isAdminOrDev = profileRole === 'admin' || profileRole === 'dev';
 
   return (
     <header className="border-b border-white/5 bg-background/80 backdrop-blur-xl sticky top-0 z-[100] shadow-lg shadow-black/20">
@@ -36,6 +38,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
         {/* User Actions */}
         <div className="flex items-center gap-4">
           
+          {/* Dev Panel Button (Visible only to Admin/Dev) */}
+          {isAdminOrDev && (
+            <button 
+              onClick={onShowDevPanel} 
+              className="p-2 text-cyan-400 hover:text-cyan-300 transition-colors rounded-lg hover:bg-white/5 border border-cyan-500/30" 
+              title="Painel do Desenvolvedor"
+            >
+              <Code size={20} />
+            </button>
+          )}
+
           {/* User Info & Role Badge */}
           <div className="hidden sm:flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full">
             <UserIcon size={14} className="text-gray-400" />

@@ -1,26 +1,28 @@
 import React from 'react';
 import { Button } from './Button';
 import { LampHeader } from './Lamp';
-import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard } from 'lucide-react';
+import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { FlyerMockup } from './FlyerMockup';
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
-import { FlyerMockupProps } from './FlyerMockup'; // Importando o tipo para tipagem local
+import { FlyerMockupProps, FlyerMockup } from './FlyerMockup'; // Importando o tipo para tipagem local
 import { SparklesCore } from './Sparkles'; // Importando SparklesCore
+import { LandingImage } from '../types';
 
 interface LandingPageProps {
   onGetStarted: () => void;
   onLogin: () => void;
+  landingImages: LandingImage[]; // New prop
+  isLandingImagesLoading: boolean; // New prop
 }
 
 // Definindo o tipo localmente para garantir a compatibilidade
 type FlyerData = Omit<FlyerMockupProps, 'theme'> & { theme: 'mechanic' | 'food' | 'law' | 'tech' };
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
-  
-  const flyers: FlyerData[] = [
+// Hardcoded fallback data (used if DB is empty or loading fails)
+const FALLBACK_FLYERS: FlyerData[] = [
     {
       bg: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=1000&auto=format&fit=crop",
       title: "AUTO CENTER",
@@ -54,24 +56,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
       theme: "tech",
       badge: "50% OFF"
     },
-    {
-      bg: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=1000&auto-format&fit=crop",
-      title: "BARBER SHOP",
-      subtitle: "Corte e Barba. Cerveja gelada inclusa.",
-      phone: "Agende Já",
-      theme: "mechanic",
-      badge: "ESTILO"
-    },
-    {
-      bg: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=1000&auto-format&fit=crop",
-      title: "SUSHI HOUSE",
-      subtitle: "Rodízio Premium com Sashimi Ilimitado.",
-      phone: "(31) 3333-2222",
-      theme: "food",
-      badge: "Jantar",
-      price: "R$89"
-    }
-  ];
+];
+
+
+export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, landingImages, isLandingImagesLoading }) => {
+  
+  // Use dynamic images if available, otherwise use fallback
+  const carouselItems = landingImages.length > 0 ? landingImages.map(img => ({
+    bg: img.url,
+    title: "Design IA",
+    subtitle: "Gerado por Inteligência Artificial",
+    phone: "Flow Designer",
+    theme: (['mechanic', 'food', 'law', 'tech'] as const)[Math.floor(Math.random() * 4)], // Random theme for mockup style
+    badge: "NOVO"
+  })) : FALLBACK_FLYERS;
+  
+  // Duplicate items for infinite scroll effect
+  const marqueeContent = [...carouselItems, ...carouselItems];
+
 
   const featureVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -204,15 +206,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
           <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
           <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
           
-          <div className="flex w-[200%] animate-scroll hover:[animation-play-state:paused] border border-white/10 rounded-xl p-4">
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="flex gap-4 px-2">
-                {flyers.map((flyer, idx) => (
-                  <FlyerMockup key={idx} {...flyer} />
-                ))}
-              </div>
-            ))}
-          </div>
+          {isLandingImagesLoading ? (
+            <div className="flex items-center justify-center h-40 text-gray-500">
+                <Loader2 size={24} className="animate-spin mr-2" /> Carregando carrossel...
+            </div>
+          ) : (
+            <div className="flex w-[200%] animate-scroll hover:[animation-play-state:paused] border border-white/10 rounded-xl p-4">
+              {marqueeContent.map((flyer, idx) => (
+                <div key={idx} className="flex gap-4 px-2">
+                  <FlyerMockup {...flyer} />
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Bento Grid Features */}

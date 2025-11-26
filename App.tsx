@@ -4,13 +4,15 @@ import { getSupabase } from './services/supabaseClient';
 import { LampHeader } from './components/Lamp';
 import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Code } from 'lucide-react';
 import { useGeneration } from './hooks/useGeneration';
 import { ResultDisplay } from './components/ResultDisplay';
 import { SettingsModal } from './components/Modals';
 import { useProfile } from './hooks/useProfile'; // Import useProfile
 import { GenerationForm } from './components/GenerationForm';
 import { AppHeader } from './components/AppHeader'; // Import new header
+import { DevPanelModal } from './components/DevPanelModal'; // Import DevPanelModal
+import { useLandingImages } from './hooks/useLandingImages'; // Import useLandingImages
 
 // Define a minimal structure for the authenticated user before profile is loaded
 interface AuthUser {
@@ -25,24 +27,31 @@ export const App: React.FC = () => {
   const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP'>('LANDING');
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showDevPanel, setShowDevPanel] = useState(false); // New state for Dev Panel
   
   // Profile Hook
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
 
   // Combined User State (passed to hooks/components)
+  const profileRole = (profile?.role || 'free') as UserRole;
+  
   const user: User | null = authUser && profile ? {
     id: authUser.id,
     email: authUser.email,
     firstName: profile.firstName,
     lastName: profile.lastName,
     createdAt: authUser.createdAt,
-    // Note: Role is kept server-side for security, but we can pass it if needed for UI display
+    role: profileRole, // Add role to user object
   } : null;
 
   // Generation Logic Hook
   const { 
     form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage
   } = useGeneration(user);
+  
+  // Landing Images Hook (Used by LandingPage and DevPanel)
+  const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
+
 
   const fetchAuthUser = (supabaseUser: any) => {
     const newAuthUser: AuthUser = {
@@ -108,15 +117,20 @@ export const App: React.FC = () => {
   // --- RENDER VIEWS ---
 
   if (view === 'LANDING') {
-    return <LandingPage onGetStarted={() => setView('AUTH')} onLogin={() => setView('AUTH')} />;
+    return (
+      <LandingPage 
+        onGetStarted={() => setView('AUTH')} 
+        onLogin={() => setView('AUTH')} 
+        landingImages={landingImages}
+        isLandingImagesLoading={isLandingImagesLoading}
+      />
+    );
   }
 
   if (view === 'AUTH') {
     return <AuthScreens onSuccess={() => {}} onBack={() => setView('LANDING')} />;
   }
   
-  const profileRole = (profile?.role || 'free') as UserRole;
-
   // MAIN APP UI (Protected)
   return (
     <div className="min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
@@ -127,6 +141,7 @@ export const App: React.FC = () => {
         profileRole={profileRole} 
         onLogout={handleLogout} 
         onShowSettings={() => setShowSettings(true)} 
+        onShowDevPanel={() => setShowDevPanel(true)} // Pass new handler
       />
 
       <div className="relative z-10 -mt-8 md:-mt-10">
@@ -162,6 +177,11 @@ export const App: React.FC = () => {
       </main>
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profileRole} />}
+      
+      {/* Render Dev Panel if user is admin/dev */}
+      {showDevPanel && user && (profileRole === 'admin' || profileRole === 'dev') && (
+        <DevPanelModal onClose={() => setShowDevPanel(false)} user={user} />
+      )}
     </div>
   );
 };

@@ -41,6 +41,7 @@ export interface User {
   firstName: string;
   lastName: string;
   createdAt: number;
+  role: UserRole;
 }
 
 // Apenas configs que o frontend precisa saber (URLs públicas)
@@ -55,4 +56,11 @@ export interface ArtStyle {
   name: string;
   iconName: string;
   previewColor: string;
+}
+
+// NEW: Landing Page Carousel Image Type
+export interface LandingImage {
+  id: string;
+  url: string;
+  sortOrder: number;
 }
