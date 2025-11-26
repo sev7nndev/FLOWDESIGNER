@@ -1,11 +1,10 @@
-
 import React from "react";
 import { motion } from "framer-motion";
 import { SparklesCore } from "./Sparkles";
 
 export const LampHeader = () => {
   return (
-    <div className="relative flex h-[18rem] md:h-[28rem] flex-col items-center justify-center overflow-hidden w-full z-0">
+    <div className="relative flex h-[12rem] md:h-[18rem] flex-col items-center justify-center overflow-hidden w-full z-0">
       <div className="relative flex w-full flex-1 scale-y-125 items-center justify-center isolate z-0 mt-[-4rem] md:mt-[-6rem]">
         
         {/* Lamp Left Beam */}
@@ -101,9 +100,9 @@ export const LampHeader = () => {
             duration: 0.8,
             ease: "easeInOut",
           }}
-          className="bg-gradient-to-br from-white to-gray-400 py-4 bg-clip-text text-center text-7xl md:text-9xl font-bold tracking-tighter text-transparent leading-[0.9] md:leading-[0.9]"
+          className="bg-gradient-to-br from-white to-gray-400 py-4 bg-clip-text text-center text-5xl md:text-7xl font-bold tracking-tighter text-transparent leading-[0.9] md:leading-[0.9]"
         >
-          Flow <br /> <span className="text-white drop-shadow-[0_0_25px_rgba(139,92,246,0.6)]">Designer</span>
+          Flow <span className="text-white drop-shadow-[0_0_25px_rgba(139,92,246,0.6)]">Designer</span>
         </motion.h1>
       </div>
     </div>
