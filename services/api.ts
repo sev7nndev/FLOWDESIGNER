@@ -2,25 +2,43 @@ import { GeneratedImage, BusinessInfo } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // URL do seu Backend Node.js local (ou deployado)
-// Usa a variável de ambiente injetada pelo Vite, com fallback para localhost
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001/api";
+// Alterado para usar caminho relativo para o backend Node.js (Issue 4 Fix)
+const BACKEND_URL = "/api"; 
+
+// URL da Edge Function (Hardcoded Project ID + Function Name)
+const SUPABASE_PROJECT_ID = "akynbiixxcftxgvjpjxu";
+const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/get-signed-url`;
 
 // Função auxiliar para gerar URL assinada (Signed URL)
 const getSignedUrl = async (path: string): Promise<string> => {
     const supabase = getSupabase();
     if (!supabase) throw new Error("Supabase not configured.");
 
-    // Gera uma URL válida por 60 segundos
-    const { data, error } = await supabase.storage
-        .from('generated-arts')
-        .createSignedUrl(path, 60); 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Faça login para acessar arquivos.");
 
-    if (error) {
-        console.error("Error generating signed URL:", error);
-        // REMOVED INSECURE FALLBACK: return supabase.storage.from('generated-arts').getPublicUrl(path).data.publicUrl;
-        throw new Error("Failed to generate secure download URL.");
+    try {
+        const response = await fetch(EDGE_FUNCTION_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${session.access_token}` 
+            },
+            body: JSON.stringify({ path })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || "Erro ao gerar URL segura.");
+        }
+
+        const data = await response.json();
+        return data.signedUrl;
+
+    } catch (error) {
+        console.error("Error generating signed URL via Edge Function:", error);
+        throw new Error("Falha ao gerar URL de download segura.");
     }
-    return data.signedUrl;
 };
 
 
@@ -56,7 +74,7 @@ export const api = {
       const data = await response.json();
       
       // Converte o formato do DB para o formato do frontend
-      // Gera a URL assinada imediatamente após a geração
+      // Gera a URL assinada imediatamente após a geração usando a nova função segura
       const signedUrl = await getSignedUrl(data.image.image_url);
 
       return {
@@ -84,7 +102,6 @@ export const api = {
     const { data, error } = await supabase
       .from('images')
       .select('*')
-      // Removido o filtro .eq('user_id', user.id) pois o RLS já o impõe.
       .order('created_at', { ascending: false });
 
     if (error || !data) return [];
@@ -92,6 +109,7 @@ export const api = {
     // Mapeia e gera a URL assinada para cada imagem
     const historyWithUrls = await Promise.all(data.map(async (row: any) => {
         try {
+            // Usa a nova função segura para obter a URL
             const signedUrl = await getSignedUrl(row.image_url);
             return {
                 id: row.id,
