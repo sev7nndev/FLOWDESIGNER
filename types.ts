@@ -37,9 +37,9 @@ export type UserRole = 'admin' | 'dev' | 'client' | 'free' | 'pro';
 
 export interface User {
   id: string;
-  name: string;
   email: string;
-  // Removed role: UserRole;
+  firstName: string;
+  lastName: string;
   createdAt: number;
 }
 

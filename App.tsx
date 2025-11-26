@@ -6,34 +6,50 @@ import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
 import { LogOut, Settings, Sparkles } from 'lucide-react';
 import { useGeneration } from './hooks/useGeneration';
-import { GenerationForm } from './components/GenerationForm';
 import { ResultDisplay } from './components/ResultDisplay';
 import { SettingsModal } from './components/Modals';
+import { useProfile } from './hooks/useProfile'; // Import useProfile
+import { GenerationForm } from './components/GenerationForm';
+
+// Define a minimal structure for the authenticated user before profile is loaded
+interface AuthUser {
+  id: string;
+  email: string;
+  createdAt: number;
+}
 
 export const App: React.FC = () => {
   // Auth State
-  const [user, setUser] = useState<User | null>(null);
-  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP'>('LANDING'); // Removed 'ADMIN' view
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP'>('LANDING');
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   
+  // Profile Hook
+  const { profile, isLoading: isProfileLoading, fetchProfile, updateProfile } = useProfile(authUser?.id);
+
+  // Combined User State (passed to hooks/components)
+  const user: User | null = authUser && profile ? {
+    id: authUser.id,
+    email: authUser.email,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    createdAt: authUser.createdAt,
+    // Note: Role is kept server-side for security, but we can pass it if needed for UI display
+  } : null;
+
   // Generation Logic Hook
   const { 
     form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage, setForm, setState
   } = useGeneration(user);
 
-  const fetchUserAndSetSession = async (supabaseUser: any) => {
-    // We no longer fetch the role here, as it is sensitive and only needed server-side.
-    // We only extract the name for display purposes.
-    let name = supabaseUser.user_metadata?.name || 'Usuário';
-
-    const newUser: User = {
+  const fetchAuthUser = (supabaseUser: any) => {
+    const newAuthUser: AuthUser = {
       id: supabaseUser.id,
       email: supabaseUser.email || '',
-      name: name,
-      createdAt: Date.now()
+      createdAt: Date.parse(supabaseUser.created_at) || Date.now()
     };
-    setUser(newUser);
+    setAuthUser(newAuthUser);
     setView('APP');
   };
 
@@ -44,9 +60,8 @@ export const App: React.FC = () => {
       // Check Session
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
-          fetchUserAndSetSession(session.user);
+          fetchAuthUser(session.user);
         } else {
-          // If no session, ensure view is LANDING
           setView('LANDING');
         }
       });
@@ -54,9 +69,9 @@ export const App: React.FC = () => {
       // Listen for Auth Changes
       const { data: { subscription } = { data: { subscription: { unsubscribe: () => {} } } } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
-          fetchUserAndSetSession(session.user);
+          fetchAuthUser(session.user);
         } else {
-          setUser(null);
+          setAuthUser(null);
           setView('LANDING');
         }
       });
@@ -75,9 +90,18 @@ export const App: React.FC = () => {
   const handleLogout = async () => {
     const supabase = getSupabase();
     if (supabase) await supabase.auth.signOut();
-    setUser(null);
+    setAuthUser(null);
     setView('LANDING');
   };
+
+  // Show loading state while profile is being fetched after successful authentication
+  if (view === 'APP' && !user && authUser && isProfileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+        <Sparkles size={32} className="animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // --- RENDER VIEWS ---
 
@@ -86,9 +110,6 @@ export const App: React.FC = () => {
   }
 
   if (view === 'AUTH') {
-    // When AuthScreens successfully completes a login/register attempt, 
-    // it triggers this function, which relies on the session listener above 
-    // to fetch the actual user data and transition to the 'APP' view.
     return <AuthScreens onSuccess={() => {}} onBack={() => setView('LANDING')} />;
   }
   
@@ -107,7 +128,9 @@ export const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* Removed Admin button as client-side role check is insecure for configuration */}
+            <span className="text-xs text-gray-400 hidden sm:block">
+              Olá, {user?.firstName || user?.email}!
+            </span>
             <button onClick={() => setShowSettings(true)} className="p-2 text-gray-400 hover:text-white transition-colors" title="Configurações Pessoais">
               <Settings size={18} />
             </button>
@@ -151,7 +174,7 @@ export const App: React.FC = () => {
         </div>
       </main>
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profile?.role || 'free'} />}
     </div>
   );
 };

@@ -17,7 +17,8 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
   const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '', // Changed from name
+    lastName: '',  // New field
     email: '',
     password: ''
   });
@@ -32,12 +33,12 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
         // authService.login handles sign in and returns null, relying on App.tsx listener
         await authService.login(formData.email, formData.password);
         // If login succeeds (no error thrown), the session listener in App.tsx will fire.
-        // We call onSuccess to signal completion, although the user object passed is irrelevant here.
         onSuccess(null); 
       } else {
-        if (!formData.name) throw new Error("Nome é obrigatório");
+        if (!formData.firstName) throw new Error("Primeiro nome é obrigatório");
+        
         // authService.register handles sign up and returns null
-        await authService.register(formData.name, formData.email, formData.password);
+        await authService.register(formData.firstName, formData.lastName, formData.email, formData.password);
         // If register succeeds, the session listener in App.tsx will fire.
         onSuccess(null);
       }
@@ -70,16 +71,28 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
-            <div>
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Nome</label>
-              <input 
-                type="text" 
-                required 
-                className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
-                placeholder="Seu nome"
-                value={formData.name}
-                onChange={e => setFormData({...formData, name: e.target.value})}
-              />
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Primeiro Nome</label>
+                    <input 
+                        type="text" 
+                        required 
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
+                        placeholder="Seu nome"
+                        value={formData.firstName}
+                        onChange={e => setFormData({...formData, firstName: e.target.value})}
+                    />
+                </div>
+                <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Sobrenome (Opcional)</label>
+                    <input 
+                        type="text" 
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
+                        placeholder="Seu sobrenome"
+                        value={formData.lastName}
+                        onChange={e => setFormData({...formData, lastName: e.target.value})}
+                    />
+                </div>
             </div>
           )}
           

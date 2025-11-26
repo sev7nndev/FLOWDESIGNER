@@ -1,6 +1,6 @@
-import React from 'react';
-import { GeneratedImage } from '../types';
-import { X, Image as ImageIcon, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { GeneratedImage, User, UserRole } from '../types';
+import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from './Button';
 
 // --- Generic Modal Wrapper ---
@@ -65,19 +65,118 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({ history, onClose, on
 // --- User Settings Modal ---
 interface SettingsModalProps {
   onClose: () => void;
+  user: User | null;
+  updateProfile: (firstName: string, lastName: string) => Promise<boolean | undefined>;
+  profileRole: UserRole;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, updateProfile, profileRole }) => {
+  const [firstName, setFirstName] = useState(user?.firstName || '');
+  const [lastName, setLastName] = useState(user?.lastName || '');
+  const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName);
+      setLastName(user.lastName);
+    }
+  }, [user]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setIsLoading(true);
+    setStatusMessage(null);
+
+    const success = await updateProfile(firstName, lastName);
+
+    if (success) {
+      setStatusMessage({ type: 'success', message: 'Perfil atualizado com sucesso!' });
+    } else {
+      setStatusMessage({ type: 'error', message: 'Falha ao salvar. Tente novamente.' });
+    }
+    setIsLoading(false);
+  };
+  
+  const roleDisplay: Record<UserRole, { name: string, color: string }> = {
+    admin: { name: 'Administrador', color: 'bg-red-600' },
+    dev: { name: 'Desenvolvedor', color: 'bg-cyan-600' },
+    client: { name: 'Cliente', color: 'bg-blue-600' },
+    free: { name: 'Grátis', color: 'bg-gray-500' },
+    pro: { name: 'Pro', color: 'bg-primary' },
+  };
+
+  const currentRole = roleDisplay[profileRole] || roleDisplay.free;
+
   return (
     <ModalWrapper title="Configurações Pessoais" onClose={onClose}>
-      <div className="max-w-xl mx-auto space-y-6">
-        <div className="p-6 bg-zinc-800/50 border border-white/10 rounded-lg text-gray-300 text-sm flex items-start gap-3">
-          <Info size={20} className="text-primary flex-shrink-0 mt-0.5" />
-          <p>
-            As configurações de chaves de API de Inteligência Artificial e de Banco de Dados foram movidas para o servidor seguro. 
-            Este painel agora é usado apenas para configurações futuras do usuário.
-          </p>
+      <div className="max-w-xl mx-auto space-y-8">
+        
+        {/* Status Section */}
+        <div className="p-6 bg-zinc-800/50 border border-white/10 rounded-lg space-y-4">
+            <h4 className="text-lg font-semibold text-white border-b border-white/5 pb-2 mb-4">Status da Conta</h4>
+            
+            <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm flex items-center gap-2"><Mail size={16} className="text-primary" /> Email:</span>
+                <span className="text-white font-medium text-sm">{user?.email}</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm flex items-center gap-2"><UserIcon size={16} className="text-primary" /> Plano:</span>
+                <span className={`text-white text-xs font-bold uppercase px-3 py-1 rounded-full ${currentRole.color}`}>
+                    {currentRole.name}
+                </span>
+            </div>
+            
+            {profileRole === 'free' && (
+                <div className="pt-4 border-t border-white/5 text-sm text-gray-400 flex items-start gap-2">
+                    <Info size={16} className="text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <p>Seu plano atual é Grátis. Para remover a marca d'água e ter acesso ilimitado, considere o upgrade para o plano Pro.</p>
+                </div>
+            )}
         </div>
+
+        {/* Profile Update Form */}
+        <form onSubmit={handleSave} className="space-y-6 p-6 bg-zinc-900/50 border border-white/10 rounded-lg">
+            <h4 className="text-lg font-semibold text-white border-b border-white/5 pb-2 mb-4">Atualizar Perfil</h4>
+            
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Primeiro Nome</label>
+                    <input 
+                        type="text" 
+                        required 
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none text-sm"
+                        value={firstName}
+                        onChange={e => setFirstName(e.target.value)}
+                    />
+                </div>
+                <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Sobrenome</label>
+                    <input 
+                        type="text" 
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none text-sm"
+                        value={lastName}
+                        onChange={e => setLastName(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            {statusMessage && (
+                <div className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
+                    statusMessage.type === 'success' ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                }`}>
+                    {statusMessage.type === 'success' ? <CheckCircle2 size={16} /> : <Info size={16} />}
+                    <p>{statusMessage.message}</p>
+                </div>
+            )}
+
+            <Button type="submit" isLoading={isLoading} className="w-full h-12 rounded-lg" icon={!isLoading ? <Save size={18} /> : null}>
+                Salvar Alterações
+            </Button>
+        </form>
       </div>
     </ModalWrapper>
   );

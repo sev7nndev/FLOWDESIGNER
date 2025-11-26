@@ -2,8 +2,7 @@ import { User, UserRole } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // We no longer store the full user object in localStorage, relying on Supabase SDK for session management.
-// The SESSION_KEY is now unused in this file, but kept for reference if needed elsewhere.
-// const SESSION_KEY = "flow_session"; 
+// const SESSION_KEY is now unused.
 
 export const authService = {
   init: () => {},
@@ -26,7 +25,7 @@ export const authService = {
     return null;
   },
 
-  register: async (name: string, email: string, password: string): Promise<User | null> => {
+  register: async (firstName: string, lastName: string, email: string, password: string): Promise<User | null> => {
     const supabase = getSupabase();
 
     if (!supabase) {
@@ -37,7 +36,7 @@ export const authService = {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } }
+      options: { data: { first_name: firstName, last_name: lastName } }
     });
     
     if (error) throw new Error(error.message);
@@ -51,12 +50,5 @@ export const authService = {
   logout: async () => {
     const supabase = getSupabase();
     if (supabase) await supabase.auth.signOut();
-    // Removed localStorage.removeItem(SESSION_KEY);
   },
-
-  // This function is now obsolete as we don't store the user object locally anymore.
-  // getCurrentUser: (): User | null => {
-  //   const session = localStorage.getItem(SESSION_KEY);
-  //   return session ? JSON.parse(session) : null;
-  // }
 };
