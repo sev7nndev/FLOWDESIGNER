@@ -172,7 +172,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
             )}
             
             {errorAllImages && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{errorAllImages}</div>
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{String(errorAllImages)}</div>
             )}
             
             {deleteError && (
@@ -256,7 +256,7 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
             )}
             
             {error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{error}</div>
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{String(error)}</div>
             )}
             
             {deleteError && (
