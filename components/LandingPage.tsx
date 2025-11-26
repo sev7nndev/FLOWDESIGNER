@@ -3,7 +3,6 @@ import { Button } from './Button';
 import { LampHeader } from './Lamp';
 import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { FlyerMockup } from './FlyerMockup';
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
