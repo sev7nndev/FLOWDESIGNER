@@ -1,0 +1,127 @@
+import React, { useState } from 'react';
+import { Button } from './Button';
+import { Sparkles, ArrowLeft } from 'lucide-react';
+import { authService } from '../services/authService';
+import { User } from '../types';
+
+interface AuthScreensProps {
+  onSuccess: (user: User) => void;
+  onBack: () => void;
+}
+
+export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    try {
+      if (isLogin) {
+        const user = authService.login(formData.email, formData.password);
+        if (user) {
+          onSuccess(user);
+        } else {
+          setError('Email ou senha inválidos.');
+        }
+      } else {
+        if (!formData.name) throw new Error("Nome é obrigatório");
+        const user = authService.register(formData.name, formData.email, formData.password);
+        onSuccess(user);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Ocorreu um erro.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative">
+      <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] pointer-events-none" />
+      
+      <div className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative z-10 animate-fade-in">
+        <button onClick={onBack} className="absolute top-8 left-8 text-gray-500 hover:text-white">
+          <ArrowLeft size={20} />
+        </button>
+
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-4">
+            <Sparkles size={24} />
+          </div>
+          <h2 className="text-2xl font-bold text-white">{isLogin ? 'Bem-vindo de volta' : 'Criar Conta'}</h2>
+          <p className="text-gray-500 text-sm mt-2">
+            {isLogin ? 'Entre para gerenciar suas artes.' : 'Comece a criar designs profissionais hoje.'}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <div>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Nome</label>
+              <input 
+                type="text" 
+                required 
+                className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
+                placeholder="Seu nome"
+                value={formData.name}
+                onChange={e => setFormData({...formData, name: e.target.value})}
+              />
+            </div>
+          )}
+          
+          <div>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Email</label>
+            <input 
+              type="email" 
+              required 
+              className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
+              placeholder="seu@email.com"
+              value={formData.email}
+              onChange={e => setFormData({...formData, email: e.target.value})}
+            />
+          </div>
+          
+          <div>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Senha</label>
+            <input 
+              type="password" 
+              required 
+              className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={e => setFormData({...formData, password: e.target.value})}
+            />
+          </div>
+
+          {error && <p className="text-red-400 text-xs text-center">{error}</p>}
+
+          <Button type="submit" isLoading={isLoading} className="w-full h-12 rounded-lg">
+            {isLogin ? 'Entrar' : 'Cadastrar'}
+          </Button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <button 
+            onClick={() => { setIsLogin(!isLogin); setError(''); }}
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            {isLogin ? 'Não tem conta? Crie uma agora.' : 'Já tem conta? Faça login.'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
