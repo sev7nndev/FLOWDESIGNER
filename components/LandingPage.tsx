@@ -152,10 +152,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
               <h3 className="text-3xl md:text-5xl font-bold text-white mt-2">Design Profissional Simplificado</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[250px]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[200px]">
               {/* Feature 1 - Large */}
               <motion.div 
-                className="md:col-span-2 row-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl"
+                className="md:col-span-2 row-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl"
                 variants={featureVariants}
                 initial="hidden"
                 whileInView="visible"
@@ -165,14 +165,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
                 <div className="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent" />
                 <div className="relative z-10 max-w-sm">
                   <div className="bg-primary/20 w-fit p-3 rounded-xl mb-4 text-primary"><Zap size={24} /></div>
-                  <h4 className="text-2xl font-bold text-white mb-2">Prompt Engineering Automático</h4>
-                  <p className="text-gray-400">Você digita "Oficina Mecânica" e nossa I.A. escreve um comando de 500 palavras detalhando iluminação, texturas e ângulos para a melhor foto possível.</p>
+                  <h4 className="text-xl font-bold text-white mb-2">Prompt Engineering Automático</h4>
+                  <p className="text-gray-400 text-sm">Você digita "Oficina Mecânica" e nossa I.A. escreve um comando de 500 palavras detalhando iluminação, texturas e ângulos para a melhor foto possível.</p>
                 </div>
               </motion.div>
 
               {/* Feature 2 - Small */}
               <motion.div 
-                className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center group hover:border-secondary/50 transition-colors hover:shadow-secondary/10 shadow-xl"
+                className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 flex flex-col justify-center items-center text-center group hover:border-secondary/50 transition-colors hover:shadow-secondary/10 shadow-xl"
                 variants={featureVariants}
                 initial="hidden"
                 whileInView="visible"
@@ -186,7 +186,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
 
                {/* Feature 3 - Small */}
                <motion.div 
-                className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center group hover:border-accent/50 transition-colors hover:shadow-accent/10 shadow-xl"
+                className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 flex flex-col justify-center items-center text-center group hover:border-accent/50 transition-colors hover:shadow-accent/10 shadow-xl"
                 variants={featureVariants}
                 initial="hidden"
                 whileInView="visible"
@@ -200,7 +200,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
 
               {/* Feature 4 - Large */}
               <motion.div 
-                className="md:col-span-2 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl"
+                className="md:col-span-2 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl"
                 variants={featureVariants}
                 initial="hidden"
                 whileInView="visible"
@@ -210,8 +210,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
                  <div className="absolute right-0 bottom-0 w-2/3 h-full bg-gradient-to-tl from-primary/10 to-transparent" />
                  <div className="relative z-10">
                    <div className="bg-primary/20 w-fit p-3 rounded-xl mb-4 text-primary"><CreditCard size={24} /></div>
-                   <h4 className="text-2xl font-bold text-white mb-2">Custo Zero por Arte</h4>
-                   <p className="text-gray-400">Diferente de designers que cobram por peça, aqui você tem geração ilimitada no plano Pro. Crie 10 variações e escolha a melhor.</p>
+                   <h4 className="text-xl font-bold text-white mb-2">Custo Zero por Arte</h4>
+                   <p className="text-gray-400 text-sm">Diferente de designers que cobram por peça, aqui você tem geração ilimitada no plano Pro. Crie 10 variações e escolha a melhor.</p>
                  </div>
               </motion.div>
             </div>
