@@ -133,7 +133,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
           <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
           <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
           
-          <div className="flex w-[200%] animate-scroll hover:[animation-play-state:paused]">
+          <div className="flex w-[200%] animate-scroll hover:[animation-play-state:paused] border border-white/10 rounded-xl p-4">
             {[...Array(2)].map((_, i) => (
               <div key={i} className="flex gap-4 px-2">
                 {flyers.map((flyer, idx) => (
