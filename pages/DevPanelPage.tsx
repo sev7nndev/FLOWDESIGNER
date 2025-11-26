@@ -1,40 +1,17 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock } from 'lucide-react';
-import { Button } from './Button';
+import { X, Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft } from 'lucide-react';
+import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage } from '../types';
 import { useLandingImages } from '../hooks/useLandingImages';
 import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
-import { api } from '../services/api'; // Importar API para download
+import { api } from '../services/api';
 
-interface DevPanelModalProps {
-  onClose: () => void;
+interface DevPanelPageProps {
   user: User;
+  onBack: () => void;
 }
 
-// --- Generic Modal Wrapper (Reused from Modals.tsx, but defined here for simplicity) ---
-interface ModalWrapperProps {
-  title: string;
-  onClose: () => void;
-  children?: React.ReactNode;
-}
-
-const ModalWrapper: React.FC<ModalWrapperProps> = ({ title, onClose, children }) => (
-  <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-    <div className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-      <div className="p-4 border-b border-white/10 flex justify-between items-center bg-zinc-900 z-10 sticky top-0">
-        <h3 className="text-lg font-bold text-white">{title}</h3>
-        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white">
-          <X size={20} />
-        </button>
-      </div>
-      <div className="overflow-y-auto p-6 custom-scrollbar">
-        {children}
-      </div>
-    </div>
-  </div>
-);
-
-// --- Image Upload Component ---
+// --- Image Upload Component (Reused) ---
 interface ImageUploadProps {
     onUpload: (file: File) => Promise<void>;
     userId: string;
@@ -167,8 +144,6 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
         setDeletingId(image.id);
         setDeleteError(null);
         try {
-            // A URL da imagem gerada é o path do storage (ex: user_id/mock-timestamp.png)
-            // O backend espera o path completo (image.url no DB)
             const path = (allImages.find(img => img.id === image.id) as any)?.image_url;
             
             if (!path) {
@@ -176,7 +151,6 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
             }
             
             await deleteImage(image.id, path);
-            // Atualiza o estado local após a exclusão
             setImagesWithSignedUrls(prev => prev.filter(img => img.id !== image.id));
         } catch (e: any) {
             setDeleteError(e.message || "Falha ao deletar arte.");
@@ -186,7 +160,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
     }, [allImages, deleteImage]);
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 bg-zinc-900/50 p-6 rounded-xl border border-white/10">
             <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2 flex items-center gap-2">
                 <Users size={20} className="text-accent" /> Todas as Artes Geradas ({allImages.length})
             </h3>
@@ -237,9 +211,8 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
     );
 };
 
-
-// --- Main Dev Panel Modal ---
-export const DevPanelModal: React.FC<DevPanelModalProps> = ({ onClose, user }) => {
+// --- Componente de Gerenciamento de Imagens da Landing Page ---
+const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
     const { images, isLoading, error, uploadImage, deleteImage } = useLandingImages(user.role);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -248,8 +221,6 @@ export const DevPanelModal: React.FC<DevPanelModalProps> = ({ onClose, user }) =
         setDeletingId(image.id);
         setDeleteError(null);
         try {
-            // A URL pública é: [SUPABASE_URL]/storage/v1/object/public/landing-carousel/[path]
-            // Precisamos extrair o [path]
             const urlParts = image.url.split('/landing-carousel/');
             const path = urlParts.length > 1 ? urlParts[1] : '';
             
@@ -270,61 +241,83 @@ export const DevPanelModal: React.FC<DevPanelModalProps> = ({ onClose, user }) =
     }, [uploadImage, user.id]);
 
     return (
-        <ModalWrapper title="Painel do Desenvolvedor (Admin/Dev)" onClose={onClose}>
-            <div className="space-y-10">
-                
-                {/* Seção 1: Gerenciamento de Artes Geradas por Usuários */}
-                <GeneratedImagesManager userRole={user.role} />
+        <div className="space-y-4 bg-zinc-900/50 p-6 rounded-xl border border-white/10">
+            <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2 flex items-center gap-2">
+                <ImageIcon size={20} className="text-secondary" /> Imagens Atuais do Carrossel ({images.length})
+            </h3>
+            
+            {/* Upload Section */}
+            <ImageUpload onUpload={handleUploadWrapper} userId={user.id} />
 
-                {/* Seção 2: Gerenciamento de Imagens da Landing Page */}
-                <div className="space-y-4">
-                    <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2 flex items-center gap-2">
-                        <ImageIcon size={20} className="text-secondary" /> Imagens Atuais do Carrossel ({images.length})
-                    </h3>
-                    
-                    {/* Upload Section */}
-                    <ImageUpload onUpload={handleUploadWrapper} userId={user.id} />
+            {isLoading && (
+                <div className="text-center py-10 text-gray-500 flex items-center justify-center gap-2">
+                    <Loader2 size={20} className="animate-spin mr-2" /> Carregando...
+                </div>
+            )}
+            
+            {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{error}</div>
+            )}
+            
+            {deleteError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{deleteError}</div>
+            )}
 
-                    {isLoading && (
-                        <div className="text-center py-10 text-gray-500 flex items-center justify-center gap-2">
-                            <Loader2 size={20} className="animate-spin mr-2" /> Carregando...
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {images.map((img) => (
+                    <div key={img.id} className="relative aspect-[3/4] rounded-lg overflow-hidden border border-white/10 group">
+                        <img src={img.url} alt="Carousel Asset" className="w-full h-full object-cover" />
+                        
+                        {/* Delete Overlay */}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Button 
+                                variant="danger" 
+                                onClick={() => handleDeleteLandingImage(img)}
+                                isLoading={deletingId === img.id}
+                                className="h-10 px-4 text-xs"
+                                icon={<Trash2 size={16} />}
+                            >
+                                Deletar
+                            </Button>
                         </div>
-                    )}
-                    
-                    {error && (
-                        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{error}</div>
-                    )}
-                    
-                    {deleteError && (
-                        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{deleteError}</div>
-                    )}
-
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {images.map((img) => (
-                            <div key={img.id} className="relative aspect-[3/4] rounded-lg overflow-hidden border border-white/10 group">
-                                <img src={img.url} alt="Carousel Asset" className="w-full h-full object-cover" />
-                                
-                                {/* Delete Overlay */}
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <Button 
-                                        variant="danger" 
-                                        onClick={() => handleDeleteLandingImage(img)}
-                                        isLoading={deletingId === img.id}
-                                        className="h-10 px-4 text-xs"
-                                        icon={<Trash2 size={16} />}
-                                    >
-                                        Deletar
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
                     </div>
-                    
-                    {images.length === 0 && !isLoading && !error && (
-                        <p className="text-center text-gray-500 py-10">Nenhuma imagem no carrossel. Faça upload de algumas!</p>
-                    )}
+                ))}
+            </div>
+            
+            {images.length === 0 && !isLoading && !error && (
+                <p className="text-center text-gray-500 py-10">Nenhuma imagem no carrossel. Faça upload de algumas!</p>
+            )}
+        </div>
+    );
+};
+
+
+// --- Main Dev Panel Page ---
+export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBack }) => {
+    return (
+        <div className="min-h-screen bg-zinc-950 text-gray-100 pt-20 pb-16 relative">
+            <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
+            
+            <div className="max-w-7xl mx-auto px-4 md:px-6 relative z-10">
+                
+                {/* Header da Página */}
+                <div className="flex items-center justify-between border-b border-primary/50 pb-4 mb-8">
+                    <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
+                        <Code size={28} className="text-primary" /> Painel do Desenvolvedor
+                    </h1>
+                    <Button variant="secondary" onClick={onBack} icon={<ArrowLeft size={16} />}>
+                        Voltar ao App
+                    </Button>
+                </div>
+
+                <div className="space-y-12">
+                    {/* Seção 1: Gerenciamento de Artes Geradas por Usuários */}
+                    <GeneratedImagesManager userRole={user.role} />
+
+                    {/* Seção 2: Gerenciamento de Imagens da Landing Page */}
+                    <LandingImagesManager user={user} />
                 </div>
             </div>
-        </ModalWrapper>
+        </div>
     );
 };

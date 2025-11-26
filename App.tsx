@@ -11,8 +11,8 @@ import { SettingsModal } from './components/Modals';
 import { useProfile } from './hooks/useProfile'; // Import useProfile
 import { GenerationForm } from './components/GenerationForm';
 import { AppHeader } from './components/AppHeader'; // Import new header
-import { DevPanelModal } from './components/DevPanelModal'; // Import DevPanelModal
 import { useLandingImages } from './hooks/useLandingImages'; // Import useLandingImages
+import { DevPanelPage } from './pages/DevPanelPage'; // Import new DevPanelPage
 
 // Define a minimal structure for the authenticated user before profile is loaded
 interface AuthUser {
@@ -24,10 +24,9 @@ interface AuthUser {
 export const App: React.FC = () => {
   // Auth State
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP'>('LANDING');
+  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL'>('LANDING');
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showDevPanel, setShowDevPanel] = useState(false); // New state for Dev Panel
   
   // Profile Hook
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
@@ -100,11 +99,10 @@ export const App: React.FC = () => {
   // NEW: Auto-open Dev Panel if user is Admin/Dev after profile loads
   useEffect(() => {
     // Se o usuário for admin ou dev e o perfil tiver carregado, abra o painel.
-    // Removemos a verificação `!showDevPanel` para garantir que ele abra após o login.
-    if (user && !isProfileLoading && (user.role === 'admin' || user.role === 'dev')) {
-        setShowDevPanel(true);
+    if (user && !isProfileLoading && (user.role === 'admin' || user.role === 'dev') && view === 'APP') {
+        setView('DEV_PANEL');
     }
-  }, [user, isProfileLoading]);
+  }, [user, isProfileLoading, view]);
 
 
   const handleLogout = async () => {
@@ -122,7 +120,7 @@ export const App: React.FC = () => {
       </div>
     );
   }
-
+  
   // --- RENDER VIEWS ---
 
   if (view === 'LANDING') {
@@ -140,6 +138,15 @@ export const App: React.FC = () => {
     return <AuthScreens onSuccess={() => {}} onBack={() => setView('LANDING')} />;
   }
   
+  if (view === 'DEV_PANEL') {
+    if (!user || (user.role !== 'admin' && user.role !== 'dev')) {
+        // Redireciona se o usuário tentar acessar a página sem permissão
+        setView('APP');
+        return null; 
+    }
+    return <DevPanelPage user={user} onBack={() => setView('APP')} />;
+  }
+  
   // MAIN APP UI (Protected)
   return (
     <div className="min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
@@ -150,7 +157,7 @@ export const App: React.FC = () => {
         profileRole={profileRole} 
         onLogout={handleLogout} 
         onShowSettings={() => setShowSettings(true)} 
-        onShowDevPanel={() => setShowDevPanel(true)} // Pass new handler
+        onShowDevPanel={() => setView('DEV_PANEL')} // Change to setView
       />
 
       <div className="relative z-10 -mt-8 md:-mt-10">
@@ -186,11 +193,6 @@ export const App: React.FC = () => {
       </main>
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profileRole} />}
-      
-      {/* Render Dev Panel if user is admin/dev */}
-      {showDevPanel && user && (profileRole === 'admin' || profileRole === 'dev') && (
-        <DevPanelModal onClose={() => setShowDevPanel(false)} user={user} />
-      )}
     </div>
   );
 };
