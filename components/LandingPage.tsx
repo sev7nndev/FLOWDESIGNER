@@ -85,6 +85,55 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
     })
   };
 
+  // Componente de Card de Recurso Reutilizável
+  const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string, color: 'primary' | 'secondary' | 'accent', custom: number }> = ({ icon, title, description, color, custom }) => {
+    const colorClasses = {
+      primary: {
+        bg: 'bg-primary/10',
+        text: 'text-primary',
+        hoverBorder: 'hover:border-primary/50',
+        shadow: 'hover:shadow-primary/10',
+        gradient: 'from-primary/5 to-transparent'
+      },
+      secondary: {
+        bg: 'bg-secondary/10',
+        text: 'text-secondary',
+        hoverBorder: 'hover:border-secondary/50',
+        shadow: 'hover:shadow-secondary/10',
+        gradient: 'from-secondary/5 to-transparent'
+      },
+      accent: {
+        bg: 'bg-accent/10',
+        text: 'text-accent',
+        hoverBorder: 'hover:border-accent/50',
+        shadow: 'hover:shadow-accent/10',
+        gradient: 'from-accent/5 to-transparent'
+      }
+    }[color];
+
+    return (
+      <motion.div 
+        className={`relative overflow-hidden rounded-3xl p-6 md:p-8 bg-zinc-900/50 backdrop-blur border border-white/10 shadow-xl transition-all duration-500 group ${colorClasses.hoverBorder} ${colorClasses.shadow}`}
+        variants={featureVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.3 }}
+        custom={custom}
+      >
+        {/* Efeito de Borda Mágica/Gradiente */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${colorClasses.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+        
+        <div className="relative z-10">
+          <div className={`${colorClasses.bg} w-fit p-3 rounded-xl mb-4 ${colorClasses.text}`}>
+            {icon}
+          </div>
+          <h4 className="text-xl font-bold text-white mb-2">{title}</h4>
+          <p className="text-gray-400 text-sm">{description}</p>
+        </div>
+      </motion.div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden scroll-smooth">
       {/* Background Gradients */}
@@ -152,69 +201,40 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
               <h3 className="text-3xl md:text-5xl font-bold text-white mt-2">Design Profissional Simplificado</h3>
             </div>
 
-            {/* Alterado para grid-cols-1 e removidas classes de col-span */}
-            <div className="grid grid-cols-1 gap-6 auto-rows-[200px] max-w-3xl mx-auto">
-              {/* Feature 1 - Large -> Full Width */}
-              <motion.div 
-                className="col-span-full row-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl"
-                variants={featureVariants}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.3 }}
+            {/* Mantendo grid-cols-1 para empilhar, mas aumentando a altura para parecer mais quadrado */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[250px]">
+              
+              <FeatureCard
+                icon={<Zap size={24} />}
+                title="Prompt Engineering Automático"
+                description="Você digita 'Oficina Mecânica' e nossa I.A. escreve um comando de 500 palavras detalhando iluminação, texturas e ângulos para a melhor foto possível."
+                color="primary"
                 custom={0}
-              >
-                <div className="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent" />
-                <div className="relative z-10 max-w-sm">
-                  <div className="bg-primary/20 w-fit p-3 rounded-xl mb-4 text-primary"><Zap size={24} /></div>
-                  <h4 className="text-xl font-bold text-white mb-2">Prompt Engineering Automático</h4>
-                  <p className="text-gray-400 text-sm">Você digita "Oficina Mecânica" e nossa I.A. escreve um comando de 500 palavras detalhando iluminação, texturas e ângulos para a melhor foto possível.</p>
-                </div>
-              </motion.div>
+              />
 
-              {/* Feature 2 - Small -> Full Width */}
-              <motion.div 
-                className="col-span-full bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 flex flex-col justify-center items-center text-center group hover:border-secondary/50 transition-colors hover:shadow-secondary/10 shadow-xl"
-                variants={featureVariants}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.3 }}
+              <FeatureCard
+                icon={<ImageIcon size={24} />}
+                title="Imagens 8K"
+                description="Resolução ultra-alta pronta para impressão ou web."
+                color="secondary"
                 custom={1}
-              >
-                 <div className="bg-secondary/20 w-fit p-3 rounded-xl mb-4 text-secondary"><ImageIcon size={24} /></div>
-                 <h4 className="text-xl font-bold text-white mb-2">Imagens 8K</h4>
-                 <p className="text-gray-400 text-sm">Resolução ultra-alta pronta para impressão ou web.</p>
-              </motion.div>
+              />
 
-               {/* Feature 3 - Small -> Full Width */}
-               <motion.div 
-                className="col-span-full bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 flex flex-col justify-center items-center text-center group hover:border-accent/50 transition-colors hover:shadow-accent/10 shadow-xl"
-                variants={featureVariants}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.3 }}
+              <FeatureCard
+                icon={<ShieldCheck size={24} />}
+                title="Uso Comercial"
+                description="Artes livres de direitos autorais para você vender."
+                color="accent"
                 custom={2}
-              >
-                 <div className="bg-accent/20 w-fit p-3 rounded-xl mb-4 text-accent"><ShieldCheck size={24} /></div>
-                 <h4 className="text-xl font-bold text-white mb-2">Uso Comercial</h4>
-                 <p className="text-gray-400 text-sm">Artes livres de direitos autorais para você vender.</p>
-              </motion.div>
+              />
 
-              {/* Feature 4 - Large -> Full Width */}
-              <motion.div 
-                className="col-span-full bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl"
-                variants={featureVariants}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.3 }}
+              <FeatureCard
+                icon={<CreditCard size={24} />}
+                title="Custo Zero por Arte"
+                description="Diferente de designers que cobram por peça, aqui você tem geração ilimitada no plano Pro."
+                color="primary"
                 custom={3}
-              >
-                 <div className="absolute right-0 bottom-0 w-2/3 h-full bg-gradient-to-tl from-primary/10 to-transparent" />
-                 <div className="relative z-10">
-                   <div className="bg-primary/20 w-fit p-3 rounded-xl mb-4 text-primary"><CreditCard size={24} /></div>
-                   <h4 className="text-xl font-bold text-white mb-2">Custo Zero por Arte</h4>
-                   <p className="text-gray-400 text-sm">Diferente de designers que cobram por peça, aqui você tem geração ilimitada no plano Pro. Crie 10 variações e escolha a melhor.</p>
-                 </div>
-              </motion.div>
+              />
             </div>
           </div>
         </section>
