@@ -6,37 +6,19 @@ export const LampHeader = () => {
       <div className="w-full h-full relative [mask-image:linear-gradient(to_bottom,white,white,transparent)]">
         <div className="relative flex w-full flex-1 scale-y-125 items-center justify-center isolate z-0 mt-[-4rem] md:mt-[-6rem]">
           
-          {/* Lamp Left Beam Wrapper */}
-          <motion.div
-            initial={{ opacity: 0.5, width: "15rem" }}
-            whileInView={{ opacity: 1, width: "30rem" }}
-            transition={{
-              delay: 0.3,
-              duration: 0.8,
-              ease: "easeInOut",
-            }}
-            className="absolute inset-auto right-1/2 h-56 overflow-visible"
-          >
+          {/* Lamp Left Beam - Converted to static div to prevent crash */}
+          <div className="absolute inset-auto right-1/2 h-56 w-[30rem] overflow-visible">
             <div className="w-full h-full bg-gradient-conic from-primary via-transparent to-transparent text-white [--conic-position:from_70deg_at_center_top]">
               <div className="absolute w-40 h-[100%] left-0 bg-background bottom-0 z-20 [mask-image:linear-gradient(to_right,white,transparent)]" />
             </div>
-          </motion.div>
+          </div>
           
-          {/* Lamp Right Beam Wrapper */}
-          <motion.div
-            initial={{ opacity: 0.5, width: "15rem" }}
-            whileInView={{ opacity: 1, width: "30rem" }}
-            transition={{
-              delay: 0.3,
-              duration: 0.8,
-              ease: "easeInOut",
-            }}
-            className="absolute inset-auto left-1/2 h-56 overflow-visible"
-          >
+          {/* Lamp Right Beam - Converted to static div to prevent crash */}
+          <div className="absolute inset-auto left-1/2 h-56 w-[30rem] overflow-visible">
             <div className="w-full h-full bg-gradient-conic from-transparent via-transparent to-primary text-white [--conic-position:from_290deg_at_center_top]">
               <div className="absolute w-40 h-[100%] right-0 bg-background bottom-0 z-20 [mask-image:linear-gradient(to_left,white,transparent)]" />
             </div>
-          </motion.div>
+          </div>
           
           {/* Glow Effects */}
           <div className="absolute top-1/2 z-50 h-48 w-full bg-transparent opacity-20 backdrop-blur-md"></div>
