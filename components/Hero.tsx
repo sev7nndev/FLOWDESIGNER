@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from './Button';
 import { ChevronRight } from 'lucide-react';
-import { SparklesCore } from './Sparkles';
 
 interface HeroSectionProps {
   onGetStarted: () => void;
@@ -10,19 +9,7 @@ interface HeroSectionProps {
 export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
   return (
     <div className="relative w-full flex flex-col items-center justify-center pt-24 pb-20 md:pt-32 md:pb-28 overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 z-0">
-        <SparklesCore
-          id="tsparticles-hero"
-          background="transparent"
-          minSize={0.4}
-          maxSize={1.2}
-          particleDensity={60}
-          className="w-full h-full"
-          particleColor="#FFFFFF"
-          speed={0.5}
-        />
-      </div>
+      {/* Background Effects - Simplified for performance */}
       <div className="absolute top-0 z-0 h-64 w-[40rem] rounded-full bg-primary/40 blur-3xl" />
 
       {/* Content */}

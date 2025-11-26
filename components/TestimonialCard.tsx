@@ -17,7 +17,7 @@ export const TestimonialCard: React.FC<TestimonialCardProps> = ({ name, role, te
     <p className="text-gray-300 text-sm italic mb-4">"{text}"</p>
     <div className="flex items-center gap-3">
       {/* User Photo */}
-      <img src={image} alt={name} className="h-10 w-10 rounded-full object-cover border border-primary/50 p-[2px]" />
+      <img src={image} loading="lazy" alt={name} className="h-10 w-10 rounded-full object-cover border border-primary/50 p-[2px]" />
       <div>
         <h5 className="text-white text-sm font-bold">{name}</h5>
         <span className="text-gray-500 text-xs">{role}</span>

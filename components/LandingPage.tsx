@@ -2,7 +2,6 @@ import React from 'react';
 import { Button } from './Button';
 import { HeroSection } from './Hero';
 import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
@@ -72,22 +71,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   // Duplicate items for infinite scroll effect
   const marqueeContent = [...carouselItems, ...carouselItems];
 
-
-  const featureVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: i * 0.1,
-        duration: 0.5,
-        ease: "easeOut"
-      }
-    })
-  };
-
   // Componente de Card de Recurso Reutilizável
-  const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string, color: 'primary' | 'secondary' | 'accent', custom: number }> = ({ icon, title, description, color, custom }) => {
+  const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string, color: 'primary' | 'secondary' | 'accent' }> = ({ icon, title, description, color }) => {
     const colorClasses = {
       primary: {
         bg: 'bg-primary/10',
@@ -113,13 +98,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
     }[color];
 
     return (
-      <motion.div 
+      <div 
         className={`relative overflow-hidden rounded-3xl p-6 md:p-8 bg-zinc-900/50 backdrop-blur border border-white/10 shadow-xl transition-all duration-500 group ${colorClasses.hoverBorder} ${colorClasses.shadow}`}
-        variants={featureVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.3 }}
-        custom={custom}
       >
         {/* Efeito de Borda Mágica/Gradiente */}
         <div className={`absolute inset-0 bg-gradient-to-br ${colorClasses.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
@@ -131,7 +111,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
           <h4 className="text-xl font-bold text-white mb-2">{title}</h4>
           <p className="text-gray-400 text-sm">{description}</p>
         </div>
-      </motion.div>
+      </div>
     );
   };
 
@@ -199,7 +179,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 title="Prompt Engineering Automático"
                 description="Você digita 'Oficina Mecânica' e nossa I.A. escreve um comando de 500 palavras detalhando iluminação, texturas e ângulos para a melhor foto possível."
                 color="primary"
-                custom={0}
               />
 
               <FeatureCard
@@ -207,7 +186,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 title="Imagens 8K"
                 description="Resolução ultra-alta pronta para impressão ou web."
                 color="secondary"
-                custom={1}
               />
 
               <FeatureCard
@@ -215,7 +193,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 title="Uso Comercial"
                 description="Artes livres de direitos autorais para você vender."
                 color="accent"
-                custom={2}
               />
 
               <FeatureCard
@@ -223,7 +200,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 title="Custo Zero por Arte"
                 description="Diferente de designers que cobram por peça, aqui você tem geração ilimitada no plano Pro."
                 color="primary"
-                custom={3}
               />
             </div>
           </div>
