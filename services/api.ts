@@ -16,8 +16,8 @@ const getSignedUrl = async (path: string): Promise<string> => {
 
     if (error) {
         console.error("Error generating signed URL:", error);
-        // Fallback para URL pública se o bucket for acidentalmente público, mas isso deve ser evitado.
-        return supabase.storage.from('generated-arts').getPublicUrl(path).data.publicUrl;
+        // REMOVED INSECURE FALLBACK: return supabase.storage.from('generated-arts').getPublicUrl(path).data.publicUrl;
+        throw new Error("Failed to generate secure download URL.");
     }
     return data.signedUrl;
 };
@@ -90,15 +90,20 @@ export const api = {
 
     // Mapeia e gera a URL assinada para cada imagem
     const historyWithUrls = await Promise.all(data.map(async (row: any) => {
-        const signedUrl = await getSignedUrl(row.image_url);
-        return {
-            id: row.id,
-            url: signedUrl, // Usa a URL assinada
-            prompt: row.prompt,
-            businessInfo: row.business_info,
-            createdAt: new Date(row.created_at).getTime()
-        };
-    }));
+        try {
+            const signedUrl = await getSignedUrl(row.image_url);
+            return {
+                id: row.id,
+                url: signedUrl, // Usa a URL assinada
+                prompt: row.prompt,
+                businessInfo: row.business_info,
+                createdAt: new Date(row.created_at).getTime()
+            };
+        } catch (e) {
+            console.warn(`Skipping image ${row.id} due to failed signed URL generation.`);
+            return null; // Skip images that fail to generate a signed URL
+        }
+    })).then(results => results.filter((img): img is GeneratedImage => img !== null));
 
     return historyWithUrls;
   },
