@@ -21,9 +21,6 @@ export const LampHeader = () => {
               duration: 0.8,
               ease: "easeInOut",
             }}
-            style={{
-              backgroundImage: `conic-gradient(var(--conic-position), var(--tw-gradient-stops))`,
-            }}
             className="absolute inset-auto right-1/2 h-56 overflow-visible w-[30rem] bg-gradient-conic from-primary via-transparent to-transparent text-white [--conic-position:from_70deg_at_center_top]"
           >
             {/* Mantendo apenas a máscara lateral para evitar que o feixe se estenda para fora */}
@@ -38,9 +35,6 @@ export const LampHeader = () => {
               delay: 0.3,
               duration: 0.8,
               ease: "easeInOut",
-            }}
-            style={{
-              backgroundImage: `conic-gradient(var(--conic-position), var(--tw-gradient-stops))`,
             }}
             className="absolute inset-auto left-1/2 h-56 w-[30rem] bg-gradient-conic from-transparent via-transparent to-primary text-white [--conic-position:from_290deg_at_center_top]"
           >
@@ -66,36 +60,22 @@ export const LampHeader = () => {
           
         </div>
 
-        {/* Sparkles Integration (REMOVIDO DAQUI) */}
-        {/* <div className="absolute z-40 w-full h-full top-0 left-0 pointer-events-none">
-          <SparklesCore
-            id="tsparticleslamp"
-            background="transparent"
-            minSize={0.4}
-            maxSize={1.2}
-            particleDensity={50}
-            className="w-full h-full"
-            particleColor="#FFFFFF"
-            speed={0.5}
-          />
-        </div> */}
-      </div>
-
-      {/* Text Content - TITLE ONLY, GIANT */}
-      {/* Ajustado o translate-y para posicionar o título corretamente no novo layout */}
-      <div className="relative z-50 flex -translate-y-[4rem] flex-col items-center px-5">
-        <motion.h1
-          initial={{ opacity: 0.5, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{
-            delay: 0.3,
-            duration: 0.8,
-            ease: "easeInOut",
-          }}
-          className="bg-gradient-to-br from-white to-gray-400 py-4 bg-clip-text text-center text-5xl md:text-7xl font-bold tracking-tighter text-transparent leading-[0.9] md:leading-[0.9]"
-        >
-          Flow <span className="text-white drop-shadow-[0_0_25px_rgba(139,92,246,0.6)]">Designer</span>
-        </motion.h1>
+        {/* Text Content - TITLE ONLY, GIANT */}
+        {/* Ajustado o translate-y para posicionar o título corretamente no novo layout */}
+        <div className="relative z-50 flex -translate-y-[4rem] flex-col items-center px-5">
+          <motion.h1
+            initial={{ opacity: 0.5, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{
+              delay: 0.3,
+              duration: 0.8,
+              ease: "easeInOut",
+            }}
+            className="bg-gradient-to-br from-white to-gray-400 py-4 bg-clip-text text-center text-5xl md:text-7xl font-bold tracking-tighter text-transparent leading-[0.9] md:leading-[0.9]"
+          >
+            Flow <span className="text-white drop-shadow-[0_0_25px_rgba(139,92,246,0.6)]">Designer</span>
+          </motion.h1>
+        </div>
       </div>
     </div>
   );
