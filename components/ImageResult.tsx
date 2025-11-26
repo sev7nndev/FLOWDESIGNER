@@ -9,7 +9,7 @@ interface ImageResultProps {
 
 export const ImageResult: React.FC<ImageResultProps> = ({ image, onDownload }) => {
   return (
-    <div className="group relative rounded-2xl overflow-hidden bg-surface border border-white/5 shadow-2xl animate-fade-in max-w-[420px] mx-auto">
+    <div className="group relative rounded-2xl overflow-hidden bg-surface border border-white/5 shadow-2xl animate-fade-in max-w-[420px] mx-auto hover:shadow-[0_0_50px_rgba(139,92,246,0.3)] transition-shadow duration-500">
       {/* 3:4 Aspect Ratio Container */}
       <div className="aspect-[3/4] w-full relative overflow-hidden bg-black/50">
         <img 
@@ -24,13 +24,13 @@ export const ImageResult: React.FC<ImageResultProps> = ({ image, onDownload }) =
             <div className="flex gap-2 mb-4">
               <button 
                 onClick={onDownload}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/90 hover:bg-primary text-white transition-colors backdrop-blur-md shadow-lg font-medium text-sm"
+                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white transition-colors shadow-2xl shadow-primary/50 font-bold text-sm uppercase tracking-wider"
               >
                 <Download size={18} />
                 Baixar Flyer
               </button>
             </div>
-            <p className="text-gray-300 text-xs line-clamp-3 mb-2 font-light italic opacity-80">{image.prompt}</p>
+            <p className="text-gray-300 text-xs line-clamp-3 mb-2 font-light italic opacity-90 bg-black/30 p-2 rounded-lg">{image.prompt}</p>
             <p className="text-gray-500 text-[10px] flex items-center gap-1 uppercase tracking-wider">
               <Clock size={10} />
               {new Date(image.createdAt).toLocaleTimeString()}

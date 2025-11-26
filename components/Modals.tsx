@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GeneratedImage, User, UserRole } from '../types';
-import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2 } from 'lucide-react';
+import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download } from 'lucide-react';
 import { Button } from './Button';
 
 // --- Generic Modal Wrapper ---
@@ -13,7 +13,7 @@ interface ModalWrapperProps {
 const ModalWrapper: React.FC<ModalWrapperProps> = ({ title, onClose, children }) => (
   <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
     <div className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-      <div className="p-4 border-b border-white/10 flex justify-between items-center bg-zinc-900 z-10">
+      <div className="p-4 border-b border-white/10 flex justify-between items-center bg-zinc-900 z-10 sticky top-0">
         <h3 className="text-lg font-bold text-white">{title}</h3>
         <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white">
           <X size={20} />
@@ -42,17 +42,26 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({ history, onClose, on
           <p>Nenhuma arte gerada ainda.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {history.map((img) => (
-            <div key={img.id} className="group relative aspect-[3/4] bg-black rounded-lg overflow-hidden border border-white/10">
-              <img src={img.url} alt="Arte" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                <Button variant="secondary" onClick={() => onDownload(img)} className="h-8 px-3 text-xs">
+            <div key={img.id} className="group relative aspect-[3/4] bg-black rounded-xl overflow-hidden border border-white/10 shadow-lg transition-all hover:border-primary/50">
+              <img 
+                src={img.url} 
+                alt="Arte" 
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+              />
+              
+              {/* Overlay de Ação */}
+              <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                <p className="text-[10px] text-gray-400 truncate mb-2">{img.businessInfo.companyName}</p>
+                <Button 
+                  variant="primary" 
+                  onClick={() => onDownload(img)} 
+                  className="h-8 px-3 text-xs w-full"
+                  icon={<Download size={14} />}
+                >
                   Baixar
                 </Button>
-              </div>
-              <div className="absolute bottom-0 left-0 w-full p-2 bg-gradient-to-t from-black to-transparent">
-                 <p className="text-[10px] text-gray-300 truncate">{img.businessInfo.companyName}</p>
               </div>
             </div>
           ))}
@@ -115,7 +124,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
       <div className="max-w-xl mx-auto space-y-8">
         
         {/* Status Section */}
-        <div className="p-6 bg-zinc-800/50 border border-white/10 rounded-lg space-y-4">
+        <div className="p-6 bg-zinc-800/50 border border-white/10 rounded-xl space-y-4 shadow-inner shadow-black/20">
             <h4 className="text-lg font-semibold text-white border-b border-white/5 pb-2 mb-4">Status da Conta</h4>
             
             <div className="flex justify-between items-center">
@@ -139,7 +148,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
         </div>
 
         {/* Profile Update Form */}
-        <form onSubmit={handleSave} className="space-y-6 p-6 bg-zinc-900/50 border border-white/10 rounded-lg">
+        <form onSubmit={handleSave} className="space-y-6 p-6 bg-zinc-900/50 border border-white/10 rounded-xl shadow-lg">
             <h4 className="text-lg font-semibold text-white border-b border-white/5 pb-2 mb-4">Atualizar Perfil</h4>
             
             <div className="grid grid-cols-2 gap-4">
@@ -173,7 +182,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
                 </div>
             )}
 
-            <Button type="submit" isLoading={isLoading} className="w-full h-12 rounded-lg" icon={!isLoading ? <Save size={18} /> : null}>
+            <Button type="submit" isLoading={isLoading} className="w-full h-12 rounded-xl" icon={!isLoading ? <Save size={18} /> : null}>
                 Salvar Alterações
             </Button>
         </form>
