@@ -319,19 +319,15 @@ app.get('/api/admin/images', authenticateToken, checkAdminOrDev, async (req, res
             .select('id, image_url, prompt, business_info, created_at, user_id');
 
         if (error) {
-            console.error("Admin Fetch All Images Error:", error);
-            return res.status(500).json({ error: 'Erro ao buscar todas as imagens.' });
+            console.error("Admin Fetch All Images Supabase Error:", error); // Log mais específico
+            return res.status(500).json({ error: 'Erro ao buscar todas as imagens no Supabase.' });
         }
-        
-        // Note: We cannot generate signed URLs here easily, as the Edge Function is needed.
-        // The frontend hook (useAdminGeneratedImages) will handle generating signed URLs 
-        // for each image using the secure Edge Function endpoint.
         
         res.json({ images: data });
 
     } catch (error) {
         console.error("Admin Fetch All Images Internal Error:", error);
-        res.status(500).json({ error: 'Erro interno do servidor.' });
+        res.status(500).json({ error: error.message || 'Erro interno do servidor.' });
     }
 });
 
@@ -364,7 +360,7 @@ app.delete('/api/admin/images/:id', authenticateToken, checkAdminOrDev, async (r
             
         if (storageError) {
             console.warn("Admin Delete Storage Warning: Failed to delete file from storage:", storageError);
-            // Não retornamos 500, pois o registro do DB foi removido.
+            // Não retornamos 500, pois o registro do DB já foi removido.
         }
 
         res.json({ message: 'Imagem deletada com sucesso.' });
