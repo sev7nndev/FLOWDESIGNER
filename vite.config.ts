@@ -12,8 +12,10 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [dyadComponentTagger(), react()],
       define: {
-        // Injeta a variável de ambiente VITE_BACKEND_URL
+        // Injeta variáveis de ambiente
         'import.meta.env.VITE_BACKEND_URL': JSON.stringify(env.VITE_BACKEND_URL || 'http://localhost:3001/api'),
+        'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.SUPABASE_URL || 'https://akynbiixxcftxgvjpjxu.supabase.co'),
+        'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFreW5iaWl4eGNmdHhndmpwanh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjQ3MTcsImV4cCI6MjA3OTc0MDcxN30.FoIp7_p8gI_-JTuL4UU75mfyw1kjUxj0fDvtx6ZwVAI'),
       },
       resolve: {
         alias: {

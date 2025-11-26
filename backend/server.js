@@ -3,7 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
 const rateLimit = require('express-rate-limit');
-const sanitizeHtml = require('sanitize-html'); // New dependency
+const sanitizeHtml = require('sanitize-html');
 
 dotenv.config();
 
@@ -98,10 +98,14 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   const MAX_COMPANY_NAME_LENGTH = 100;
   const MAX_ADDRESS_LENGTH = 100;
   const MAX_PHONE_LENGTH = 30;
-  // Issue 3 Fix: Drastically reduce max logo length (Base64 string)
   const MAX_LOGO_LENGTH = 40000; 
 
-  const sanitizeAndValidateString = (value, maxLength, fieldName) => {
+  // Regex patterns for strict validation
+  const REGEX_ALPHANUMERIC_SPACES = /^[a-zA-Z0-9\s\u00C0-\u00FF.,\-&]*$/; // Allows basic punctuation and accents
+  const REGEX_PHONE = /^[0-9\s\-\(\)\+]*$/; // Allows numbers, spaces, hyphens, parentheses, plus sign
+  const REGEX_ADDRESS_NUMBER = /^[a-zA-Z0-9\s\-\/]*$/; // Allows numbers, letters, spaces, hyphens, slashes
+
+  const sanitizeAndValidateString = (value, maxLength, fieldName, regex = REGEX_ALPHANUMERIC_SPACES) => {
     if (typeof value !== 'string') {
       return `O campo ${fieldName} deve ser uma string.`;
     }
@@ -109,25 +113,38 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
       return `O campo ${fieldName} não pode exceder ${maxLength} caracteres.`;
     }
     
-    // Issue 3 Fix: Sanitize the input to remove potentially malicious HTML/scripts
+    // Sanitize HTML
     const sanitizedValue = sanitizeHtml(value.trim(), {
-      allowedTags: [], // Allow no HTML tags
-      allowedAttributes: {}, // Allow no attributes
+      allowedTags: [], 
+      allowedAttributes: {}, 
     });
+
+    // Check against strict regex
+    if (!regex.test(sanitizedValue)) {
+        return `O campo ${fieldName} contém caracteres inválidos.`;
+    }
 
     return sanitizedValue;
   };
   
-  // Issue 4 Fix: Validation function for address number
+  // Validation function for address number (using specific regex)
   const validateAddressNumber = (value) => {
-    const sanitizedValue = sanitizeAndValidateString(value, MAX_ADDRESS_LENGTH, 'addressNumber');
-    if (typeof sanitizedValue !== 'string') return sanitizedValue; // Return error message if sanitization failed
-
-    // Allow numbers, letters (for A, B, etc.), and hyphens/slashes
-    if (!/^[a-zA-Z0-9\s\-\/]*$/.test(sanitizedValue)) {
-        return "O número do endereço contém caracteres inválidos.";
-    }
-    return sanitizedValue;
+    return sanitizeAndValidateString(value, MAX_ADDRESS_LENGTH, 'addressNumber', REGEX_ADDRESS_NUMBER);
+  };
+  
+  // Validation function for phone (using specific regex)
+  const validatePhone = (value) => {
+    return sanitizeAndValidateString(value, MAX_PHONE_LENGTH, 'phone', REGEX_PHONE);
+  };
+  
+  // Validation function for logo (Base64 check is implicit via length limit and sanitization)
+  const validateLogo = (value) => {
+      if (!value) return null;
+      // Check if it looks like a Base64 string (starts with data:image/...)
+      if (!value.startsWith('data:image/')) {
+          return "O logo não está no formato Base64 esperado.";
+      }
+      return sanitizeAndValidateString(value, MAX_LOGO_LENGTH, 'logo', /.*/); // Allow all characters in Base64 string
   };
 
 
@@ -140,13 +157,13 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   
   const fieldsToValidate = [
     { key: 'companyName', max: MAX_COMPANY_NAME_LENGTH, required: true, validator: sanitizeAndValidateString },
-    { key: 'phone', max: MAX_PHONE_LENGTH, required: true, validator: sanitizeAndValidateString },
+    { key: 'phone', max: MAX_PHONE_LENGTH, required: true, validator: validatePhone },
     { key: 'addressStreet', max: MAX_ADDRESS_LENGTH, required: true, validator: sanitizeAndValidateString },
-    { key: 'addressNumber', max: MAX_ADDRESS_LENGTH, required: true, validator: validateAddressNumber }, // Using new validator
+    { key: 'addressNumber', max: MAX_ADDRESS_LENGTH, required: true, validator: validateAddressNumber },
     { key: 'addressNeighborhood', max: MAX_ADDRESS_LENGTH, required: true, validator: sanitizeAndValidateString },
     { key: 'addressCity', max: MAX_ADDRESS_LENGTH, required: true, validator: sanitizeAndValidateString },
     { key: 'details', max: MAX_DETAILS_LENGTH, required: true, validator: sanitizeAndValidateString },
-    { key: 'logo', max: MAX_LOGO_LENGTH, required: false, validator: sanitizeAndValidateString }, // Using reduced max length
+    { key: 'logo', max: MAX_LOGO_LENGTH, required: false, validator: validateLogo },
   ];
 
   for (const { key, max, required, validator } of fieldsToValidate) {
@@ -158,7 +175,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
 
     if (value) {
       const validationResult = validator(value, max, key);
-      if (typeof validationResult === 'string' && validationResult.startsWith('O campo') || validationResult.startsWith('O número')) {
+      if (typeof validationResult === 'string' && validationResult.startsWith('O campo') || validationResult.startsWith('O número') || validationResult.startsWith('O logo')) {
         return res.status(400).json({ error: validationResult });
       }
       sanitizedPromptInfo[key] = validationResult;
