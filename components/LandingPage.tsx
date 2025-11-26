@@ -8,6 +8,7 @@ import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
 import { FlyerMockupProps } from './FlyerMockup'; // Importando o tipo para tipagem local
+import { SparklesCore } from './Sparkles'; // Importando SparklesCore
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -139,6 +140,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
       {/* Background Gradients */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-zinc-950/0 to-zinc-950/0 pointer-events-none" />
       
+      {/* Sparkles Background (New Full Screen Position) */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <SparklesCore
+          id="tsparticles-full"
+          background="transparent"
+          minSize={0.4}
+          maxSize={1.2}
+          particleDensity={50}
+          className="w-full h-full"
+          particleColor="#FFFFFF"
+          speed={0.5}
+        />
+      </div>
+
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">

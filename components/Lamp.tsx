@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { SparklesCore } from "./Sparkles";
+// SparklesCore importado, mas não usado aqui
+// import { SparklesCore } from "./Sparkles"; 
 
 export const LampHeader = () => {
   return (
@@ -65,8 +66,8 @@ export const LampHeader = () => {
           
         </div>
 
-        {/* Sparkles Integration (Preenche o contêiner, que agora é menor) */}
-        <div className="absolute z-40 w-full h-full top-0 left-0 pointer-events-none">
+        {/* Sparkles Integration (REMOVIDO DAQUI) */}
+        {/* <div className="absolute z-40 w-full h-full top-0 left-0 pointer-events-none">
           <SparklesCore
             id="tsparticleslamp"
             background="transparent"
@@ -77,7 +78,7 @@ export const LampHeader = () => {
             particleColor="#FFFFFF"
             speed={0.5}
           />
-        </div>
+        </div> */}
       </div>
 
       {/* Text Content - TITLE ONLY, GIANT */}
