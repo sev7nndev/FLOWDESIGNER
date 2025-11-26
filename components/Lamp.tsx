@@ -3,7 +3,8 @@ import { SparklesCore } from "./Sparkles";
 
 export const LampHeader = () => {
   return (
-    <div className="relative flex h-[16rem] md:h-[22rem] flex-col items-center justify-center w-full z-0">
+    // Aumentando a altura para garantir que as estrelas cubram mais área
+    <div className="relative flex h-[20rem] md:h-[28rem] flex-col items-center justify-center w-full z-0">
       <div className="relative flex w-full flex-1 scale-y-125 items-center justify-center isolate z-0 mt-[-4rem] md:mt-[-6rem]">
         
         {/* Lamp Left Beam */}
