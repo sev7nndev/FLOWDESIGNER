@@ -306,7 +306,7 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBack }) => {
                         <Code size={28} className="text-primary" /> Painel do Desenvolvedor
                     </h1>
                     <Button variant="secondary" onClick={onBack} icon={<ArrowLeft size={16} />}>
-                        Voltar ao App
+                        Sair do app
                     </Button>
                 </div>
 
