@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User } from './types';
+import { User, UserRole } from './types';
 import { getSupabase } from './services/supabaseClient';
 import { LampHeader } from './components/Lamp';
 import { LandingPage } from './components/LandingPage';
@@ -174,7 +174,7 @@ export const App: React.FC = () => {
         </div>
       </main>
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profile?.role || 'free'} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profile?.role as UserRole || 'free'} />}
     </div>
   );
 };

@@ -7,15 +7,19 @@ import { FlyerMockup } from './FlyerMockup';
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
+import { FlyerMockupProps } from './FlyerMockup'; // Importando o tipo para tipagem local
 
 interface LandingPageProps {
   onGetStarted: () => void;
   onLogin: () => void;
 }
 
+// Definindo o tipo localmente para garantir a compatibilidade
+type FlyerData = Omit<FlyerMockupProps, 'theme'> & { theme: 'mechanic' | 'food' | 'law' | 'tech' };
+
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
   
-  const flyers = [
+  const flyers: FlyerData[] = [
     {
       bg: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=1000&auto=format&fit=crop",
       title: "AUTO CENTER",

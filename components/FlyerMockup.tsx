@@ -1,7 +1,7 @@
 import React from 'react';
 import { Phone, Shield } from 'lucide-react';
 
-interface FlyerMockupProps {
+export interface FlyerMockupProps {
   bg: string;
   title: string;
   subtitle: string;
