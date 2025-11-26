@@ -71,8 +71,7 @@ export const LampHeader = () => {
           className="absolute inset-auto z-50 h-0.5 w-[30rem] -translate-y-[7rem] bg-primary "
         ></motion.div>
 
-        {/* Masking */}
-        <div className="absolute inset-auto z-40 h-44 w-full -translate-y-[12.5rem] bg-background "></div>
+        {/* Masking - REMOVED THE CULPRIT LINE */}
       </div>
 
       {/* Sparkles Integration */}
