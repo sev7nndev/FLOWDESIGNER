@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from './Button';
 import { LampHeader } from './Lamp';
@@ -304,7 +303,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
            <div className="max-w-7xl mx-auto relative z-10">
             <div className="text-center mb-16">
               <span className="text-primary text-xs font-bold uppercase tracking-widest">Investimento</span>
-              <h3 className="text-4xl font-bold text-white mt-2">Planos Flexíveis</h3>
+              <h3 className="text-3xl md:text-4xl font-bold text-white mt-2">Planos Flexíveis</h3> {/* Reduced from 4xl to 3xl/4xl */}
               <p className="text-gray-400 mt-4">Cancele a qualquer momento. Sem fidelidade.</p>
             </div>
 
@@ -460,7 +459,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
       <div className="mb-6">
         <h4 className={`text-lg font-bold mb-2 ${highlight ? 'text-primary' : 'text-white'}`}>{name}</h4>
         <div className="flex items-baseline gap-1">
-          <span className="text-4xl font-bold text-white">{price}</span>
+          <span className="text-3xl md:text-4xl font-bold text-white">{price}</span> {/* Adjusted size here */}
           {period && <span className="text-gray-500 text-sm">{period}</span>}
         </div>
         <p className="text-gray-400 text-sm mt-2">{description}</p>
