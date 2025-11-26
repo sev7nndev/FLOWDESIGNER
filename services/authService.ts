@@ -1,11 +1,8 @@
-
 import { User, UserRole } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 const USERS_KEY = "flow_users";
 const SESSION_KEY = "flow_session";
-
-const DEV_EMAIL = "sevenbeatx@gmail.com";
 
 export const authService = {
   init: () => {},
@@ -13,20 +10,6 @@ export const authService = {
   login: async (email: string, password: string): Promise<User | null> => {
     const supabase = getSupabase();
     
-    // --- LOGIN LOCAL (BACKDOOR DE CONFIGURAÇÃO) ---
-    // Permite entrar para configurar as chaves ANTES do Supabase estar conectado
-    if (email === DEV_EMAIL && password === "24526082") {
-      const devUser: User = {
-        id: "master-dev-local",
-        name: "SevenBeatx (Dev)",
-        email: email,
-        role: "admin",
-        createdAt: Date.now()
-      };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(devUser));
-      return devUser;
-    }
-
     // --- LOGIN SUPABASE OFICIAL ---
     if (supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -35,24 +18,19 @@ export const authService = {
       // Buscar Role na tabela de profiles
       let role: UserRole = 'client';
       
-      // 1. Verifica se é o Dev Supremo (Hardcoded Security)
-      if (data.user.email === DEV_EMAIL) {
-        role = 'admin';
-      } else {
-        // 2. Busca do banco de dados
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single();
-        
-        if (profile?.role) role = profile.role as UserRole;
-      }
+      // Fetch role from the profiles table
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, first_name')
+        .eq('id', data.user.id)
+        .single();
+      
+      if (profile?.role) role = profile.role as UserRole;
 
       const user: User = {
         id: data.user.id,
         email: data.user.email || '',
-        name: data.user.user_metadata.name || email.split('@')[0],
+        name: profile?.first_name || data.user.user_metadata.name || email.split('@')[0],
         role: role,
         createdAt: Date.now()
       };
@@ -79,6 +57,7 @@ export const authService = {
 
     if (supabase) {
       // SUPABASE REGISTER
+      // Note: The role is set via the handle_new_user trigger on the database side.
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -88,8 +67,9 @@ export const authService = {
       if (error) throw new Error(error.message);
       if (!data.user) throw new Error("Erro ao criar usuário. Verifique seu email.");
 
-      // Role automática baseada no email (definida também no Trigger do SQL por segurança)
-      const role = email === DEV_EMAIL ? 'admin' : 'client';
+      // Since the profile is created asynchronously via trigger, we assume 'client' for immediate session, 
+      // but the role will be corrected on next login/session refresh.
+      const role: UserRole = 'client'; 
 
       const user: User = {
         id: data.user.id,
@@ -109,7 +89,7 @@ export const authService = {
         throw new Error("Email já cadastrado");
       }
 
-      const role: UserRole = email === DEV_EMAIL ? 'admin' : 'client';
+      const role: UserRole = 'client'; // Removed DEV_EMAIL check here too
 
       const newUser = {
         id: crypto.randomUUID(),

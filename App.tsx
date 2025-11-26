@@ -28,6 +28,33 @@ export const App: React.FC = () => {
     form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage, setForm, setState
   } = useGeneration(user);
 
+  const fetchUserRoleAndSetSession = async (supabaseUser: any) => {
+    const supabase = getSupabase();
+    let role = 'client';
+    let name = supabaseUser.user_metadata?.name || 'Usuário';
+
+    if (supabase) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, first_name')
+        .eq('id', supabaseUser.id)
+        .single();
+      
+      if (profile?.role) role = profile.role;
+      if (profile?.first_name) name = profile.first_name;
+    }
+
+    const newUser: User = {
+      id: supabaseUser.id,
+      email: supabaseUser.email || '',
+      name: name,
+      role: role as User['role'],
+      createdAt: Date.now()
+    };
+    setUser(newUser);
+    setView('APP');
+  };
+
   // Init Auth & History
   useEffect(() => {
     const supabase = getSupabase();
@@ -35,14 +62,14 @@ export const App: React.FC = () => {
       // Check Session
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
-          handleUserSession(session.user);
+          fetchUserRoleAndSetSession(session.user);
         }
       });
 
       // Listen for Auth Changes
       const { data: { subscription } = { data: { subscription: { unsubscribe: () => {} } } } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
-          handleUserSession(session.user);
+          fetchUserRoleAndSetSession(session.user);
         } else {
           setUser(null);
           setView('LANDING');
@@ -59,20 +86,6 @@ export const App: React.FC = () => {
     }
   }, [user, loadHistory]);
 
-
-  const handleUserSession = (supabaseUser: any) => {
-    // NOTE: Role determination is complex and handled in authService.
-    // For simplicity here, we assume 'client' unless it's the dev email.
-    const newUser: User = {
-      id: supabaseUser.id,
-      email: supabaseUser.email || '',
-      name: supabaseUser.user_metadata?.name || 'Usuário',
-      role: supabaseUser.email === "sevenbeatx@gmail.com" ? 'admin' : 'client',
-      createdAt: Date.now()
-    };
-    setUser(newUser);
-    setView('APP');
-  };
 
   const handleLogout = async () => {
     const supabase = getSupabase();
@@ -95,7 +108,7 @@ export const App: React.FC = () => {
   }
 
   if (view === 'AUTH') {
-    return <AuthScreens onSuccess={handleUserSession} onBack={() => setView('LANDING')} />;
+    return <AuthScreens onSuccess={fetchUserRoleAndSetSession} onBack={() => setView('LANDING')} />;
   }
   
   if (view === 'ADMIN') {

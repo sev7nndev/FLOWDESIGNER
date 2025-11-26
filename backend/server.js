@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -28,6 +27,21 @@ app.post('/api/generate', async (req, res) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(userToken);
     if (authError || !user) {
       return res.status(401).json({ error: 'Usuário não autenticado.' });
+    }
+
+    // 1.5. Verificar Autorização/Role (Critical Security Fix)
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const userRole = profile?.role || 'client';
+
+    // For this example, only 'admin' users are authorized to generate (simulating a paid tier)
+    // In a real app, this would check for credits or subscription status.
+    if (userRole !== 'admin') {
+      return res.status(403).json({ error: 'Acesso negado. A geração de arte está disponível apenas para usuários Pro (Admin).' });
     }
 
     // 2. Perplexity (Cérebro) - Server Side

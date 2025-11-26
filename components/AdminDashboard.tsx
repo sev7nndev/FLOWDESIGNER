@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { AppSettings, User } from '../types';
 import { Button } from './Button';
-import { Save, Shield, Key, Users, ArrowLeft, Database } from 'lucide-react';
+import { Save, Shield, Users, ArrowLeft, Database } from 'lucide-react';
 
 interface AdminDashboardProps {
   settings: AppSettings;
@@ -38,40 +37,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, onSave
         </div>
 
         <div className="grid gap-8">
-          {/* API Keys Section */}
-          <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Key size={20} className="text-yellow-400" /> IA - Gerações (Visual & Texto)
-            </h2>
-            <p className="text-gray-400 text-sm mb-6">
-              Chaves necessárias para criar as artes.
-            </p>
-
-            <div className="space-y-4 max-w-2xl">
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Perplexity API Key (Cérebro)</label>
-                <input 
-                  type="password" 
-                  className="w-full bg-black/50 border border-white/10 rounded-lg p-3 font-mono text-sm focus:border-primary outline-none"
-                  value={keys.perplexityKey}
-                  onChange={e => setKeys({...keys, perplexityKey: e.target.value})}
-                  placeholder="pplx-..."
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Freepik API Key (Imagem)</label>
-                <input 
-                  type="password" 
-                  className="w-full bg-black/50 border border-white/10 rounded-lg p-3 font-mono text-sm focus:border-primary outline-none"
-                  value={keys.freepikKey}
-                  onChange={e => setKeys({...keys, freepikKey: e.target.value})}
-                  placeholder="FPSX..."
-                />
-              </div>
-            </div>
-          </div>
-
           {/* Supabase Section */}
           <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">

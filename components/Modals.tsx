@@ -1,6 +1,6 @@
 import React from 'react';
 import { GeneratedImage, AppSettings } from '../types';
-import { X, Image as ImageIcon, Key, Trash2 } from 'lucide-react';
+import { X, Image as ImageIcon, Trash2, Info } from 'lucide-react';
 import { Button } from './Button';
 
 // --- Generic Modal Wrapper ---
@@ -69,41 +69,19 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose }) => {
-  const [localSettings, setLocalSettings] = React.useState(settings);
+export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
+  // Settings are now only Supabase keys, which are managed by AdminDashboard.
+  // Personal AI keys are removed for security.
 
   return (
     <ModalWrapper title="Configurações Pessoais" onClose={onClose}>
       <div className="max-w-xl mx-auto space-y-6">
-        <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-200 text-sm">
-          <p>Nota: O administrador já configurou chaves globais. Adicione chaves aqui apenas se quiser usar sua própria conta pessoal.</p>
-        </div>
-        
-        <div>
-           <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Sua Perplexity Key</label>
-           <input 
-             type="password" 
-             className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-primary outline-none"
-             value={localSettings.perplexityKey}
-             onChange={e => setLocalSettings({...localSettings, perplexityKey: e.target.value})}
-             placeholder="Deixe em branco para usar a do Admin"
-           />
-        </div>
-         <div>
-           <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Sua Freepik Key</label>
-           <input 
-             type="password" 
-             className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-primary outline-none"
-             value={localSettings.freepikKey}
-             onChange={e => setLocalSettings({...localSettings, freepikKey: e.target.value})}
-             placeholder="Deixe em branco para usar a do Admin"
-           />
-        </div>
-
-        <div className="flex justify-end pt-4">
-          <Button onClick={() => { onSave(localSettings); onClose(); }}>
-            Salvar Preferências
-          </Button>
+        <div className="p-6 bg-zinc-800/50 border border-white/10 rounded-lg text-gray-300 text-sm flex items-start gap-3">
+          <Info size={20} className="text-primary flex-shrink-0 mt-0.5" />
+          <p>
+            As configurações de chaves de API de Inteligência Artificial foram movidas para o servidor seguro. 
+            Este painel agora é usado apenas para configurações futuras do usuário.
+          </p>
         </div>
       </div>
     </ModalWrapper>

@@ -43,13 +43,10 @@ export interface User {
   createdAt: number;
 }
 
-// Apenas configs que o frontend precisa saber (URLs públicas), NADA SECRETO
+// Apenas configs que o frontend precisa saber (URLs públicas)
 export interface AppSettings {
   supabaseUrl: string;
   supabaseKey: string; // Anon Key is fine
-  // Fix: Add missing optional keys for external services
-  perplexityKey?: string;
-  freepikKey?: string;
 }
 
 // Fix: Add ArtStyle interface used by StyleCard
