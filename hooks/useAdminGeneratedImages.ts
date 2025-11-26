@@ -45,8 +45,15 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
             });
 
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || "Erro ao buscar todas as imagens.");
+                let errorBody = { error: `Erro do servidor: Status ${response.status}` };
+                try {
+                    // Tenta analisar o corpo da resposta como JSON
+                    errorBody = await response.json();
+                } catch (e) {
+                    // Se falhar (ex: Unexpected end of JSON input), usa a mensagem padrão
+                    console.warn("Falha ao analisar JSON de erro do backend.");
+                }
+                throw new Error(errorBody.error || `Erro desconhecido: Status ${response.status}`);
             }
 
             const data = await response.json();
@@ -85,8 +92,13 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
             });
 
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || "Erro ao deletar imagem.");
+                let errorBody = { error: `Erro do servidor: Status ${response.status}` };
+                try {
+                    errorBody = await response.json();
+                } catch (e) {
+                    console.warn("Falha ao analisar JSON de erro de exclusão.");
+                }
+                throw new Error(errorBody.error || `Falha ao deletar imagem: Status ${response.status}`);
             }
 
             setImages(prev => prev.filter(img => img.id !== imageId));
