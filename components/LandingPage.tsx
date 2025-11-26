@@ -3,138 +3,15 @@ import { Button } from './Button';
 import { LampHeader } from './Lamp';
 import { ChevronRight, Sparkles, ShieldCheck, Zap, Check, Star, MessageSquare, Image as ImageIcon, CreditCard, ChevronDown, Phone, MapPin, Clock, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { FlyerMockup } from './FlyerMockup';
+import { PricingCard } from './PricingCard';
+import { TestimonialCard } from './TestimonialCard';
+import { Accordion } from './Accordion';
 
 interface LandingPageProps {
   onGetStarted: () => void;
   onLogin: () => void;
 }
-
-// --- COMPONENTE DE MOCKUP DE FLYER "PREMIUM" ---
-const FlyerMockup = ({ bg, title, subtitle, phone, theme, badge, price }: any) => {
-  
-  // --- LAYOUT 1: MECÂNICA (Agressivo, Diagonal, Dark) ---
-  if (theme === 'mechanic') {
-    return (
-      <div className="w-56 md:w-64 aspect-[3/4] rounded-xl overflow-hidden relative group flex-shrink-0 shadow-2xl border border-zinc-800">
-        <img src={bg} className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110" alt={title} />
-        {/* Overlay Diagonal */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90" />
-        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-slate-900/90 skew-y-6 transform origin-bottom-right translate-y-4 border-t-4 border-red-600" />
-        
-        {/* Content */}
-        <div className="absolute inset-0 p-5 flex flex-col justify-between z-10">
-          <div className="self-end">
-            <div className="bg-red-600 text-white text-xs font-black italic uppercase px-3 py-1 skew-x-[-10deg] shadow-lg">
-              {badge}
-            </div>
-          </div>
-          <div className="mb-4">
-            <h3 className="text-3xl font-black text-white italic uppercase leading-none drop-shadow-md tracking-tighter">
-              {title}
-            </h3>
-            <div className="w-16 h-1.5 bg-red-600 my-2 skew-x-[-20deg]" />
-            <p className="text-gray-300 text-[10px] font-bold uppercase tracking-wide mb-3">
-              {subtitle}
-            </p>
-            <div className="flex items-center gap-2 bg-black/60 p-2 rounded-lg border border-white/10 backdrop-blur-sm w-fit">
-              <Phone size={12} className="text-red-500" />
-              <span className="text-white text-xs font-bold">{phone}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // --- LAYOUT 2: GASTRONOMIA (Varejo, Preço em Destaque, Quente) ---
-  if (theme === 'food') {
-    return (
-      <div className="w-56 md:w-64 aspect-[3/4] rounded-xl overflow-hidden relative group flex-shrink-0 shadow-2xl border border-zinc-800">
-        <img src={bg} className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110" alt={title} />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-        
-        {/* Badge de Preço Circular */}
-        <div className="absolute top-4 right-4 bg-yellow-500 w-16 h-16 rounded-full flex flex-col items-center justify-center shadow-[0_0_15px_rgba(234,179,8,0.6)] rotate-12 group-hover:rotate-0 transition-transform border-2 border-white border-dashed">
-          <span className="text-[8px] font-bold text-red-900 uppercase">Apenas</span>
-          <span className="text-lg font-black text-red-900 leading-none">{price}</span>
-        </div>
-
-        <div className="absolute bottom-0 w-full p-5 text-center">
-          <div className="bg-red-600/90 backdrop-blur-md p-4 rounded-t-2xl border-t border-yellow-500/50 shadow-lg">
-            <h3 className="text-2xl font-black text-yellow-400 uppercase drop-shadow-md font-sans mb-1">
-              {title}
-            </h3>
-            <p className="text-white text-[10px] font-medium leading-tight mb-2">
-              {subtitle}
-            </p>
-            <div className="bg-white/10 rounded-full py-1 px-3 inline-block">
-              <span className="text-white text-[10px] font-bold flex items-center gap-1 justify-center">
-                <Phone size={8} /> {phone}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // --- LAYOUT 3: JURÍDICO (Sóbrio, Elegante, Dourado) ---
-  if (theme === 'law') {
-    return (
-      <div className="w-56 md:w-64 aspect-[3/4] rounded-xl overflow-hidden relative group flex-shrink-0 shadow-2xl border border-zinc-800 bg-slate-900">
-        <div className="h-2/3 overflow-hidden relative">
-           <img src={bg} className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 transition-all duration-700" alt={title} />
-           <div className="absolute inset-0 bg-slate-900/30" />
-        </div>
-        
-        <div className="absolute bottom-0 w-full h-1/2 bg-gradient-to-t from-slate-950 to-slate-900 flex flex-col items-center justify-center p-6 text-center border-t border-amber-500/30">
-          <div className="w-8 h-8 mb-3 text-amber-500 border border-amber-500/50 rounded flex items-center justify-center">
-            <Shield size={16} />
-          </div>
-          <h3 className="text-lg font-serif font-bold text-white uppercase tracking-widest mb-1">
-            {title}
-          </h3>
-          <div className="w-8 h-px bg-amber-500 my-2" />
-          <p className="text-slate-400 text-[9px] uppercase tracking-wide mb-4 line-clamp-2">
-            {subtitle}
-          </p>
-          <span className="text-amber-500 text-[10px] font-serif border border-amber-500/30 px-4 py-1 rounded-sm">
-            {phone}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  // --- LAYOUT 4: TECH / OFERTAS (Glassmorphism, Neon) ---
-  return (
-    <div className="w-56 md:w-64 aspect-[3/4] rounded-xl overflow-hidden relative group flex-shrink-0 shadow-2xl border border-zinc-800">
-      <img src={bg} className="w-full h-full object-cover" alt={title} />
-      <div className="absolute inset-0 bg-blue-900/30 mix-blend-overlay" />
-      
-      {/* Glass Card Center */}
-      <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl text-center w-full shadow-[0_8px_32px_rgba(0,0,0,0.37)] group-hover:scale-105 transition-transform duration-300 relative overflow-hidden">
-          <div className="absolute -top-10 -left-10 w-20 h-20 bg-cyan-500/30 blur-xl rounded-full pointer-events-none" />
-          <div className="absolute -bottom-10 -right-10 w-20 h-20 bg-purple-500/30 blur-xl rounded-full pointer-events-none" />
-          
-          <span className="bg-cyan-500 text-black text-[8px] font-bold uppercase px-2 py-0.5 rounded mb-3 inline-block">
-            {badge}
-          </span>
-          <h3 className="text-xl font-bold text-white mb-2 leading-tight tracking-tight">
-            {title}
-          </h3>
-          <p className="text-cyan-100 text-[9px] mb-3 leading-tight">
-            {subtitle}
-          </p>
-          <div className="text-white font-mono text-[10px] bg-black/30 rounded py-1 border border-white/5">
-            {phone}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
   
@@ -433,6 +310,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
           </div>
         </section>
 
+        {/* CTA Section (NEW) */}
+        <section className="py-24 px-6 bg-zinc-950/50 border-t border-white/5">
+            <div className="max-w-4xl mx-auto text-center p-10 rounded-3xl bg-gradient-to-br from-zinc-900 to-zinc-950 border border-primary/20 shadow-2xl shadow-primary/10">
+                <Sparkles size={48} className="text-primary mx-auto mb-4 animate-pulse-slow" />
+                <h3 className="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
+                    Pare de Pagar <span className="text-primary">Designers.</span>
+                </h3>
+                <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
+                    Comece a gerar artes de alta conversão em segundos com a inteligência artificial do Flow Designer.
+                </p>
+                <Button onClick={onGetStarted} className="h-14 px-10 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20">
+                    Quero Minhas Artes Agora <ChevronRight className="ml-2" />
+                </Button>
+            </div>
+        </section>
+
         {/* FAQ */}
         <section className="py-20 px-6 bg-zinc-900/30">
           <div className="max-w-3xl mx-auto">
@@ -464,104 +357,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
           <p className="text-gray-500 text-sm">© 2024 Flow Designer. Todos os direitos reservados.</p>
         </footer>
       </main>
-    </div>
-  );
-};
-
-// --- Sub-components ---
-
-interface PricingCardProps {
-  name: string;
-  price: string;
-  period?: string;
-  description: string;
-  buttonText: string;
-  features: string[];
-  highlight?: boolean;
-  badge?: string;
-  onClick: () => void;
-}
-
-const PricingCard: React.FC<PricingCardProps> = ({ 
-  name, price, period, description, buttonText, features, highlight, badge, onClick 
-}) => {
-  return (
-    <div className={`relative rounded-3xl p-8 flex flex-col h-full transition-transform duration-300 hover:-translate-y-2 ${
-      highlight 
-        ? 'bg-zinc-900/80 border border-primary/50 shadow-2xl shadow-primary/20 z-10 scale-105' 
-        : 'bg-zinc-900/40 border border-white/5 hover:border-white/10'
-    }`}>
-      {highlight && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-primary to-secondary text-white text-[10px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg">
-          {badge}
-        </div>
-      )}
-
-      <div className="mb-6">
-        <h4 className={`text-lg font-bold mb-2 ${highlight ? 'text-primary' : 'text-white'}`}>{name}</h4>
-        <div className="flex items-baseline gap-1">
-          <span className="text-3xl md:text-4xl font-bold text-white">{price}</span>
-          {period && <span className="text-gray-500 text-sm">{period}</span>}
-        </div>
-        <p className="text-gray-400 text-sm mt-2">{description}</p>
-      </div>
-
-      <div className="flex-grow space-y-4 mb-8">
-        {features.map((feature, i) => (
-          <div key={i} className="flex items-start gap-3">
-            <div className={`mt-0.5 p-0.5 rounded-full ${highlight ? 'bg-primary/20 text-primary' : 'bg-white/10 text-gray-400'}`}>
-              <Check size={12} />
-            </div>
-            <span className="text-gray-300 text-sm">{feature}</span>
-          </div>
-        ))}
-      </div>
-
-      <Button 
-        onClick={onClick}
-        className={`w-full h-12 rounded-xl text-sm font-bold ${
-          highlight 
-            ? 'bg-gradient-to-r from-primary to-secondary hover:brightness-110 shadow-lg shadow-primary/25' 
-            : 'bg-white text-black hover:bg-gray-200 border-0'
-        }`}
-      >
-        {buttonText}
-      </Button>
-    </div>
-  );
-};
-
-const TestimonialCard = ({ name, role, text, stars, image }: any) => (
-  <div className="bg-zinc-900/50 border border-white/5 p-6 rounded-2xl">
-    <div className="flex gap-1 mb-4">
-      {[...Array(stars)].map((_, i) => <Star key={i} size={14} className="fill-yellow-400 text-yellow-400" />)}
-    </div>
-    <p className="text-gray-300 text-sm italic mb-4">"{text}"</p>
-    <div className="flex items-center gap-3">
-      {/* User Photo */}
-      <img src={image} alt={name} className="h-10 w-10 rounded-full object-cover border border-primary/50 p-[2px]" />
-      <div>
-        <h5 className="text-white text-sm font-bold">{name}</h5>
-        <span className="text-gray-500 text-xs">{role}</span>
-      </div>
-    </div>
-  </div>
-);
-
-const Accordion = ({ title, children }: any) => {
-  const [isOpen, setIsOpen] = React.useState(false);
-  return (
-    <div className="border-b border-white/5">
-      <button 
-        onClick={() => setIsOpen(!isOpen)} 
-        className="w-full py-4 flex items-center justify-between text-left text-white hover:text-primary transition-colors"
-      >
-        <span className="font-medium">{title}</span>
-        <ChevronDown className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} size={16} />
-      </button>
-      <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-40 pb-4' : 'max-h-0'}`}>
-        <p className="text-gray-400 text-sm leading-relaxed">{children}</p>
-      </div>
     </div>
   );
 };
