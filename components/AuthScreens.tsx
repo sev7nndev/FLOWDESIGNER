@@ -25,12 +25,13 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
     setError('');
     setIsLoading(true);
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 800));
+    // Simulate network delay (removed, as authService already handles async operations)
 
     try {
+      let user: User | null = null;
+      
       if (isLogin) {
-        const user = authService.login(formData.email, formData.password);
+        user = await authService.login(formData.email, formData.password);
         if (user) {
           onSuccess(user);
         } else {
@@ -38,11 +39,13 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
         }
       } else {
         if (!formData.name) throw new Error("Nome é obrigatório");
-        const user = authService.register(formData.name, formData.email, formData.password);
+        user = await authService.register(formData.name, formData.email, formData.password);
         onSuccess(user);
       }
     } catch (err: any) {
-      setError(err.message || 'Ocorreu um erro.');
+      // Check if err is an object with a message property
+      const errorMessage = err.message || 'Ocorreu um erro desconhecido.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
