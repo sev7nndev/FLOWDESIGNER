@@ -86,7 +86,7 @@ export const LampHeader = () => {
       </div>
 
       {/* Text Content - TITLE ONLY, GIANT */}
-      <div className="relative z-50 flex -translate-y-[6rem] flex-col items-center px-5">
+      <div className="relative z-50 flex -translate-y-[4rem] flex-col items-center px-5">
         <motion.h1
           initial={{ opacity: 0.5, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

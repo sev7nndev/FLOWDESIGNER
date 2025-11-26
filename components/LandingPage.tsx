@@ -167,9 +167,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
       <main className="relative z-20">
         {/* Hero Section (Content) */}
         {/* Ajustando o margin-top para que o conteúdo comece logo abaixo do título do LampHeader */}
-        <section className="pt-12 pb-12 md:pt-20 md:pb-20 relative overflow-hidden mt-[-12rem] md:mt-[-16rem] min-h-[400px] flex items-center">
+        <section className="pt-12 pb-12 md:pt-20 md:pb-20 relative overflow-hidden mt-[-8rem] md:mt-[-10rem] min-h-[400px] flex items-center">
           
-          <div className="relative z-50 max-w-4xl mx-auto text-center px-6 mt-20 md:mt-24">
+          <div className="relative z-50 max-w-4xl mx-auto text-center px-6 mt-10 md:mt-12">
             {/* Título removido daqui, pois já está no LampHeader */}
             <p className="text-lg md:text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">
               Sua agência de design particular. Crie artes comerciais de nível de estúdio em segundos.
