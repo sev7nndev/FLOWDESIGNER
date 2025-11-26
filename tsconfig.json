@@ -24,6 +24,5 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "vite-env.d.ts", "supabase/functions/deno.d.ts"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["**/*.ts", "**/*.tsx", "vite-env.d.ts", "supabase/functions/deno.d.ts"]
 }
