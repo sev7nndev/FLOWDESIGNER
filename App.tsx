@@ -28,6 +28,7 @@ export const App: React.FC = () => {
     let name = supabaseUser.user_metadata?.name || 'Usuário';
 
     if (supabase) {
+      // Fetch the user's profile data (including role and first_name) from the secure DB
       const { data: profile } = await supabase
         .from('profiles')
         .select('role, first_name')
@@ -57,6 +58,9 @@ export const App: React.FC = () => {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
           fetchUserRoleAndSetSession(session.user);
+        } else {
+          // If no session, ensure view is LANDING
+          setView('LANDING');
         }
       });
 
@@ -95,6 +99,8 @@ export const App: React.FC = () => {
   }
 
   if (view === 'AUTH') {
+    // onSuccess now receives the Supabase user object from the AuthScreens component
+    // which is then passed to fetchUserRoleAndSetSession
     return <AuthScreens onSuccess={fetchUserRoleAndSetSession} onBack={() => setView('LANDING')} />;
   }
   

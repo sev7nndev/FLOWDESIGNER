@@ -1,7 +1,9 @@
 import { User, UserRole } from "../types";
 import { getSupabase } from "./supabaseClient";
 
-const SESSION_KEY = "flow_session";
+// We no longer store the full user object in localStorage, relying on Supabase SDK for session management.
+// The SESSION_KEY is now unused in this file, but kept for reference if needed elsewhere.
+// const SESSION_KEY = "flow_session"; 
 
 export const authService = {
   init: () => {},
@@ -19,30 +21,12 @@ export const authService = {
     }
     if (!data.user) return null;
     
-    // Buscar Role na tabela de profiles
-    let role: UserRole = 'client';
-    
-    // Fetch role from the profiles table
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, first_name')
-      .eq('id', data.user.id)
-      .single();
-    
-    if (profile?.role) role = profile.role as UserRole;
-
-    const user: User = {
-      id: data.user.id,
-      email: data.user.email || '',
-      name: profile?.first_name || data.user.user_metadata.name || email.split('@')[0],
-      role: role,
-      createdAt: Date.now()
-    };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-    return user;
+    // We return null here. App.tsx will handle fetching the profile/role 
+    // and setting the final User state based on the verified session.
+    return null;
   },
 
-  register: async (name: string, email: string, password: string): Promise<User> => {
+  register: async (name: string, email: string, password: string): Promise<User | null> => {
     const supabase = getSupabase();
 
     if (!supabase) {
@@ -50,7 +34,6 @@ export const authService = {
     }
 
     // SUPABASE REGISTER
-    // Note: The role is set via the handle_new_user trigger on the database side.
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -60,29 +43,20 @@ export const authService = {
     if (error) throw new Error(error.message);
     if (!data.user) throw new Error("Erro ao criar usuário. Verifique seu email.");
 
-    // Since the profile is created asynchronously via trigger, we assume 'client' for immediate session, 
-    // but the role will be corrected on next login/session refresh.
-    const role: UserRole = 'client'; 
-
-    const user: User = {
-      id: data.user.id,
-      email: data.user.email || '',
-      name: name,
-      role: role,
-      createdAt: Date.now()
-    };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-    return user;
+    // We return null here. App.tsx will handle fetching the profile/role 
+    // and setting the final User state based on the verified session.
+    return null;
   },
 
   logout: async () => {
     const supabase = getSupabase();
     if (supabase) await supabase.auth.signOut();
-    localStorage.removeItem(SESSION_KEY);
+    // Removed localStorage.removeItem(SESSION_KEY);
   },
 
-  getCurrentUser: (): User | null => {
-    const session = localStorage.getItem(SESSION_KEY);
-    return session ? JSON.parse(session) : null;
-  }
+  // This function is now obsolete as we don't store the user object locally anymore.
+  // getCurrentUser: (): User | null => {
+  //   const session = localStorage.getItem(SESSION_KEY);
+  //   return session ? JSON.parse(session) : null;
+  // }
 };
