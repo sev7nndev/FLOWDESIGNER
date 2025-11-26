@@ -29,7 +29,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
       badge: "PROMOÇÃO"
     },
     {
-      bg: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1000&auto=format&fit=crop",
+      bg: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1000&auto-format&fit=crop",
       title: "RITA SALGADOS",
       subtitle: "Cento de Salgados fritos na hora. Coxinha & Kibe.",
       phone: "(21) 9888-7777",
@@ -38,7 +38,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
       price: "R$49"
     },
     {
-      bg: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1000&auto=format&fit=crop",
+      bg: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1000&auto-format&fit=crop",
       title: "SILVA ADVOCACIA",
       subtitle: "Direito Trabalhista e Previdenciário.",
       phone: "(11) 3030-4040",
@@ -46,7 +46,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
       badge: "Consultoria"
     },
     {
-      bg: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=1000&auto=format&fit=crop",
+      bg: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=1000&auto-format&fit=crop",
       title: "SMART AUDIO",
       subtitle: "Fone Bluetooth Pro com cancelamento de ruído.",
       phone: "www.site.com",
@@ -54,7 +54,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
       badge: "50% OFF"
     },
     {
-      bg: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=1000&auto=format&fit=crop",
+      bg: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=1000&auto-format&fit=crop",
       title: "BARBER SHOP",
       subtitle: "Corte e Barba. Cerveja gelada inclusa.",
       phone: "Agende Já",
@@ -62,7 +62,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
       badge: "ESTILO"
     },
     {
-      bg: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=1000&auto=format&fit=crop",
+      bg: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=1000&auto-format&fit=crop",
       title: "SUSHI HOUSE",
       subtitle: "Rodízio Premium com Sashimi Ilimitado.",
       phone: "(31) 3333-2222",
@@ -152,9 +152,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
             <button onClick={onLogin} className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
               Entrar
             </button>
-            <button onClick={onGetStarted} className="hidden md:block text-sm font-medium bg-white text-black px-5 py-2 rounded-full hover:bg-gray-200 transition-colors">
+            <Button onClick={onGetStarted} className="hidden md:block text-sm font-medium px-5 py-2 rounded-full">
               Criar Conta
-            </button>
+            </Button>
           </div>
         </div>
       </nav>
@@ -166,12 +166,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
 
       <main className="relative z-20">
         {/* Hero Section (Content) */}
+        {/* Ajustando o margin-top para que o conteúdo comece logo abaixo do título do LampHeader */}
         <section className="pt-12 pb-12 md:pt-20 md:pb-20 relative overflow-hidden mt-[-12rem] md:mt-[-16rem] min-h-[400px] flex items-center">
           
-          <div className="relative z-50 max-w-4xl mx-auto text-center px-6">
-            <h1 className="bg-gradient-to-br from-white to-gray-400 py-4 bg-clip-text text-center text-5xl md:text-7xl font-bold tracking-tighter text-transparent leading-[0.9] md:leading-[0.9] mb-6">
-                Flow <span className="text-white drop-shadow-[0_0_25px_rgba(139,92,246,0.6)]">Designer</span>
-            </h1>
+          <div className="relative z-50 max-w-4xl mx-auto text-center px-6 mt-20 md:mt-24">
+            {/* Título removido daqui, pois já está no LampHeader */}
             <p className="text-lg md:text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">
               Sua agência de design particular. Crie artes comerciais de nível de estúdio em segundos.
             </p>
