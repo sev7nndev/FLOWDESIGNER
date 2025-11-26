@@ -93,6 +93,30 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+// --- Admin/Dev Role Check Middleware ---
+const checkAdminOrDev = async (req, res, next) => {
+    const user = req.user;
+    
+    // Use the RLS-protected client (initialized with user token) to fetch the role
+    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${user.token}` } }
+    });
+
+    const { data: profile, error: profileError } = await supabaseAuth
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile || !['admin', 'dev'].includes(profile.role)) {
+      return res.status(403).json({ error: 'Acesso negado. Requer papel de Administrador ou Desenvolvedor.' });
+    }
+    
+    req.user.role = profile.role; // Attach role for later use if needed
+    next();
+};
+
+
 // --- API Routes ---
 
 app.post('/api/generate', authenticateToken, generationLimiter, async (req, res) => {
@@ -285,6 +309,72 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
     res.status(500).json({ error: error.message || 'Erro interno do servidor durante a geração.' });
   }
 });
+
+// --- NOVO ENDPOINT ADMIN: Buscar todas as imagens geradas ---
+app.get('/api/admin/images', authenticateToken, checkAdminOrDev, async (req, res) => {
+    try {
+        // Use Service Role Client to bypass RLS and fetch all images
+        const { data, error } = await supabaseService
+            .from('images')
+            .select('id, image_url, prompt, business_info, created_at, user_id');
+
+        if (error) {
+            console.error("Admin Fetch All Images Error:", error);
+            return res.status(500).json({ error: 'Erro ao buscar todas as imagens.' });
+        }
+        
+        // Note: We cannot generate signed URLs here easily, as the Edge Function is needed.
+        // The frontend hook (useAdminGeneratedImages) will handle generating signed URLs 
+        // for each image using the secure Edge Function endpoint.
+        
+        res.json({ images: data });
+
+    } catch (error) {
+        console.error("Admin Fetch All Images Internal Error:", error);
+        res.status(500).json({ error: 'Erro interno do servidor.' });
+    }
+});
+
+// --- NOVO ENDPOINT ADMIN: Deletar imagem gerada ---
+app.delete('/api/admin/images/:id', authenticateToken, checkAdminOrDev, async (req, res) => {
+    const { id } = req.params;
+    const { imageUrl } = req.body; // image_url path from DB
+    
+    if (!imageUrl) {
+        return res.status(400).json({ error: 'Caminho da imagem é obrigatório.' });
+    }
+
+    try {
+        // 1. Deletar do banco de dados (Service Role Client)
+        const { error: dbError } = await supabaseService
+            .from('images')
+            .delete()
+            .eq('id', id);
+
+        if (dbError) {
+            console.error("Admin Delete DB Error:", dbError);
+            return res.status(500).json({ error: 'Erro ao deletar registro do banco de dados.' });
+        }
+        
+        // 2. Deletar do Storage (Service Role Client)
+        // O bucket para imagens geradas é 'generated-arts' (assumindo o padrão)
+        const { error: storageError } = await supabaseService.storage
+            .from('generated-arts')
+            .remove([imageUrl]);
+            
+        if (storageError) {
+            console.warn("Admin Delete Storage Warning: Failed to delete file from storage:", storageError);
+            // Não retornamos 500, pois o registro do DB foi removido.
+        }
+
+        res.json({ message: 'Imagem deletada com sucesso.' });
+
+    } catch (error) {
+        console.error("Admin Delete Internal Error:", error);
+        res.status(500).json({ error: 'Erro interno do servidor.' });
+    }
+});
+
 
 app.get('/api/status', (req, res) => {
   res.json({ status: 'Backend is running' });

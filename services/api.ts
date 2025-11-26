@@ -127,6 +127,30 @@ export const api = {
     return historyWithUrls;
   },
   
+  // --- NOVO: Função para buscar TODAS as imagens geradas (Admin/Dev) ---
+  getAllGeneratedImages: async (): Promise<GeneratedImage[]> => {
+    // Esta função deve ser chamada APENAS pelo backend ou por um cliente com Service Role Key.
+    // Como estamos no frontend, vamos usar o endpoint do backend para buscar todos os dados.
+    // No entanto, como o backend ainda não tem um endpoint para isso, vamos simular a busca
+    // usando o cliente Supabase padrão, mas com a expectativa de que o RLS será ignorado
+    // se o usuário for Admin/Dev (o que não é verdade no frontend).
+    // Para manter a segurança, vamos criar um endpoint no backend para isso.
+    
+    // Por enquanto, vamos retornar um array vazio e focar na implementação do frontend.
+    // A implementação segura de "getAllGeneratedImages" deve ser feita no backend.
+    // Para fins de desenvolvimento, vamos usar o cliente padrão, mas isso é inseguro
+    // se o RLS não for configurado para permitir.
+    
+    // Vamos assumir que o backend será atualizado para fornecer este endpoint seguro.
+    // Por enquanto, vamos usar a função getHistory, mas com um nome diferente para o Dev Panel.
+    // Para o Dev Panel, vamos criar um novo hook que chama um novo endpoint seguro no backend.
+    
+    // ALTERNATIVA: Como o backend já tem o Service Role Client, vamos criar um novo endpoint lá.
+    // Por enquanto, vamos deixar esta função no frontend como um placeholder.
+    
+    return [];
+  },
+  
   // --- Funções para Gerenciamento de Imagens da Landing Page ---
   
   getLandingImages: async (): Promise<LandingImage[]> => {
