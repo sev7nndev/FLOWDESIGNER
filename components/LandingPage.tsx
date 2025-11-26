@@ -152,10 +152,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
               <h3 className="text-3xl md:text-5xl font-bold text-white mt-2">Design Profissional Simplificado</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[200px]">
-              {/* Feature 1 - Large */}
+            {/* Alterado para grid-cols-1 e removidas classes de col-span */}
+            <div className="grid grid-cols-1 gap-6 auto-rows-[200px] max-w-3xl mx-auto">
+              {/* Feature 1 - Large -> Full Width */}
               <motion.div 
-                className="md:col-span-2 row-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl"
+                className="col-span-full row-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl"
                 variants={featureVariants}
                 initial="hidden"
                 whileInView="visible"
@@ -170,9 +171,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
                 </div>
               </motion.div>
 
-              {/* Feature 2 - Small */}
+              {/* Feature 2 - Small -> Full Width */}
               <motion.div 
-                className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 flex flex-col justify-center items-center text-center group hover:border-secondary/50 transition-colors hover:shadow-secondary/10 shadow-xl"
+                className="col-span-full bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 flex flex-col justify-center items-center text-center group hover:border-secondary/50 transition-colors hover:shadow-secondary/10 shadow-xl"
                 variants={featureVariants}
                 initial="hidden"
                 whileInView="visible"
@@ -184,9 +185,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
                  <p className="text-gray-400 text-sm">Resolução ultra-alta pronta para impressão ou web.</p>
               </motion.div>
 
-               {/* Feature 3 - Small */}
+               {/* Feature 3 - Small -> Full Width */}
                <motion.div 
-                className="md:col-span-1 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 flex flex-col justify-center items-center text-center group hover:border-accent/50 transition-colors hover:shadow-accent/10 shadow-xl"
+                className="col-span-full bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 flex flex-col justify-center items-center text-center group hover:border-accent/50 transition-colors hover:shadow-accent/10 shadow-xl"
                 variants={featureVariants}
                 initial="hidden"
                 whileInView="visible"
@@ -198,9 +199,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
                  <p className="text-gray-400 text-sm">Artes livres de direitos autorais para você vender.</p>
               </motion.div>
 
-              {/* Feature 4 - Large */}
+              {/* Feature 4 - Large -> Full Width */}
               <motion.div 
-                className="md:col-span-2 bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl"
+                className="col-span-full bg-zinc-900/50 backdrop-blur border border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-primary/50 transition-colors hover:shadow-primary/10 shadow-xl"
                 variants={featureVariants}
                 initial="hidden"
                 whileInView="visible"
