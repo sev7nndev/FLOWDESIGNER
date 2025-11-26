@@ -1,0 +1,169 @@
+import React from 'react';
+import { BusinessInfo, GenerationStatus } from '../types';
+import { Button } from './Button';
+import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2 } from 'lucide-react';
+
+interface InputFieldProps {
+  label: string;
+  value: string;
+  field: keyof BusinessInfo;
+  placeholder: string;
+  icon?: React.ReactNode;
+  onChange: (field: keyof BusinessInfo, value: string) => void;
+}
+
+const InputField: React.FC<InputFieldProps> = ({ label, value, field, placeholder, icon, onChange }) => (
+  <div className="space-y-1.5 group">
+    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 group-focus-within:text-primary transition-colors flex items-center gap-1.5">
+      {icon} {label}
+    </label>
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(field, e.target.value)}
+      placeholder={placeholder}
+      className="w-full bg-zinc-800/50 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-gray-500 focus:bg-zinc-800 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all outline-none backdrop-blur-sm"
+    />
+  </div>
+);
+
+interface GenerationFormProps {
+    form: BusinessInfo;
+    status: GenerationStatus;
+    error?: string;
+    handleInputChange: (field: keyof BusinessInfo, value: string) => void;
+    handleLogoUpload: (file: File) => void;
+    handleGenerate: () => void;
+    loadExample: () => void;
+}
+
+export const GenerationForm: React.FC<GenerationFormProps> = ({
+    form, status, error, handleInputChange, handleLogoUpload, handleGenerate, loadExample
+}) => {
+    const isGenerating = status === GenerationStatus.THINKING || status === GenerationStatus.GENERATING;
+    const canGenerate = form.companyName && form.details;
+
+    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) handleLogoUpload(file);
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Section 1: Identity */}
+            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
+                
+                <div className="relative space-y-6">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                <Building2 size={16} />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-white text-base">1. Identidade Visual</h3>
+                                <p className="text-xs text-gray-500">Dados principais do negócio</p>
+                            </div>
+                        </div>
+                        <button onClick={loadExample} className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
+                            <Wand2 size={12} /> Exemplo
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <InputField label="Nome da Empresa" value={form.companyName} field="companyName" placeholder="Ex: Calors Automóveis" onChange={handleInputChange} />
+                        <div className="space-y-1.5 group">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                                <Upload size={10} /> Logotipo (Opcional)
+                            </label>
+                            <div className="relative">
+                                <input type="file" accept="image/*" onChange={onFileChange} className="hidden" id="logo-upload" />
+                                <label htmlFor="logo-upload" className={`w-full bg-zinc-800/50 border border-white/10 rounded-lg px-4 py-3 text-sm cursor-pointer transition-all flex items-center justify-between hover:bg-zinc-800 hover:border-white/20 ${form.logo ? 'text-green-400 border-green-500/30 bg-green-500/10' : 'text-gray-500'}`}>
+                                    <span className="truncate">{form.logo ? 'Logo Carregada' : 'Enviar Imagem'}</span>
+                                    {form.logo ? <CheckCircle2 size={16} /> : <Upload size={16} />}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Section 2: Contact */}
+            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                <div className="relative space-y-6">
+                    <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                        <div className="h-8 w-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                            <MapPin size={16} />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-white text-base">2. Endereço & Contato</h3>
+                            <p className="text-xs text-gray-500">Para o cliente te encontrar</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-12 md:col-span-8">
+                            <InputField label="Rua / Avenida" value={form.addressStreet} field="addressStreet" placeholder="Rua Silenciosa" onChange={handleInputChange} />
+                        </div>
+                        <div className="col-span-4 md:col-span-4">
+                            <InputField label="Número" value={form.addressNumber} field="addressNumber" placeholder="278" onChange={handleInputChange} />
+                        </div>
+                        <div className="col-span-8 md:col-span-6">
+                            <InputField label="Bairro" value={form.addressNeighborhood} field="addressNeighborhood" placeholder="São José" onChange={handleInputChange} />
+                        </div>
+                        <div className="col-span-12 md:col-span-6">
+                            <InputField label="Cidade" value={form.addressCity} field="addressCity" placeholder="Rio de Janeiro" onChange={handleInputChange} />
+                        </div>
+                        <div className="col-span-12">
+                            <InputField label="WhatsApp / Telefone" value={form.phone} field="phone" placeholder="(21) 99999-9999" icon={<Phone size={10} />} onChange={handleInputChange} />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Section 3: Briefing */}
+            <div className="bg-gradient-to-b from-zinc-800/60 to-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl flex-grow flex flex-col group hover:border-primary/30 transition-colors">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-4">
+                    <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center text-accent">
+                        <Layers size={16} />
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-white text-base">3. O Pedido (Briefing)</h3>
+                        <p className="text-xs text-gray-500">Descreva o que você precisa que a I.A. crie</p>
+                    </div>
+                </div>
+                <textarea
+                    value={form.details}
+                    onChange={(e) => handleInputChange('details', e.target.value)}
+                    placeholder="Ex: Oficina especializada em importados. Promoção de troca de óleo. Cores escuras e neon."
+                    className="w-full flex-grow min-h-[150px] bg-transparent border-0 text-white placeholder-gray-500 focus:ring-0 transition-all outline-none resize-none text-sm leading-relaxed"
+                />
+                <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">A I.A. vai ler isso</p>
+                    <span className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded">{form.details.length} caracteres</span>
+                </div>
+            </div>
+
+            {/* Generation Button & Error */}
+            <div className="space-y-4 pt-4">
+                <Button 
+                    onClick={handleGenerate} 
+                    isLoading={isGenerating}
+                    className="w-full h-16 text-lg font-bold tracking-wide rounded-xl shadow-[0_0_40px_-10px_rgba(139,92,246,0.5)] bg-gradient-to-r from-primary via-purple-600 to-secondary hover:brightness-110 active:scale-[0.98] transition-all border border-white/20 relative overflow-hidden group"
+                    disabled={!canGenerate}
+                >
+                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out" />
+                    <span className="relative flex items-center justify-center gap-3">
+                        {isGenerating ? 'Criando Design (Secure)...' : 
+                        <> <Sparkles className="fill-white" /> GERAR ARTE FLOW </>}
+                    </span>
+                </Button>
+                {error && (
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 animate-fade-in">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                        <p>{error}</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
