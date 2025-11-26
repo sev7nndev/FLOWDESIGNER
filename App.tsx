@@ -164,7 +164,8 @@ export const App: React.FC = () => {
         <LampHeader />
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 relative z-20 mt-[-4rem] md:mt-[-6rem] p-4">
+      {/* Margem negativa ajustada para o novo LampHeader mais simples */}
+      <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 relative z-20 mt-[-2rem] md:mt-[-4rem] p-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Coluna 1: Formulário de Geração */}
