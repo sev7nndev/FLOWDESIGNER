@@ -2,7 +2,6 @@ import { GeneratedImage, BusinessInfo, LandingImage } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // URL do seu Backend Node.js local (ou deployado)
-// Alterado para usar caminho relativo para o backend Node.js (Issue 4 Fix)
 const BACKEND_URL = "/api"; 
 
 export const api = {
@@ -10,17 +9,14 @@ export const api = {
     const supabase = getSupabase();
     if (!supabase) throw new Error("Erro de conexão com o App.");
 
-    // Pegar o token de sessão atual do usuário para enviar ao backend
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error("Faça login para gerar artes.");
 
     try {
-      // Chama o SEU backend, não a API externa
       const response = await fetch(`${BACKEND_URL}/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // Envia o token no cabeçalho Authorization: Bearer
           "Authorization": `Bearer ${session.access_token}` 
         },
         body: JSON.stringify({
@@ -29,18 +25,21 @@ export const api = {
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Erro no servidor");
+        try {
+          const err = await response.json();
+          throw new Error(err.error || "Erro no servidor");
+        } catch (e) {
+          // Se a análise do JSON falhar, a resposta provavelmente estava vazia.
+          console.error("Falha ao analisar a resposta de erro como JSON.", { status: response.status, statusText: response.statusText });
+          throw new Error(`O servidor retornou um erro inesperado (Status: ${response.status}). Verifique se o backend está rodando corretamente.`);
+        }
       }
 
       const data = await response.json();
       
-      // --- SIMULATION BYPASS ---
-      // O backend agora retorna uma URL pública diretamente em image_url.
-      // Não precisamos mais gerar uma URL assinada para ela.
       return {
         id: data.image.id,
-        url: data.image.image_url, // Usa a URL pública diretamente
+        url: data.image.image_url,
         prompt: data.image.prompt,
         businessInfo: data.image.business_info,
         createdAt: new Date(data.image.created_at).getTime()
@@ -59,7 +58,6 @@ export const api = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
-    // RLS garante que apenas os dados do usuário logado são retornados.
     const { data, error } = await supabase
       .from('images')
       .select('*')
@@ -67,13 +65,10 @@ export const api = {
 
     if (error || !data) return [];
 
-    // --- SIMULATION BYPASS ---
-    // O banco de dados agora contém URLs públicas diretamente.
-    // Não precisamos mais gerar URLs assinadas para itens do histórico.
     const historyWithUrls = data.map((row: any) => {
         return {
             id: row.id,
-            url: row.image_url, // Usa a URL pública diretamente
+            url: row.image_url,
             prompt: row.prompt,
             businessInfo: row.business_info,
             createdAt: new Date(row.created_at).getTime()
@@ -83,13 +78,10 @@ export const api = {
     return historyWithUrls;
   },
   
-  // --- Funções para Gerenciamento de Imagens da Landing Page ---
-  
   getLandingImages: async (): Promise<LandingImage[]> => {
     const supabase = getSupabase();
     if (!supabase) return [];
 
-    // RLS permite SELECT público
     const { data, error } = await supabase
       .from('landing_carousel_images')
       .select('id, image_url, sort_order')
@@ -101,7 +93,6 @@ export const api = {
         return [];
     }
 
-    // Converte o path do storage para URL pública (assumindo bucket 'landing-carousel' é público)
     const imagesWithUrls: LandingImage[] = data.map(row => {
         const { data: { publicUrl } } = supabase.storage
             .from('landing-carousel')
@@ -122,10 +113,8 @@ export const api = {
     if (!supabase) throw new Error("Supabase not configured.");
     
     const fileExtension = file.name.split('.').pop();
-    // Armazena no formato: userId/timestamp.ext
     const filePath = `${userId}/${Date.now()}.${fileExtension}`;
     
-    // 1. Upload para o bucket público (RLS deve permitir INSERT para admin/dev)
     const { error: uploadError } = await supabase.storage
       .from('landing-carousel')
       .upload(filePath, file, {
@@ -137,7 +126,6 @@ export const api = {
       throw new Error(`Falha no upload: ${uploadError.message}`);
     }
     
-    // 2. Inserir o path no banco de dados (RLS deve permitir INSERT para admin/dev)
     const { data: dbData, error: dbError } = await supabase
       .from('landing_carousel_images')
       .insert({ image_url: filePath, created_by: userId })
@@ -145,12 +133,10 @@ export const api = {
       .single();
 
     if (dbError || !dbData) {
-      // Tenta remover o arquivo se a inserção falhar
       await supabase.storage.from('landing-carousel').remove([filePath]);
       throw new Error(`Falha ao registrar imagem: ${dbError?.message || 'Erro desconhecido'}`);
     }
     
-    // 3. Retorna a URL pública
     const { data: { publicUrl } } = supabase.storage
         .from('landing-carousel')
         .getPublicUrl(dbData.image_url);
@@ -166,7 +152,6 @@ export const api = {
     const supabase = getSupabase();
     if (!supabase) throw new Error("Supabase not configured.");
     
-    // 1. Deletar do banco de dados (RLS deve permitir DELETE para admin/dev)
     const { error: dbError } = await supabase
       .from('landing_carousel_images')
       .delete()
@@ -176,18 +161,15 @@ export const api = {
       throw new Error(`Falha ao deletar registro: ${dbError.message}`);
     }
     
-    // 2. Deletar do Storage (RLS deve permitir DELETE para admin/dev)
     const { error: storageError } = await supabase.storage
       .from('landing-carousel')
       .remove([path]);
       
     if (storageError) {
-        // Loga o erro, mas não lança exceção, pois o registro do DB já foi removido.
         console.error("Falha ao deletar arquivo do storage:", storageError);
     }
   },
 
-  // A função getDownloadUrl não é mais usada no fluxo principal, mas pode ser útil para outras coisas.
   getDownloadUrl: async (path: string): Promise<string> => {
     const supabase = getSupabase();
     if (!supabase) throw new Error("Supabase not configured.");
