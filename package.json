@@ -7,7 +7,7 @@
     "dev": "concurrently \"vite\" \"npm run server\"",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "server": "node backend/server.js"
+    "server": "node backend/server.cjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
