@@ -22,10 +22,13 @@ const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 const FREEPIK_API_KEY = process.env.FREEPIK_API_KEY;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFreW5iaWl4eGNmdHhndmpwanh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjQ3MTcsImV4cCI6MjA3OTc0MDcxN30.FoIp7_p8gI_-JTuL4UU75mfyw1kjUxj0fDvtx6ZwVAI";
 
-// FIX: Check for essential variables and provide a clear startup error if missing
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !PERPLEXITY_API_KEY || !FREEPIK_API_KEY) {
-  console.error("\n\n\x1b[31m%s\x1b[0m", "ERRO FATAL: Variáveis de ambiente essenciais (Supabase, Perplexity, Freepik) não foram encontradas.");
-  console.error("Por favor, copie o arquivo .env.example para .env.local e preencha TODAS as chaves.\n\n");
+// FIX: Check for essential variables and provide a clear startup error if missing or empty
+if (!SUPABASE_URL || SUPABASE_URL === '' ||
+    !SUPABASE_SERVICE_KEY || SUPABASE_SERVICE_KEY === '' ||
+    !PERPLEXITY_API_KEY || PERPLEXITY_API_KEY === '' ||
+    !FREEPIK_API_KEY || FREEPIK_API_KEY === '') {
+  console.error("\n\n\x1b[31m%s\x1b[0m", "ERRO FATAL: Variáveis de ambiente essenciais (SUPABASE_URL, SUPABASE_SERVICE_KEY, PERPLEXITY_API_KEY, FREEPIK_API_KEY) não foram encontradas ou estão vazias.");
+  console.error("Por favor, verifique o arquivo .env.local na raiz do projeto e preencha TODAS as chaves com valores válidos.\n\n");
   process.exit(1);
 }
 
@@ -63,7 +66,8 @@ const authenticateToken = async (req, res, next) => {
     req.user = { ...user, token }; 
     next();
   } catch (e) {
-    return res.status(403).json({ error: 'Falha na autenticação.' });
+    console.error("Authentication Token Error:", e);
+    return res.status(403).json({ error: 'Falha na autenticação do token.' });
   }
 };
 
@@ -73,7 +77,8 @@ const checkAdminOrDev = async (req, res, next) => {
     });
     const { data: profile, error } = await supabaseAuth.from('profiles').select('role').eq('id', req.user.id).single();
     if (error || !profile || !['admin', 'dev'].includes(profile.role)) {
-      return res.status(403).json({ error: 'Acesso negado.' });
+      console.warn(`User ${req.user.id} (role: ${profile?.role}) attempted admin/dev access.`);
+      return res.status(403).json({ error: 'Acesso negado. Você não tem permissão para esta ação.' });
     }
     req.user.role = profile.role;
     next();
@@ -83,7 +88,8 @@ const checkAdminOrDev = async (req, res, next) => {
 
 const generateDetailedPrompt = async (briefing) => {
   if (!PERPLEXITY_API_KEY || PERPLEXITY_API_KEY === '') {
-    throw new Error("Erro de configuração: PERPLEXITY_API_KEY não está definida ou está vazia no backend.");
+    console.error("PERPLEXITY_API_KEY is missing or empty. Check .env.local.");
+    throw new Error("Erro de configuração: PERPLEXITY_API_KEY não está definida ou está vazia no backend. Verifique seu arquivo .env.local.");
   }
   const systemPrompt = `
     Você é um especialista em engenharia de prompts para IAs de geração de imagem. Sua tarefa é pegar um briefing simples de um cliente e transformá-lo em um prompt detalhado e técnico em inglês. O prompt deve ser rico em detalhes sobre iluminação, estilo de arte, composição, cores e emoção, para gerar um flyer de marketing visualmente impressionante.
@@ -110,13 +116,14 @@ const generateDetailedPrompt = async (briefing) => {
   } catch (error) {
     console.error("Perplexity API Error:", error.response ? error.response.data : error.message);
     const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message;
-    throw new Error(`Falha ao gerar o prompt detalhado com a IA (Perplexity): ${errorMessage}`);
+    throw new Error(`Falha ao gerar o prompt detalhado com a IA (Perplexity): ${errorMessage}. Verifique sua PERPLEXITY_API_KEY e limites de uso.`);
   }
 };
 
 const generateImage = async (prompt) => {
   if (!FREEPIK_API_KEY || FREEPIK_API_KEY === '') {
-    throw new Error("Erro de configuração: FREEPIK_API_KEY não está definida ou está vazia no backend.");
+    console.error("FREEPIK_API_KEY is missing or empty. Check .env.local.");
+    throw new Error("Erro de configuração: FREEPIK_API_KEY não está definida ou está vazia no backend. Verifique seu arquivo .env.local.");
   }
   try {
     // 1. Start generation
@@ -143,11 +150,11 @@ const generateImage = async (prompt) => {
       }
       attempts++;
     }
-    throw new Error("Tempo de geração da imagem excedido.");
+    throw new Error("Tempo de geração da imagem excedido (mais de 60 segundos).");
   } catch (error) {
     console.error("Freepik API Error:", error.response ? error.response.data : error.message);
     const errorMessage = error.response?.data?.message || error.message;
-    throw new Error(`Falha ao gerar a imagem com a IA (Freepik): ${errorMessage}`);
+    throw new Error(`Falha ao gerar a imagem com a IA (Freepik): ${errorMessage}. Verifique sua FREEPIK_API_KEY e limites de uso.`);
   }
 };
 
@@ -167,9 +174,9 @@ const uploadImageToSupabase = async (imageUrl, userId) => {
     if (error) throw error;
     return data.path;
   } catch (error) {
-    console.error("Supabase Upload Error:", error);
+    console.error("Supabase Upload Error for user", userId, ":", error);
     const errorMessage = error.message || 'Erro desconhecido no Supabase Storage.';
-    throw new Error(`Falha ao salvar a imagem gerada no Supabase Storage: ${errorMessage}`);
+    throw new Error(`Falha ao salvar a imagem gerada no Supabase Storage: ${errorMessage}. Verifique as permissões do bucket 'generated-arts'.`);
   }
 };
 
@@ -180,12 +187,10 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   const { promptInfo } = req.body;
   const user = req.user;
 
-  // CRITICAL FIX: Add a check for promptInfo to prevent server crash on empty body
   if (!promptInfo) {
     return res.status(400).json({ error: "Corpo da requisição inválido: objeto 'promptInfo' ausente." });
   }
 
-  // (Input validation remains the same)
   const MAX_DETAILS_LENGTH = 1000;
   const MAX_COMPANY_NAME_LENGTH = 100;
   const MAX_ADDRESS_LENGTH = 100;
@@ -246,23 +251,26 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
         global: { headers: { Authorization: `Bearer ${user.token}` } }
     });
     const { data: profile, error: profileError } = await supabaseAuth.from('profiles').select('role').eq('id', user.id).single();
-    if (profileError) throw new Error(`Acesso negado ou perfil não encontrado no Supabase: ${profileError.message}`);
+    if (profileError) throw new Error(`Acesso negado ou perfil não encontrado no Supabase: ${profileError.message}. Verifique a configuração do Supabase.`);
     const userRole = profile?.role || 'free';
     if (!['admin', 'pro', 'dev', 'free'].includes(userRole)) {
       return res.status(403).json({ error: 'Acesso negado. A geração de arte requer um plano Pro.' });
     }
     
     // --- REAL AI GENERATION FLOW ---
-    console.log("Step 1: Generating detailed prompt...");
+    console.log(`[${user.id}] Step 1: Generating detailed prompt for user ${user.email}...`);
     const detailedPrompt = await generateDetailedPrompt(sanitizedPromptInfo.details);
-    
-    console.log("Step 2: Generating image with Freepik...");
+    console.log(`[${user.id}] Step 1 Complete. Detailed prompt (first 100 chars): ${detailedPrompt.substring(0, 100)}...`);
+
+    console.log(`[${user.id}] Step 2: Generating image with Freepik...`);
     const generatedImageUrl = await generateImage(detailedPrompt);
+    console.log(`[${user.id}] Step 2 Complete. Generated URL: ${generatedImageUrl}`);
 
-    console.log("Step 3: Uploading image to Supabase...");
+    console.log(`[${user.id}] Step 3: Uploading image to Supabase for user ${user.id}...`);
     const imagePath = await uploadImageToSupabase(generatedImageUrl, user.id);
+    console.log(`[${user.id}] Step 3 Complete. Supabase path: ${imagePath}`);
 
-    console.log("Step 4: Saving record to database...");
+    console.log(`[${user.id}] Step 4: Saving record to database for user ${user.id}...`);
     const { data: image, error: dbError } = await supabaseService
       .from('images')
       .insert({
@@ -275,10 +283,11 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
       .single();
 
     if (dbError) {
-      console.error("DB Insert Error:", dbError);
+      console.error(`[${user.id}] DB Insert Error:`, dbError);
       const errorMessage = dbError.message || 'Erro desconhecido ao inserir no banco de dados Supabase.';
-      return res.status(500).json({ error: `Erro ao salvar a imagem no banco de dados Supabase: ${errorMessage}` });
+      return res.status(500).json({ error: `Erro ao salvar a imagem no banco de dados Supabase: ${errorMessage}. Verifique a tabela 'images' e suas permissões.` });
     }
+    console.log(`[${user.id}] Step 4 Complete. Image ID: ${image.id}`);
 
     res.json({ 
       message: 'Arte gerada com sucesso!',
@@ -286,10 +295,10 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
     });
 
   } catch (error) {
-    console.error("Generation Error:", error);
+    console.error(`[${user.id}] Generation Process Failed:`, error);
     res.status(500).json({ 
-      error: error.message || 'Erro interno do servidor durante a geração.',
-      details: error.stack || 'No stack trace available' // Add stack for debugging
+      error: error.message || 'Erro interno do servidor durante a geração. Verifique os logs do backend para mais detalhes.',
+      details: error.stack || 'No stack trace available'
     });
   }
 });
@@ -301,7 +310,8 @@ app.get('/api/admin/images', authenticateToken, checkAdminOrDev, async (req, res
         if (error) throw error;
         res.json({ images: data });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Admin Images Fetch Error:", error);
+        res.status(500).json({ error: error.message || 'Falha ao buscar imagens administrativas.' });
     }
 });
 
@@ -318,7 +328,8 @@ app.delete('/api/admin/images/:id', authenticateToken, checkAdminOrDev, async (r
         
         res.json({ message: 'Imagem deletada com sucesso.' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Admin Image Delete Error:", error);
+        res.status(500).json({ error: error.message || 'Falha ao deletar imagem administrativa.' });
     }
 });
 
