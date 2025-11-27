@@ -153,10 +153,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 <Loader2 size={24} className="animate-spin mr-2" /> Carregando carrossel...
             </div>
           ) : (
-            <div className="flex w-[200%] animate-scroll hover:[animation-play-state:paused] border border-white/10 rounded-xl p-4">
-              {marqueeContent.map((flyer, idx) => (
-                <div key={idx} className="flex gap-4 px-2">
-                  <FlyerMockup {...flyer} />
+            <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-4 p-4">
+              {marqueeContent.map((item, idx) => (
+                <div key={idx} className="w-56 md:w-64 aspect-[3/4] rounded-xl overflow-hidden relative group flex-shrink-0 shadow-2xl border border-zinc-800">
+                  <img 
+                    src={item.bg} 
+                    loading="lazy" 
+                    className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110" 
+                    alt={`Carousel image ${idx + 1}`} 
+                  />
                 </div>
               ))}
             </div>
@@ -283,7 +288,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                         role="Esteticista" 
                         text="Minha clínica precisava de uma identidade mais premium. O Flow Designer capturou exatamente o estilo 'clean' que eu queria. Recomendo!" 
                         stars={5}
-                        image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto-format&fit=crop"
+                        image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop"
                       />
                     </div>
                     <div className="w-[300px] md:w-[400px] flex-shrink-0">
@@ -292,7 +297,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                         role="Lojista de Moda" 
                         text="As vendas da minha loja aumentaram muito depois que comecei a usar os templates de oferta. É muito rápido e profissional." 
                         stars={5}
-                        image="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto-format&fit=crop"
+                        image="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop"
                       />
                     </div>
                  </React.Fragment>
