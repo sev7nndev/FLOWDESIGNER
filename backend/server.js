@@ -277,7 +277,11 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
 
   } catch (error) {
     console.error("Generation Error:", error);
-    res.status(500).json({ error: error.message || 'Erro interno do servidor durante a geração.' });
+    // Ensure a consistent JSON error response
+    res.status(500).json({ 
+      error: error.message || 'Erro interno do servidor durante a geração.',
+      details: error.stack || 'No stack trace available' // Add stack for debugging
+    });
   }
 });
 
