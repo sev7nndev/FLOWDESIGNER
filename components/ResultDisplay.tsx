@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, memo } from 'react';
 import { GeneratedImage, GenerationState, GenerationStatus } from '../types';
 import { ImageResult } from './ImageResult';
 import { GalleryModal } from './Modals';
@@ -12,7 +12,7 @@ interface ResultDisplayProps {
     setShowGallery: (show: boolean) => void;
 }
 
-export const ResultDisplay: React.FC<ResultDisplayProps> = ({ state, downloadImage, showGallery, setShowGallery }) => {
+const ResultDisplayComponent: React.FC<ResultDisplayProps> = ({ state, downloadImage, showGallery, setShowGallery }) => {
     const resultRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -74,3 +74,5 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ state, downloadIma
         </div>
     );
 };
+
+export const ResultDisplay = memo(ResultDisplayComponent);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { BusinessInfo, GenerationStatus } from '../types';
 import { Button } from './Button';
 import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2 } from 'lucide-react';
@@ -40,7 +40,7 @@ interface GenerationFormProps {
     loadExample: () => void;
 }
 
-export const GenerationForm: React.FC<GenerationFormProps> = ({
+const GenerationFormComponent: React.FC<GenerationFormProps> = ({
     form, status, error, handleInputChange, handleLogoUpload, handleGenerate, loadExample
 }) => {
     const isGenerating = status === GenerationStatus.THINKING || status === GenerationStatus.GENERATING;
@@ -54,7 +54,7 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
     return (
         <div className="space-y-6">
             {/* Section 1: Identity */}
-            <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+            <div className="bg-zinc-900/90 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
                 
                 <div className="relative space-y-6">
@@ -99,7 +99,7 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
             </div>
 
             {/* Section 2: Contact */}
-            <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+            <div className="bg-zinc-900/90 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
                 <div className="relative space-y-6">
                     <div className="flex items-center gap-3 border-b border-white/5 pb-4">
                         <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20">
@@ -131,7 +131,7 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
             </div>
 
             {/* Section 3: Briefing */}
-            <div className="bg-gradient-to-b from-zinc-900/80 to-zinc-950/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl flex-grow flex flex-col group hover:border-primary/30 transition-colors">
+            <div className="bg-gradient-to-b from-zinc-900 to-zinc-950 border border-white/10 rounded-3xl p-6 shadow-2xl flex-grow flex flex-col group hover:border-primary/30 transition-colors">
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-4">
                     <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
                         <Layers size={18} />
@@ -179,3 +179,5 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
         </div>
     );
 };
+
+export const GenerationForm = memo(GenerationFormComponent);
