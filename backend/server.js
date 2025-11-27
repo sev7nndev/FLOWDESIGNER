@@ -22,6 +22,16 @@ const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 const FREEPIK_API_KEY = process.env.FREEPIK_API_KEY;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFreW5iaWl4eGNmdHhndmpwanh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjQ3MTcsImV4cCI6MjA3OTc0MDcxN30.FoIp7_p8gI_-JTuL4UU75mfyw1kjUxj0fDvtx6ZwVAI";
 
+// NEW: Log environment variables for debugging
+console.log("Backend Environment Variables Check:");
+console.log(`SUPABASE_URL: ${SUPABASE_URL ? 'Configured' : 'MISSING/EMPTY'}`);
+console.log(`SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY ? 'Configured' : 'MISSING/EMPTY'}`);
+console.log(`PERPLEXITY_API_KEY: ${PERPLEXITY_API_KEY ? 'Configured' : 'MISSING/EMPTY'}`);
+console.log(`FREEPIK_API_KEY: ${FREEPIK_API_KEY ? 'Configured' : 'MISSING/EMPTY'}`);
+console.log(`SUPABASE_ANON_KEY (VITE_SUPABASE_ANON_KEY): ${SUPABASE_ANON_KEY ? 'Configured' : 'MISSING/EMPTY'}`);
+console.log(`PORT: ${port}`);
+
+
 // FIX: Check for essential variables and provide a clear startup error if missing or empty
 if (!SUPABASE_URL || SUPABASE_URL === '' ||
     !SUPABASE_SERVICE_KEY || SUPABASE_SERVICE_KEY === '' ||
@@ -62,12 +72,15 @@ const authenticateToken = async (req, res, next) => {
   if (token == null) return res.status(401).json({ error: 'Token de autenticação ausente.' });
   try {
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
-    if (error || !user) return res.status(403).json({ error: 'Token inválido ou expirado.' });
+    if (error || !user) {
+      console.error("Supabase Auth Error:", error);
+      return res.status(403).json({ error: `Token inválido ou expirado: ${error?.message || 'Erro desconhecido.'}` });
+    }
     req.user = { ...user, token }; 
     next();
   } catch (e) {
     console.error("Authentication Token Error:", e);
-    return res.status(403).json({ error: 'Falha na autenticação do token.' });
+    return res.status(403).json({ error: `Falha na autenticação do token: ${e.message || 'Erro desconhecido.'}` });
   }
 };
 
@@ -183,7 +196,7 @@ const uploadImageToSupabase = async (imageUrl, userId) => {
 
 // --- API Routes ---
 
-app.post('/api/generate', authenticateToken, generationLimiter, async (req, res) => {
+app.post('/api/generate', authenticateToken, generationLimiter, async (req, res, next) => { // Added 'next'
   const { promptInfo } = req.body;
   const user = req.user;
 
@@ -295,27 +308,23 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
     });
 
   } catch (error) {
-    console.error(`[${user.id}] Generation Process Failed:`, error);
-    res.status(500).json({ 
-      error: error.message || 'Erro interno do servidor durante a geração. Verifique os logs do backend para mais detalhes.',
-      details: error.stack || 'No stack trace available'
-    });
+    // Pass the error to the global error handler
+    next(error);
   }
 });
 
 // Admin endpoints
-app.get('/api/admin/images', authenticateToken, checkAdminOrDev, async (req, res) => {
+app.get('/api/admin/images', authenticateToken, checkAdminOrDev, async (req, res, next) => { // Added 'next'
     try {
         const { data, error } = await supabaseService.from('images').select('*');
         if (error) throw error;
         res.json({ images: data });
     } catch (error) {
-        console.error("Admin Images Fetch Error:", error);
-        res.status(500).json({ error: error.message || 'Falha ao buscar imagens administrativas.' });
+        next(error); // Pass to global error handler
     }
 });
 
-app.delete('/api/admin/images/:id', authenticateToken, checkAdminOrDev, async (req, res) => {
+app.delete('/api/admin/images/:id', authenticateToken, checkAdminOrDev, async (req, res, next) => { // Added 'next'
     const { id } = req.params;
     const { imageUrl } = req.body; // This is now the file path
     if (!imageUrl) return res.status(400).json({ error: 'Caminho da imagem é obrigatório.' });
@@ -328,13 +337,21 @@ app.delete('/api/admin/images/:id', authenticateToken, checkAdminOrDev, async (r
         
         res.json({ message: 'Imagem deletada com sucesso.' });
     } catch (error) {
-        console.error("Admin Image Delete Error:", error);
-        res.status(500).json({ error: error.message || 'Falha ao deletar imagem administrativa.' });
+        next(error); // Pass to global error handler
     }
 });
 
 app.get('/api/status', (req, res) => {
   res.json({ status: 'Backend is running' });
+});
+
+// NEW: Global Error handling middleware (MUST be the last app.use())
+app.use((err, req, res, next) => {
+  console.error("Unhandled Backend Error Caught by Global Handler:", err);
+  res.status(err.status || 500).json({
+    error: err.message || "Erro interno do servidor. Por favor, tente novamente mais tarde.",
+    details: err.stack || "Detalhes do erro não disponíveis."
+  });
 });
 
 app.listen(port, () => {
