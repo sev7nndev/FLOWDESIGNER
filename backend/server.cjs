@@ -4,9 +4,10 @@ const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
 const rateLimit = require('express-rate-limit');
 const sanitizeHtml = require('sanitize-html');
-const axios = require('axios');
+const axios = require('axios'); // Manter axios para Freepik
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const { GoogleGenerativeAI } = require('@google/generative-ai'); // Importar Gemini
 
 // FIX: Load .env files from the project root directory
 dotenv.config({ path: path.resolve(__dirname, '..', '.env.local') });
@@ -18,7 +19,7 @@ const port = process.env.PORT || 3001;
 // API & Supabase Keys
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Nova chave Gemini
 const FREEPIK_API_KEY = process.env.FREEPIK_API_KEY;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFreW5iaWl4eGNmdHhndmpwanh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjQ3MTcsImV4cCI6MjA3OTc0MDcxN30.FoIp7_p8gI_-JTuL4UU75mfyw1kjUxj0fDvtx6ZwVAI";
 
@@ -26,7 +27,7 @@ const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI
 console.log("Backend Environment Variables Check:");
 console.log(`SUPABASE_URL: ${SUPABASE_URL ? 'Configured' : 'MISSING/EMPTY'}`);
 console.log(`SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY ? 'Configured' : 'MISSING/EMPTY'}`);
-console.log(`PERPLEXITY_API_KEY: ${PERPLEXITY_API_KEY ? 'Configured' : 'MISSING/EMPTY'}`);
+console.log(`GEMINI_API_KEY: ${GEMINI_API_KEY ? 'Configured' : 'MISSING/EMPTY'}`); // Log Gemini key
 console.log(`FREEPIK_API_KEY: ${FREEPIK_API_KEY ? 'Configured' : 'MISSING/EMPTY'}`);
 console.log(`SUPABASE_ANON_KEY (VITE_SUPABASE_ANON_KEY): ${SUPABASE_ANON_KEY ? 'Configured' : 'MISSING/EMPTY'}`);
 console.log(`PORT: ${port}`);
@@ -35,12 +36,16 @@ console.log(`PORT: ${port}`);
 // FIX: Check for essential variables and provide a clear startup error if missing or empty
 if (!SUPABASE_URL || SUPABASE_URL === '' ||
     !SUPABASE_SERVICE_KEY || SUPABASE_SERVICE_KEY === '' ||
-    !PERPLEXITY_API_KEY || PERPLEXITY_API_KEY === '' ||
+    !GEMINI_API_KEY || GEMINI_API_KEY === '' || // Verificar Gemini key
     !FREEPIK_API_KEY || FREEPIK_API_KEY === '') {
-  console.error("\n\n\x1b[31m%s\x1b[0m", "ERRO FATAL: Variáveis de ambiente essenciais (SUPABASE_URL, SUPABASE_SERVICE_KEY, PERPLEXITY_API_KEY, FREEPIK_API_KEY) não foram encontradas ou estão vazias.");
+  console.error("\n\n\x1b[31m%s\x1b[0m", "ERRO FATAL: Variáveis de ambiente essenciais (SUPABASE_URL, SUPABASE_SERVICE_KEY, GEMINI_API_KEY, FREEPIK_API_KEY) não foram encontradas ou estão vazias.");
   console.error("Por favor, verifique o arquivo .env.local na raiz do projeto e preencha TODAS as chaves com valores válidos.\n\n");
   process.exit(1);
 }
+
+// Initialize Gemini client
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const geminiModel = genAI.getGenerativeModel({ model: "gemini-pro" }); // Usando gemini-pro, pode ser ajustado se necessário
 
 // Service Role Client (High Privilege)
 const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
@@ -100,9 +105,9 @@ const checkAdminOrDev = async (req, res, next) => {
 // --- Helper Functions for AI Generation ---
 
 const generateDetailedPrompt = async (briefing) => {
-  if (!PERPLEXITY_API_KEY || PERPLEXITY_API_KEY === '') {
-    console.error("PERPLEXITY_API_KEY is missing or empty. Check .env.local.");
-    throw new Error("Erro de configuração: PERPLEXITY_API_KEY não está definida ou está vazia no backend. Verifique seu arquivo .env.local.");
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === '') {
+    console.error("GEMINI_API_KEY is missing or empty. Check .env.local.");
+    throw new Error("Erro de configuração: GEMINI_API_KEY não está definida ou está vazia no backend. Verifique seu arquivo .env.local.");
   }
   const systemPrompt = `
     Você é um especialista em engenharia de prompts para IAs de geração de imagem. Sua tarefa é pegar um briefing simples de um cliente e transformá-lo em um prompt detalhado e técnico em inglês. O prompt deve ser rico em detalhes sobre iluminação, estilo de arte, composição, cores e emoção, para gerar um flyer de marketing visualmente impressionante.
@@ -116,20 +121,15 @@ const generateDetailedPrompt = async (briefing) => {
   `;
 
   try {
-    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
-      model: 'llama-3-sonar-large-32k-online',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Crie um prompt para o seguinte negócio: ${briefing}` }
-      ],
-    }, {
-      headers: { 'Authorization': `Bearer ${PERPLEXITY_API_KEY}` }
-    });
-    return response.data.choices[0].message.content;
+    const result = await geminiModel.generateContent([
+      { role: 'user', parts: [{ text: systemPrompt }] },
+      { role: 'user', parts: [{ text: `Crie um prompt para o seguinte negócio: ${briefing}` }] }
+    ]);
+    const response = await result.response;
+    return response.text();
   } catch (error) {
-    console.error("Perplexity API Error:", error.response ? error.response.data : error.message);
-    const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message;
-    throw new Error(`Falha ao gerar o prompt detalhado com a IA (Perplexity): ${errorMessage}. Verifique sua PERPLEXITY_API_KEY e limites de uso.`);
+    console.error("Gemini API Error:", error.message);
+    throw new Error(`Falha ao gerar o prompt detalhado com a IA (Gemini): ${error.message}. Verifique sua GEMINI_API_KEY e limites de uso.`);
   }
 };
 
