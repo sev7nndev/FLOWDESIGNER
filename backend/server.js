@@ -171,6 +171,11 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   const { promptInfo } = req.body;
   const user = req.user;
 
+  // CRITICAL FIX: Add a check for promptInfo to prevent server crash on empty body
+  if (!promptInfo) {
+    return res.status(400).json({ error: "Corpo da requisição inválido: objeto 'promptInfo' ausente." });
+  }
+
   // (Input validation remains the same)
   const MAX_DETAILS_LENGTH = 1000;
   const MAX_COMPANY_NAME_LENGTH = 100;
