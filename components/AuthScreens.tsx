@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { Button } from './Button';
-import { Sparkles, ArrowLeft } from 'lucide-react';
+import { Sparkles, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { authService } from '../services/authService';
 import { GoogleIcon } from './GoogleIcon';
 
 interface AuthScreensProps {
-  // onSuccess is now triggered when the auth service call succeeds, 
-  // signaling App.tsx to wait for the session listener.
   onSuccess: (user: any) => void; 
   onBack: () => void;
 }
@@ -16,10 +14,11 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   const [formData, setFormData] = useState({
-    firstName: '', // Changed from name
-    lastName: '',  // New field
+    firstName: '',
+    lastName: '',
     email: '',
     password: ''
   });
@@ -27,24 +26,33 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
     setIsLoading(true);
 
     try {
       if (isLogin) {
-        // authService.login handles sign in and returns null, relying on App.tsx listener
         await authService.login(formData.email, formData.password);
-        // If login succeeds (no error thrown), the session listener in App.tsx will fire.
         onSuccess(null); 
       } else {
         if (!formData.firstName) throw new Error("Primeiro nome é obrigatório");
         
-        // authService.register handles sign up and returns null
         await authService.register(formData.firstName, formData.lastName, formData.email, formData.password);
-        // If register succeeds, the session listener in App.tsx will fire.
-        onSuccess(null);
+        
+        // Exibe a mensagem de sucesso em vez de tentar redirecionar
+        setSuccessMessage('Cadastro realizado! Verifique seu e-mail para confirmar sua conta e poder fazer o login.');
       }
     } catch (err: any) {
-      const errorMessage = err.message || 'Ocorreu um erro desconhecido.';
+      let errorMessage = err.message || 'Ocorreu um erro desconhecido.';
+      
+      // Traduzindo erros comuns do Supabase
+      if (errorMessage.includes('you can only request this after')) {
+        errorMessage = 'Muitas tentativas. Por favor, aguarde um minuto e tente novamente.';
+      } else if (errorMessage.includes('User already registered')) {
+        errorMessage = 'Este e-mail já está cadastrado. Tente fazer login.';
+      } else if (errorMessage.includes('Invalid login credentials')) {
+        errorMessage = 'Email ou senha inválidos.';
+      }
+      
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -56,13 +64,30 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
     setIsGoogleLoading(true);
     try {
       await authService.loginWithGoogle();
-      // O listener do Supabase no App.tsx cuidará do redirecionamento e da sessão.
     } catch (err: any) {
       setError(err.message || 'Ocorreu um erro desconhecido.');
       setIsGoogleLoading(false);
     }
   };
 
+  // --- TELA DE SUCESSO PÓS-CADASTRO ---
+  if (successMessage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative">
+        <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] pointer-events-none" />
+        <div className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative z-10 animate-fade-in text-center">
+          <CheckCircle2 size={48} className="text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white">Quase lá!</h2>
+          <p className="text-gray-400 mt-4">{successMessage}</p>
+          <Button onClick={() => setIsLogin(true)} variant="secondary" className="w-full h-12 rounded-lg mt-8">
+            Ir para o Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- TELA DE LOGIN/CADASTRO PADRÃO ---
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative">
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] pointer-events-none" />
@@ -163,7 +188,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
 
         <div className="mt-6 text-center">
           <button 
-            onClick={() => { setIsLogin(!isLogin); setError(''); }}
+            onClick={() => { setIsLogin(!isLogin); setError(''); setSuccessMessage(''); }}
             className="text-sm text-gray-400 hover:text-white transition-colors"
           >
             {isLogin ? 'Não tem conta? Crie uma agora.' : 'Já tem conta? Faça login.'}
