@@ -82,6 +82,9 @@ const checkAdminOrDev = async (req, res, next) => {
 // --- Helper Functions for AI Generation ---
 
 const generateDetailedPrompt = async (briefing) => {
+  if (!PERPLEXITY_API_KEY || PERPLEXITY_API_KEY === '') {
+    throw new Error("Erro de configuração: PERPLEXITY_API_KEY não está definida ou está vazia no backend.");
+  }
   const systemPrompt = `
     Você é um especialista em engenharia de prompts para IAs de geração de imagem. Sua tarefa é pegar um briefing simples de um cliente e transformá-lo em um prompt detalhado e técnico em inglês. O prompt deve ser rico em detalhes sobre iluminação, estilo de arte, composição, cores e emoção, para gerar um flyer de marketing visualmente impressionante.
 
@@ -106,11 +109,15 @@ const generateDetailedPrompt = async (briefing) => {
     return response.data.choices[0].message.content;
   } catch (error) {
     console.error("Perplexity API Error:", error.response ? error.response.data : error.message);
-    throw new Error(`Falha ao gerar o prompt detalhado com a IA (Perplexity): ${error.response?.data?.error?.message || error.message}`);
+    const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message;
+    throw new Error(`Falha ao gerar o prompt detalhado com a IA (Perplexity): ${errorMessage}`);
   }
 };
 
 const generateImage = async (prompt) => {
+  if (!FREEPIK_API_KEY || FREEPIK_API_KEY === '') {
+    throw new Error("Erro de configuração: FREEPIK_API_KEY não está definida ou está vazia no backend.");
+  }
   try {
     // 1. Start generation
     const startResponse = await axios.post('https://api.freepik.com/v1/images/generate', {
@@ -139,7 +146,8 @@ const generateImage = async (prompt) => {
     throw new Error("Tempo de geração da imagem excedido.");
   } catch (error) {
     console.error("Freepik API Error:", error.response ? error.response.data : error.message);
-    throw new Error(`Falha ao gerar a imagem com a IA (Freepik): ${error.response?.data?.message || error.message}`);
+    const errorMessage = error.response?.data?.message || error.message;
+    throw new Error(`Falha ao gerar a imagem com a IA (Freepik): ${errorMessage}`);
   }
 };
 
@@ -160,7 +168,8 @@ const uploadImageToSupabase = async (imageUrl, userId) => {
     return data.path;
   } catch (error) {
     console.error("Supabase Upload Error:", error);
-    throw new Error(`Falha ao salvar a imagem gerada no Supabase Storage: ${error.message}`);
+    const errorMessage = error.message || 'Erro desconhecido no Supabase Storage.';
+    throw new Error(`Falha ao salvar a imagem gerada no Supabase Storage: ${errorMessage}`);
   }
 };
 
@@ -267,7 +276,8 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
 
     if (dbError) {
       console.error("DB Insert Error:", dbError);
-      return res.status(500).json({ error: `Erro ao salvar a imagem no banco de dados Supabase: ${dbError.message}` });
+      const errorMessage = dbError.message || 'Erro desconhecido ao inserir no banco de dados Supabase.';
+      return res.status(500).json({ error: `Erro ao salvar a imagem no banco de dados Supabase: ${errorMessage}` });
     }
 
     res.json({ 
@@ -277,7 +287,6 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
 
   } catch (error) {
     console.error("Generation Error:", error);
-    // Ensure a consistent JSON error response
     res.status(500).json({ 
       error: error.message || 'Erro interno do servidor durante a geração.',
       details: error.stack || 'No stack trace available' // Add stack for debugging
