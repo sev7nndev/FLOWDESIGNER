@@ -5,43 +5,6 @@ import { getSupabase } from "./supabaseClient";
 // Alterado para usar caminho relativo para o backend Node.js (Issue 4 Fix)
 const BACKEND_URL = "/api"; 
 
-// URL da Edge Function (Hardcoded Project ID + Function Name)
-const SUPABASE_PROJECT_ID = "akynbiixxcftxgvjpjxu";
-const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/get-signed-url`;
-
-// Função auxiliar para gerar URL assinada (Signed URL)
-const getSignedUrl = async (path: string): Promise<string> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Supabase not configured.");
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Faça login para acessar arquivos.");
-
-    try {
-        const response = await fetch(EDGE_FUNCTION_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${session.access_token}` 
-            },
-            body: JSON.stringify({ path })
-        });
-
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || "Erro ao gerar URL segura.");
-        }
-
-        const data = await response.json();
-        return data.signedUrl;
-
-    } catch (error) {
-        console.error("Error generating signed URL via Edge Function:", error);
-        throw new Error("Falha ao gerar URL de download segura.");
-    }
-};
-
-
 export const api = {
   generate: async (businessInfo: BusinessInfo): Promise<GeneratedImage> => {
     const supabase = getSupabase();
@@ -62,7 +25,6 @@ export const api = {
         },
         body: JSON.stringify({
           promptInfo: businessInfo,
-          // userToken removido do body
         })
       });
 
@@ -73,13 +35,12 @@ export const api = {
 
       const data = await response.json();
       
-      // Converte o formato do DB para o formato do frontend
-      // Gera a URL assinada imediatamente após a geração usando a nova função segura
-      const signedUrl = await getSignedUrl(data.image.image_url);
-
+      // --- SIMULATION BYPASS ---
+      // O backend agora retorna uma URL pública diretamente em image_url.
+      // Não precisamos mais gerar uma URL assinada para ela.
       return {
         id: data.image.id,
-        url: signedUrl, // Usa a URL assinada
+        url: data.image.image_url, // Usa a URL pública diretamente
         prompt: data.image.prompt,
         businessInfo: data.image.business_info,
         createdAt: new Date(data.image.created_at).getTime()
@@ -106,49 +67,20 @@ export const api = {
 
     if (error || !data) return [];
 
-    // Mapeia e gera a URL assinada para cada imagem
-    const historyWithUrls = await Promise.all(data.map(async (row: any) => {
-        try {
-            // Usa a nova função segura para obter a URL
-            const signedUrl = await getSignedUrl(row.image_url);
-            return {
-                id: row.id,
-                url: signedUrl, // Usa a URL assinada
-                prompt: row.prompt,
-                businessInfo: row.business_info,
-                createdAt: new Date(row.created_at).getTime()
-            };
-        } catch (e) {
-            console.warn(`Skipping image ${row.id} due to failed signed URL generation.`);
-            return null; // Skip images that fail to generate a signed URL
-        }
-    })).then(results => results.filter((img): img is GeneratedImage => img !== null));
+    // --- SIMULATION BYPASS ---
+    // O banco de dados agora contém URLs públicas diretamente.
+    // Não precisamos mais gerar URLs assinadas para itens do histórico.
+    const historyWithUrls = data.map((row: any) => {
+        return {
+            id: row.id,
+            url: row.image_url, // Usa a URL pública diretamente
+            prompt: row.prompt,
+            businessInfo: row.business_info,
+            createdAt: new Date(row.created_at).getTime()
+        };
+    });
 
     return historyWithUrls;
-  },
-  
-  // --- NOVO: Função para buscar TODAS as imagens geradas (Admin/Dev) ---
-  getAllGeneratedImages: async (): Promise<GeneratedImage[]> => {
-    // Esta função deve ser chamada APENAS pelo backend ou por um cliente com Service Role Key.
-    // Como estamos no frontend, vamos usar o endpoint do backend para buscar todos os dados.
-    // No entanto, como o backend ainda não tem um endpoint para isso, vamos simular a busca
-    // usando o cliente Supabase padrão, mas com a expectativa de que o RLS será ignorado
-    // se o usuário for Admin/Dev (o que não é verdade no frontend).
-    // Para manter a segurança, vamos criar um endpoint no backend para isso.
-    
-    // Por enquanto, vamos retornar um array vazio e focar na implementação do frontend.
-    // A implementação segura de "getAllGeneratedImages" deve ser feita no backend.
-    // Para fins de desenvolvimento, vamos usar o cliente padrão, mas isso é inseguro
-    // se o RLS não for configurado para permitir.
-    
-    // Vamos assumir que o backend será atualizado para fornecer este endpoint seguro.
-    // Por enquanto, vamos usar a função getHistory, mas com um nome diferente para o Dev Panel.
-    // Para o Dev Panel, vamos criar um novo hook que chama um novo endpoint seguro no backend.
-    
-    // ALTERNATIVA: Como o backend já tem o Service Role Client, vamos criar um novo endpoint lá.
-    // Por enquanto, vamos deixar esta função no frontend como um placeholder.
-    
-    return [];
   },
   
   // --- Funções para Gerenciamento de Imagens da Landing Page ---
@@ -255,6 +187,37 @@ export const api = {
     }
   },
 
-  // Expõe a função de download para o hook
-  getDownloadUrl: getSignedUrl
+  // A função getDownloadUrl não é mais usada no fluxo principal, mas pode ser útil para outras coisas.
+  getDownloadUrl: async (path: string): Promise<string> => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase not configured.");
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Faça login para acessar arquivos.");
+
+    const EDGE_FUNCTION_URL = `https://${"akynbiixxcftxgvjpjxu"}.supabase.co/functions/v1/get-signed-url`;
+
+    try {
+        const response = await fetch(EDGE_FUNCTION_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${session.access_token}` 
+            },
+            body: JSON.stringify({ path })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || "Erro ao gerar URL segura.");
+        }
+
+        const data = await response.json();
+        return data.signedUrl;
+
+    } catch (error) {
+        console.error("Error generating signed URL via Edge Function:", error);
+        throw new Error("Falha ao gerar URL de download segura.");
+    }
+  }
 };
