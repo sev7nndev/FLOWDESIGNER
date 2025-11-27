@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code } from 'lucide-react';
+import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage } from '../types';
 import { useLandingImages } from '../hooks/useLandingImages';
@@ -8,7 +8,8 @@ import { api } from '../services/api';
 
 interface DevPanelPageProps {
   user: User;
-  onBack: () => void;
+  onBackToApp: () => void;
+  onLogout: () => void;
 }
 
 // --- Image Upload Component (Reused) ---
@@ -293,7 +294,7 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
 
 
 // --- Main Dev Panel Page ---
-export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBack }) => {
+export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, onLogout }) => {
     return (
         <div className="min-h-screen bg-zinc-950 text-gray-100 pt-20 pb-16 relative">
             <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
@@ -305,9 +306,14 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBack }) => {
                     <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
                         <Code size={28} className="text-primary" /> Painel do Desenvolvedor
                     </h1>
-                    <Button variant="secondary" onClick={onBack} icon={<ArrowLeft size={16} />}>
-                        Sair do app
-                    </Button>
+                    <div className="flex items-center gap-4">
+                        <Button variant="secondary" onClick={onBackToApp} icon={<ArrowLeft size={16} />}>
+                            Voltar para o App
+                        </Button>
+                        <Button variant="danger" onClick={onLogout} icon={<LogOut size={16} />}>
+                            Logout
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="space-y-12">

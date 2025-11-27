@@ -144,7 +144,7 @@ export const App: React.FC = () => {
         setView('APP');
         return null; 
     }
-    return <DevPanelPage user={user} onBack={() => setView('APP')} />;
+    return <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
   }
   
   // MAIN APP UI (Protected)
