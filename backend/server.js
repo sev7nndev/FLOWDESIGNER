@@ -106,7 +106,7 @@ const generateDetailedPrompt = async (briefing) => {
     return response.data.choices[0].message.content;
   } catch (error) {
     console.error("Perplexity API Error:", error.response ? error.response.data : error.message);
-    throw new Error("Falha ao gerar o prompt detalhado com a IA.");
+    throw new Error(`Falha ao gerar o prompt detalhado com a IA (Perplexity): ${error.response?.data?.error?.message || error.message}`);
   }
 };
 
@@ -139,7 +139,7 @@ const generateImage = async (prompt) => {
     throw new Error("Tempo de geração da imagem excedido.");
   } catch (error) {
     console.error("Freepik API Error:", error.response ? error.response.data : error.message);
-    throw new Error("Falha ao gerar a imagem com a IA.");
+    throw new Error(`Falha ao gerar a imagem com a IA (Freepik): ${error.response?.data?.message || error.message}`);
   }
 };
 
@@ -160,7 +160,7 @@ const uploadImageToSupabase = async (imageUrl, userId) => {
     return data.path;
   } catch (error) {
     console.error("Supabase Upload Error:", error);
-    throw new Error("Falha ao salvar a imagem gerada.");
+    throw new Error(`Falha ao salvar a imagem gerada no Supabase Storage: ${error.message}`);
   }
 };
 
@@ -237,7 +237,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
         global: { headers: { Authorization: `Bearer ${user.token}` } }
     });
     const { data: profile, error: profileError } = await supabaseAuth.from('profiles').select('role').eq('id', user.id).single();
-    if (profileError) throw new Error('Acesso negado ou perfil não encontrado.');
+    if (profileError) throw new Error(`Acesso negado ou perfil não encontrado no Supabase: ${profileError.message}`);
     const userRole = profile?.role || 'free';
     if (!['admin', 'pro', 'dev', 'free'].includes(userRole)) {
       return res.status(403).json({ error: 'Acesso negado. A geração de arte requer um plano Pro.' });
@@ -267,7 +267,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
 
     if (dbError) {
       console.error("DB Insert Error:", dbError);
-      return res.status(500).json({ error: 'Erro ao salvar a imagem no banco de dados.' });
+      return res.status(500).json({ error: `Erro ao salvar a imagem no banco de dados Supabase: ${dbError.message}` });
     }
 
     res.json({ 
