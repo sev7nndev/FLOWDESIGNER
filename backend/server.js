@@ -6,8 +6,11 @@ const rateLimit = require('express-rate-limit');
 const sanitizeHtml = require('sanitize-html');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 
-dotenv.config();
+// FIX: Load .env files from the project root directory
+dotenv.config({ path: path.resolve(__dirname, '..', '.env.local') });
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -17,17 +20,12 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 const FREEPIK_API_KEY = process.env.FREEPIK_API_KEY;
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFreW5iaWl4eGNmdHhndmpwanh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjQ3MTcsImV4cCI6MjA3OTc0MDcxN30.FoIp7_p8gI_-JTuL4UU75mfyw1kjUxj0fDvtx6ZwVAI";
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFreW5iaWl4eGNmdHhndmpwanh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjQ3MTcsImV4cCI6MjA3OTc0MDcxN30.FoIp7_p8gI_-JTuL4UU75mfyw1kjUxj0fDvtx6ZwVAI";
 
-const FRONTEND_URL = process.env.FRONTEND_URL;
-
+// FIX: Check for essential variables and provide a clear startup error if missing
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  console.error("FATAL: Chaves de API do Supabase estão faltando.");
-  // Removida a verificação de Perplexity e Freepik para o ambiente de desenvolvimento
-  // process.exit(1);
-}
-if (!FRONTEND_URL) {
-  console.error("FATAL: FRONTEND_URL environment variable is missing.");
+  console.error("\n\n\x1b[31m%s\x1b[0m", "ERRO FATAL: As variáveis SUPABASE_URL e SUPABASE_SERVICE_KEY não foram encontradas.");
+  console.error("Por favor, copie o arquivo .env.example para .env.local e preencha as chaves.\n\n");
   process.exit(1);
 }
 
@@ -42,7 +40,8 @@ const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 // Middleware
-app.use(cors({ origin: FRONTEND_URL })); 
+// FIX: Relax CORS for development to allow requests from any origin
+app.use(cors()); 
 app.use(express.json({ limit: '50kb' }));
 app.set('trust proxy', 1); 
 
