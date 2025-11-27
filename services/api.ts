@@ -29,7 +29,6 @@ export const api = {
           const err = await response.json();
           throw new Error(err.error || "Erro no servidor");
         } catch (e) {
-          // Se a análise do JSON falhar, a resposta provavelmente estava vazia.
           console.error("Falha ao analisar a resposta de erro como JSON.", { status: response.status, statusText: response.statusText });
           throw new Error(`O servidor retornou um erro inesperado (Status: ${response.status}). Verifique se o backend está rodando corretamente.`);
         }
@@ -37,9 +36,12 @@ export const api = {
 
       const data = await response.json();
       
+      // Get a secure, signed URL for the newly created image
+      const signedUrl = await api.getDownloadUrl(data.image.image_url);
+
       return {
         id: data.image.id,
-        url: data.image.image_url,
+        url: signedUrl,
         prompt: data.image.prompt,
         businessInfo: data.image.business_info,
         createdAt: new Date(data.image.created_at).getTime()
@@ -65,17 +67,25 @@ export const api = {
 
     if (error || !data) return [];
 
-    const historyWithUrls = data.map((row: any) => {
-        return {
-            id: row.id,
-            url: row.image_url,
-            prompt: row.prompt,
-            businessInfo: row.business_info,
-            createdAt: new Date(row.created_at).getTime()
-        };
-    });
+    // Generate signed URLs for all images in parallel for performance
+    const historyWithUrls = await Promise.all(data.map(async (row: any) => {
+        try {
+            const signedUrl = await api.getDownloadUrl(row.image_url);
+            return {
+                id: row.id,
+                url: signedUrl,
+                prompt: row.prompt,
+                businessInfo: row.business_info,
+                createdAt: new Date(row.created_at).getTime()
+            };
+        } catch (e) {
+            console.warn(`Could not get signed URL for image ${row.id}. It might have been deleted.`);
+            return null;
+        }
+    }));
 
-    return historyWithUrls;
+    // Filter out any images that failed to get a URL
+    return historyWithUrls.filter((item): item is GeneratedImage => item !== null);
   },
   
   getLandingImages: async (): Promise<LandingImage[]> => {

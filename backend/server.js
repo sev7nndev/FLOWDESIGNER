@@ -23,9 +23,9 @@ const FREEPIK_API_KEY = process.env.FREEPIK_API_KEY;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFreW5iaWl4eGNmdHhndmpwanh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjQ3MTcsImV4cCI6MjA3OTc0MDcxN30.FoIp7_p8gI_-JTuL4UU75mfyw1kjUxj0fDvtx6ZwVAI";
 
 // FIX: Check for essential variables and provide a clear startup error if missing
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  console.error("\n\n\x1b[31m%s\x1b[0m", "ERRO FATAL: As variáveis SUPABASE_URL e SUPABASE_SERVICE_KEY não foram encontradas.");
-  console.error("Por favor, copie o arquivo .env.example para .env.local e preencha as chaves.\n\n");
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !PERPLEXITY_API_KEY || !FREEPIK_API_KEY) {
+  console.error("\n\n\x1b[31m%s\x1b[0m", "ERRO FATAL: Variáveis de ambiente essenciais (Supabase, Perplexity, Freepik) não foram encontradas.");
+  console.error("Por favor, copie o arquivo .env.example para .env.local e preencha TODAS as chaves.\n\n");
   process.exit(1);
 }
 
@@ -40,7 +40,6 @@ const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 // Middleware
-// FIX: Relax CORS for development to allow requests from any origin
 app.use(cors()); 
 app.use(express.json({ limit: '50kb' }));
 app.set('trust proxy', 1); 
@@ -79,6 +78,92 @@ const checkAdminOrDev = async (req, res, next) => {
     req.user.role = profile.role;
     next();
 };
+
+// --- Helper Functions for AI Generation ---
+
+const generateDetailedPrompt = async (briefing) => {
+  const systemPrompt = `
+    Você é um especialista em engenharia de prompts para IAs de geração de imagem. Sua tarefa é pegar um briefing simples de um cliente e transformá-lo em um prompt detalhado e técnico em inglês. O prompt deve ser rico em detalhes sobre iluminação, estilo de arte, composição, cores e emoção, para gerar um flyer de marketing visualmente impressionante.
+
+    Regras:
+    - O prompt final deve ser em INGLÊS.
+    - Não inclua texto visível na imagem, a menos que seja o nome da empresa.
+    - Foque em elementos visuais: iluminação cinematográfica, texturas realistas, cores vibrantes, etc.
+    - Adapte o estilo ao tipo de negócio (ex: moderno para tecnologia, rústico para comida, etc.).
+    - O output deve ser APENAS o prompt, sem nenhuma outra explicação.
+  `;
+
+  try {
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+      model: 'llama-3-sonar-large-32k-online',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Crie um prompt para o seguinte negócio: ${briefing}` }
+      ],
+    }, {
+      headers: { 'Authorization': `Bearer ${PERPLEXITY_API_KEY}` }
+    });
+    return response.data.choices[0].message.content;
+  } catch (error) {
+    console.error("Perplexity API Error:", error.response ? error.response.data : error.message);
+    throw new Error("Falha ao gerar o prompt detalhado com a IA.");
+  }
+};
+
+const generateImage = async (prompt) => {
+  try {
+    // 1. Start generation
+    const startResponse = await axios.post('https://api.freepik.com/v1/images/generate', {
+      prompt: prompt,
+      size: "1024x1792"
+    }, {
+      headers: { 'X-Freepik-API-Key': FREEPIK_API_KEY, 'Content-Type': 'application/json' }
+    });
+    
+    const generationId = startResponse.data.data.id;
+
+    // 2. Poll for result
+    let attempts = 0;
+    const maxAttempts = 20; // 20 attempts * 3 seconds = 60 seconds timeout
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+      const statusResponse = await axios.get(`https://api.freepik.com/v1/images/generate/status/${generationId}`, {
+        headers: { 'X-Freepik-API-Key': FREEPIK_API_KEY }
+      });
+
+      if (statusResponse.data.data.status === 'complete') {
+        return statusResponse.data.data.images[0].url;
+      }
+      attempts++;
+    }
+    throw new Error("Tempo de geração da imagem excedido.");
+  } catch (error) {
+    console.error("Freepik API Error:", error.response ? error.response.data : error.message);
+    throw new Error("Falha ao gerar a imagem com a IA.");
+  }
+};
+
+const uploadImageToSupabase = async (imageUrl, userId) => {
+  try {
+    const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+    const filePath = `${userId}/${uuidv4()}.png`;
+
+    const { data, error } = await supabaseService.storage
+      .from('generated-arts')
+      .upload(filePath, imageBuffer, {
+        contentType: 'image/png',
+        upsert: false
+      });
+
+    if (error) throw error;
+    return data.path;
+  } catch (error) {
+    console.error("Supabase Upload Error:", error);
+    throw new Error("Falha ao salvar a imagem gerada.");
+  }
+};
+
 
 // --- API Routes ---
 
@@ -149,27 +234,27 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
     const { data: profile, error: profileError } = await supabaseAuth.from('profiles').select('role').eq('id', user.id).single();
     if (profileError) throw new Error('Acesso negado ou perfil não encontrado.');
     const userRole = profile?.role || 'free';
-    if (!['admin', 'pro', 'dev', 'free'].includes(userRole)) { // Permitindo 'free' para teste
+    if (!['admin', 'pro', 'dev', 'free'].includes(userRole)) {
       return res.status(403).json({ error: 'Acesso negado. A geração de arte requer um plano Pro.' });
     }
     
-    // --- SIMULATED AI GENERATION FLOW (FOR DEV ENVIRONMENT) ---
-    console.log("Simulating AI generation flow...");
+    // --- REAL AI GENERATION FLOW ---
+    console.log("Step 1: Generating detailed prompt...");
+    const detailedPrompt = await generateDetailedPrompt(sanitizedPromptInfo.details);
     
-    // 1. Simulate delay
-    await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second delay
+    console.log("Step 2: Generating image with Freepik...");
+    const generatedImageUrl = await generateImage(detailedPrompt);
 
-    // 2. Create a placeholder prompt and image URL
-    const simulatedPrompt = `(Simulado) Prompt para: ${sanitizedPromptInfo.companyName}. Detalhes: ${sanitizedPromptInfo.details}`;
-    const placeholderImageUrl = `https://via.placeholder.com/1024x1792.png/8B5CF6/FFFFFF?text=${encodeURIComponent(sanitizedPromptInfo.companyName)}`;
+    console.log("Step 3: Uploading image to Supabase...");
+    const imagePath = await uploadImageToSupabase(generatedImageUrl, user.id);
 
-    // 3. Save to Database with the public placeholder URL
+    console.log("Step 4: Saving record to database...");
     const { data: image, error: dbError } = await supabaseService
       .from('images')
       .insert({
         user_id: user.id,
-        prompt: simulatedPrompt,
-        image_url: placeholderImageUrl, // Using the public URL directly
+        prompt: detailedPrompt,
+        image_url: imagePath, // Store the path, not the public URL
         business_info: sanitizedPromptInfo,
       })
       .select()
@@ -180,9 +265,8 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
       return res.status(500).json({ error: 'Erro ao salvar a imagem no banco de dados.' });
     }
 
-    // 4. Return Success
     res.json({ 
-      message: 'Arte gerada com sucesso (simulado)!',
+      message: 'Arte gerada com sucesso!',
       image: image
     });
 
@@ -192,7 +276,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res)
   }
 });
 
-// Admin endpoints remain the same
+// Admin endpoints
 app.get('/api/admin/images', authenticateToken, checkAdminOrDev, async (req, res) => {
     try {
         const { data, error } = await supabaseService.from('images').select('*');
@@ -205,14 +289,15 @@ app.get('/api/admin/images', authenticateToken, checkAdminOrDev, async (req, res
 
 app.delete('/api/admin/images/:id', authenticateToken, checkAdminOrDev, async (req, res) => {
     const { id } = req.params;
-    const { imageUrl } = req.body;
+    const { imageUrl } = req.body; // This is now the file path
     if (!imageUrl) return res.status(400).json({ error: 'Caminho da imagem é obrigatório.' });
     try {
         const { error: dbError } = await supabaseService.from('images').delete().eq('id', id);
         if (dbError) throw dbError;
-        // A URL é pública, não há nada para remover do storage neste fluxo simulado
-        // const { error: storageError } = await supabaseService.storage.from('generated-arts').remove([imageUrl]);
-        // if (storageError) console.warn("Storage Delete Warning:", storageError);
+        
+        const { error: storageError } = await supabaseService.storage.from('generated-arts').remove([imageUrl]);
+        if (storageError) console.warn("Storage Delete Warning:", storageError);
+        
         res.json({ message: 'Imagem deletada com sucesso.' });
     } catch (error) {
         res.status(500).json({ error: error.message });
