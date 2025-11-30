@@ -5,14 +5,14 @@ import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCar
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
-import { FlyerMockupProps, FlyerMockup } from './FlyerMockup'; // Importando o tipo para tipagem local
+import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
 import { LandingImage } from '../types';
 
 interface LandingPageProps {
   onGetStarted: () => void;
   onLogin: () => void;
-  landingImages: LandingImage[]; // New prop
-  isLandingImagesLoading: boolean; // New prop
+  landingImages: LandingImage[];
+  isLandingImagesLoading: boolean;
 }
 
 // Definindo o tipo localmente para garantir a compatibilidade
@@ -155,14 +155,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
           ) : (
             <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-4 p-4">
               {marqueeContent.map((item, idx) => (
-                <div key={idx} className="w-56 md:w-64 aspect-[3/4] rounded-xl overflow-hidden relative group flex-shrink-0 shadow-2xl border border-zinc-800">
-                  <img 
-                    src={item.bg} 
-                    loading="lazy" 
-                    className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110" 
-                    alt={`Carousel image ${idx + 1}`} 
-                  />
-                </div>
+                <FlyerMockup 
+                  key={idx} 
+                  bg={item.bg} 
+                  title={item.title} 
+                  subtitle={item.subtitle} 
+                  phone={item.phone} 
+                  theme={item.theme} 
+                  badge={item.badge} 
+                  price={item.price} 
+                />
               ))}
             </div>
           )}
