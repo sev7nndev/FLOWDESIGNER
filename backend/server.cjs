@@ -48,13 +48,17 @@ const express = require('express');
     }));
     app.use(express.json({ limit: '50mb' })); // Increased limit for potential base64 logos
 
-    // Rate Limiting for generation endpoint
+    // Trust proxy for correct IP identification in rate limiting
+    app.set('trust proxy', 1);
+
+    // Rate Limiting for generation endpoint (user-based)
     const generationLimiter = rateLimit({
       windowMs: 60 * 1000, // 1 minute
-      max: 5, // Limit each IP to 5 requests per windowMs
+      max: 5, // Limit each user to 5 requests per windowMs
       message: "Muitas requisições de geração. Por favor, tente novamente após um minuto.",
       standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
       legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+      keyGenerator: (req, res) => req.user.id, // Use authenticated user's ID for rate limiting
     });
 
     // Helper function to verify JWT token
@@ -365,6 +369,13 @@ const express = require('express');
         }
         const contentType = matches[1];
         const buffer = Buffer.from(matches[2], 'base64');
+
+        // --- SERVER-SIDE FILE SIZE VALIDATION (Issue 1 Fix) ---
+        const MAX_LANDING_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+        if (buffer.length > MAX_LANDING_IMAGE_SIZE_BYTES) {
+            return res.status(400).json({ error: `O arquivo é muito grande. O tamanho máximo permitido é de ${MAX_LANDING_IMAGE_SIZE_BYTES / (1024 * 1024)}MB.` });
+        }
+        // --- END SERVER-SIDE FILE SIZE VALIDATION ---
 
         const fileExtension = fileName.split('.').pop();
         const filePath = `landing-carousel/${userId}/${uuidv4()}.${fileExtension}`; // Store under bucket/user's ID

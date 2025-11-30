@@ -96,14 +96,8 @@ export const App: React.FC = () => {
     }
   }, [user, loadHistory]);
 
-  // NEW: Auto-open Dev Panel if user is Admin/Dev after profile loads
-  useEffect(() => {
-    // Se o usuário for admin ou dev e o perfil tiver carregado, abra o painel.
-    if (user && !isProfileLoading && (user.role === 'admin' || user.role === 'dev') && view === 'APP') {
-        setView('DEV_PANEL');
-    }
-  }, [user, isProfileLoading, view]);
-
+  // Removed: Auto-open Dev Panel if user is Admin/Dev after profile loads
+  // The DevPanelPage will now handle its own access display.
 
   const handleLogout = async () => {
     const supabase = getSupabase();
@@ -139,11 +133,7 @@ export const App: React.FC = () => {
   }
   
   if (view === 'DEV_PANEL') {
-    if (!user || (user.role !== 'admin' && user.role !== 'dev')) {
-        // Redireciona se o usuário tentar acessar a página sem permissão
-        setView('APP');
-        return null; 
-    }
+    // Pass user directly, DevPanelPage will handle access check internally
     return <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
   }
   
