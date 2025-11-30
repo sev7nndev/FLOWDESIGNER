@@ -341,6 +341,44 @@ app.delete('/api/admin/images/:id', authenticateToken, checkAdminOrDev, async (r
     }
 });
 
+// NEW: Admin endpoint for deleting landing page images
+app.delete('/api/admin/landing-images/:id', authenticateToken, checkAdminOrDev, async (req, res, next) => {
+    const { id } = req.params;
+    const { imagePath } = req.body; // This is the path in the 'landing-carousel' bucket
+    
+    if (!imagePath) {
+        return res.status(400).json({ error: 'Caminho da imagem é obrigatório.' });
+    }
+
+    try {
+        // 1. Delete record from the database
+        const { error: dbError } = await supabaseService
+            .from('landing_carousel_images')
+            .delete()
+            .eq('id', id);
+
+        if (dbError) {
+            console.error("Supabase DB Delete Error (landing_carousel_images):", dbError);
+            throw new Error(`Falha ao deletar registro da imagem da landing page: ${dbError.message}`);
+        }
+
+        // 2. Delete file from Supabase Storage
+        const { error: storageError } = await supabaseService.storage
+            .from('landing-carousel')
+            .remove([imagePath]);
+            
+        if (storageError) {
+            console.warn("Supabase Storage Delete Warning (landing-carousel):", storageError);
+            // Don't throw error here, as DB record is already deleted. Log and continue.
+        }
+        
+        res.json({ message: 'Imagem da landing page deletada com sucesso.' });
+    } catch (error) {
+        next(error); // Pass to global error handler
+    }
+});
+
+
 app.get('/api/status', (req, res) => {
   res.json({ status: 'Backend is running' });
 });

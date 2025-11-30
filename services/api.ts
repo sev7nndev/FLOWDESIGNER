@@ -158,25 +158,30 @@ export const api = {
     };
   },
   
-  deleteLandingImage: async (id: string, path: string): Promise<void> => {
+  deleteLandingImage: async (id: string, imagePath: string): Promise<void> => {
     const supabase = getSupabase();
     if (!supabase) throw new Error("Supabase not configured.");
     
-    const { error: dbError } = await supabase
-      .from('landing_carousel_images')
-      .delete()
-      .eq('id', id);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Faça login para deletar imagens.");
 
-    if (dbError) {
-      throw new Error(`Falha ao deletar registro: ${dbError.message}`);
-    }
-    
-    const { error: storageError } = await supabase.storage
-      .from('landing-carousel')
-      .remove([path]);
-      
-    if (storageError) {
-        console.error("Falha ao deletar arquivo do storage:", storageError);
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/landing-images/${id}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${session.access_token}` 
+            },
+            body: JSON.stringify({ imagePath }) // Pass the imagePath to the backend
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || `Falha ao deletar imagem da landing page: Status ${response.status}`);
+        }
+    } catch (error) {
+        console.error("Error deleting landing image via backend:", error);
+        throw error;
     }
   },
 
