@@ -6,6 +6,7 @@ import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
 import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
 import { LandingImage } from '../types';
+import { HeroSection } from './Hero'; // Importação adicionada
 
 interface LandingPageProps {
   onGetStarted: () => void;

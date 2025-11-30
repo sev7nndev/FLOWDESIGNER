@@ -33,7 +33,8 @@ export const SparklesCore = (props: ParticlesProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
   const [particles, setParticles] = useState<any[]>([]);
-  const animationFrameId = useRef<number>();
+  // Corrigido: useRef deve ser inicializado com null ou undefined se o tipo incluir null/undefined
+  const animationFrameId = useRef<number | undefined>(undefined); 
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -85,7 +86,7 @@ export const SparklesCore = (props: ParticlesProps) => {
           context.fillRect(0, 0, width, height);
         }
 
-        particles.forEach((particle) => {
+        particles.forEach((particle: any) => {
           particle.x += particle.speedX;
           particle.y += particle.speedY;
 
