@@ -122,40 +122,39 @@ export const api = {
     const supabase = getSupabase();
     if (!supabase) throw new Error("Supabase not configured.");
     
-    const fileExtension = file.name.split('.').pop();
-    const filePath = `${userId}/${Date.now()}.${fileExtension}`;
-    
-    const { error: uploadError } = await supabase.storage
-      .from('landing-carousel')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Faça login para fazer upload de imagens.");
 
-    if (uploadError) {
-      throw new Error(`Falha no upload: ${uploadError.message}`);
-    }
-    
-    const { data: dbData, error: dbError } = await supabase
-      .from('landing_carousel_images')
-      .insert({ image_url: filePath, created_by: userId })
-      .select('id, image_url, sort_order')
-      .single();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const fileBase64 = reader.result as string;
+            const fileName = file.name;
 
-    if (dbError || !dbData) {
-      await supabase.storage.from('landing-carousel').remove([filePath]);
-      throw new Error(`Falha ao registrar imagem: ${dbError?.message || 'Erro desconhecido'}`);
-    }
-    
-    const { data: { publicUrl } } = supabase.storage
-        .from('landing-carousel')
-        .getPublicUrl(dbData.image_url);
-        
-    return {
-        id: dbData.id,
-        url: publicUrl,
-        sortOrder: dbData.sort_order
-    };
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/landing-images/upload`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${session.access_token}` 
+                    },
+                    body: JSON.stringify({ fileBase64, fileName, userId })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || `Falha ao fazer upload da imagem da landing page: Status ${response.status}`);
+                }
+                const data = await response.json();
+                resolve(data.image); // Backend should return the full LandingImage object
+            } catch (error) {
+                console.error("Error uploading landing image via backend:", error);
+                reject(error);
+            }
+        };
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+    });
   },
   
   deleteLandingImage: async (id: string, imagePath: string): Promise<void> => {

@@ -342,6 +342,79 @@ const express = require('express');
       }
     });
 
+    // Admin endpoint to upload a landing carousel image (NEW)
+    app.post('/api/admin/landing-images/upload', authenticateToken, checkAdminOrDev, async (req, res, next) => {
+      const { fileBase64, fileName, userId } = req.body;
+      const user = req.user; // Authenticated user from token
+
+      if (!fileBase64 || !fileName || !userId) {
+        return res.status(400).json({ error: "Dados de arquivo incompletos." });
+      }
+
+      // Security check: Ensure the userId in the body matches the authenticated user's ID
+      // This prevents a dev/admin from uploading files under another user's ID if they tried to manipulate the request.
+      if (user.id !== userId) {
+        return res.status(403).json({ error: "Ação não autorizada para o usuário especificado." });
+      }
+
+      try {
+        // Extract file type and base64 data
+        const matches = fileBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
+          throw new Error('Formato de base64 inválido.');
+        }
+        const contentType = matches[1];
+        const buffer = Buffer.from(matches[2], 'base64');
+
+        const fileExtension = fileName.split('.').pop();
+        const filePath = `landing-carousel/${userId}/${uuidv4()}.${fileExtension}`; // Store under bucket/user's ID
+
+        // 1. Upload to Supabase Storage using service role key
+        const { data: uploadData, error: uploadError } = await supabaseService.storage
+          .from('landing-carousel')
+          .upload(filePath, buffer, {
+            contentType: contentType,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error(`Error uploading to Supabase Storage:`, uploadError);
+          throw new Error(`Falha no upload para o armazenamento: ${uploadError.message}`);
+        }
+
+        // 2. Insert record into Supabase Database
+        const { data: dbData, error: dbError } = await supabaseService
+          .from('landing_carousel_images')
+          .insert({ image_url: filePath, created_by: userId })
+          .select('id, image_url, sort_order')
+          .single();
+
+        if (dbError || !dbData) {
+          // If DB insert fails, try to remove the uploaded file from storage
+          await supabaseService.storage.from('landing-carousel').remove([filePath]);
+          console.error(`Error inserting into DB:`, dbError);
+          throw new Error(`Falha ao registrar imagem no banco de dados: ${dbError?.message || 'Erro desconhecido'}`);
+        }
+        
+        // Get public URL for the newly uploaded image
+        const { data: { publicUrl } } = supabaseService.storage
+            .from('landing-carousel')
+            .getPublicUrl(dbData.image_url);
+            
+        const newLandingImage = {
+            id: dbData.id,
+            url: publicUrl,
+            sortOrder: dbData.sort_order
+        };
+
+        res.status(200).json({ message: 'Imagem da landing page carregada com sucesso!', image: newLandingImage });
+
+      } catch (error) {
+        next(error);
+      }
+    });
+
+
     // Admin endpoint to delete a landing carousel image
     app.delete('/api/admin/landing-images/:id', authenticateToken, checkAdminOrDev, async (req, res, next) => {
       const { id } = req.params;
