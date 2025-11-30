@@ -19,10 +19,28 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+
+    /* Type Roots */
+    "typeRoots": ["./node_modules/@types"], // Ensure @types are found
+
+    /* Path Aliases */
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "vite-env.d.ts", "supabase/functions/deno.d.ts"]
+  "include": [
+    "src", 
+    "vite-env.d.ts", 
+    "types.ts", 
+    "constants.ts", 
+    "index.tsx", 
+    "components", 
+    "hooks", 
+    "pages", 
+    "services", 
+    "backend", 
+    "supabase"
+  ],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }
