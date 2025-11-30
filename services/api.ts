@@ -191,7 +191,9 @@ export const api = {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error("Faça login para acessar arquivos.");
 
-    const EDGE_FUNCTION_URL = `https://${"akynbiixxcftxgvjpjxu"}.supabase.co/functions/v1/get-signed-url`;
+    // Use environment variable for Supabase Project ID (Issue 3 Fix)
+    const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/get-signed-url`;
 
     try {
         const response = await fetch(EDGE_FUNCTION_URL, {

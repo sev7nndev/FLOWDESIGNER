@@ -170,12 +170,13 @@ const express = require('express');
       try {
         const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
         const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+        const actualContentType = imageResponse.headers['content-type'] || 'image/png'; // Fallback to png
 
         const filePath = `${userId}/${uuidv4()}.png`; // Store images under user's ID
         const { data, error } = await supabaseService.storage
           .from('generated-arts')
           .upload(filePath, imageBuffer, {
-            contentType: 'image/png',
+            contentType: actualContentType, // Use dynamic content type
             upsert: false,
           });
 
@@ -214,6 +215,12 @@ const express = require('express');
 
       if (!sanitizedPromptInfo.companyName || !sanitizedPromptInfo.details) {
         return res.status(400).json({ error: "Nome da empresa e detalhes são obrigatórios." });
+      }
+      
+      // Server-side logo size validation (Issue 1 Fix)
+      const MAX_LOGO_BASE64_LENGTH_SERVER = 40000; // Approx 30KB original file size
+      if (sanitizedPromptInfo.logo && sanitizedPromptInfo.logo.length > MAX_LOGO_BASE64_LENGTH_SERVER) {
+        return res.status(400).json({ error: `O logo é muito grande. O tamanho máximo permitido é de ${Math.round(MAX_LOGO_BASE64_LENGTH_SERVER / 1.33 / 1024)}KB.` });
       }
 
       try {
