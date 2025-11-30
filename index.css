@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+      
+/* Corrigindo o problema de overflow do iframe */
+html, body {
+  width: 100%;
+  height: auto; /* Garante que o scroll funcione e não force 100vh */
+  overflow-x: hidden; /* Evita scroll horizontal desnecessário */
+}
+
+body {
+  background-color: #09090b;
+  color: #fafafa;
+  font-family: 'Inter', sans-serif;
+  background-image: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15), transparent 40%);
+}
+
+/* Grid Background Effect */
+.bg-grid {
+  background-size: 40px 40px;
+  mask-image: linear-gradient(to bottom, transparent, 10%, black, 90%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, 10%, black, 90%, transparent);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Utility for Modals */
+.custom-scrollbar {
+    scrollbar-width: thin;
+}
+
+/* Hide scrollbar for Marquee */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
