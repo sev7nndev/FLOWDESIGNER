@@ -77,7 +77,7 @@ export const useProfile = (userId: string | undefined) => {
                 throw new Error(error.message);
             }
 
-            setProfile(prev => ({
+            setProfile((prev: ProfileData | null) => ({
                 ...prev!,
                 firstName: newFirstName,
                 lastName: newLastName

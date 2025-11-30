@@ -32,7 +32,7 @@ export const useLandingImages = (userRole: UserRole) => {
         
         try {
             const newImage = await api.uploadLandingImage(file, userId);
-            setImages(prev => [...prev, newImage].sort((a, b) => a.sortOrder - b.sortOrder));
+            setImages((prev: LandingImage[]) => [...prev, newImage].sort((a, b) => a.sortOrder - b.sortOrder));
         } catch (e: any) {
             throw new Error(e.message || "Erro ao fazer upload da imagem.");
         }
@@ -45,7 +45,7 @@ export const useLandingImages = (userRole: UserRole) => {
         
         try {
             await api.deleteLandingImage(id, path);
-            setImages(prev => prev.filter(img => img.id !== id));
+            setImages((prev: LandingImage[]) => prev.filter((img: LandingImage) => img.id !== id));
         } catch (e: any) {
             throw new Error(e.message || "Erro ao deletar a imagem.");
         }

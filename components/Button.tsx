@@ -16,7 +16,7 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
   const baseStyles = "relative inline-flex items-center justify-center px-6 py-3 text-sm font-medium transition-all duration-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed";
   
-  const variants = {
+  const variants: Record<NonNullable<ButtonProps['variant']>, string> = {
     primary: "bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white shadow-lg shadow-primary/25",
     secondary: "bg-surface border border-white/10 hover:bg-white/5 text-gray-200",
     ghost: "bg-transparent hover:bg-white/5 text-gray-400 hover:text-white",

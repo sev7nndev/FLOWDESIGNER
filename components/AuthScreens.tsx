@@ -3,9 +3,10 @@ import { Button } from './Button';
 import { Sparkles, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { authService } from '../services/authService';
 import { GoogleIcon } from './GoogleIcon';
+import { User } from '../types'; // Import User type
 
 interface AuthScreensProps {
-  onSuccess: (user: any) => void; 
+  onSuccess: (user: User | null) => void; 
   onBack: () => void;
 }
 
@@ -118,7 +119,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
                         className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
                         placeholder="Seu nome"
                         value={formData.firstName}
-                        onChange={e => setFormData({...formData, firstName: e.target.value})}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, firstName: e.target.value})}
                     />
                 </div>
                 <div>
@@ -128,7 +129,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
                         className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
                         placeholder="Seu sobrenome"
                         value={formData.lastName}
-                        onChange={e => setFormData({...formData, lastName: e.target.value})}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, lastName: e.target.value})}
                     />
                 </div>
             </div>
@@ -142,7 +143,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
               className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
               placeholder="seu@email.com"
               value={formData.email}
-              onChange={e => setFormData({...formData, email: e.target.value})}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, email: e.target.value})}
             />
           </div>
           
@@ -154,7 +155,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
               className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
               placeholder="••••••••"
               value={formData.password}
-              onChange={e => setFormData({...formData, password: e.target.value})}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, password: e.target.value})}
             />
           </div>
 

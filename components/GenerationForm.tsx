@@ -21,7 +21,7 @@ const InputField: React.FC<InputFieldProps> = ({ label, value, field, placeholde
     <input
       type="text"
       value={value}
-      onChange={(e) => onChange(field, e.target.value)}
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field, e.target.value)}
       placeholder={placeholder}
       maxLength={maxLength} // Aplicado maxLength
       // Refined input styling: darker background, subtle focus ring
@@ -143,7 +143,7 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                 </div>
                 <textarea
                     value={form.details}
-                    onChange={(e) => handleInputChange('details', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('details', e.target.value)}
                     placeholder="Ex: Oficina especializada em importados. Promoção de troca de óleo. Cores escuras e neon."
                     // Refined textarea styling
                     className="w-full flex-grow min-h-[150px] bg-transparent border-0 text-white placeholder-gray-600 focus:ring-0 transition-all outline-none resize-none text-sm leading-relaxed"

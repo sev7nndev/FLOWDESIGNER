@@ -43,7 +43,7 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({ history, onClose, on
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {history.map((img) => (
+          {history.map((img: GeneratedImage) => (
             <div key={img.id} className="group relative aspect-[3/4] bg-black rounded-xl overflow-hidden border border-white/10 shadow-lg transition-all hover:border-primary/50">
               <img 
                 src={img.url} 
@@ -159,16 +159,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
                         required 
                         className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none text-sm"
                         value={firstName}
-                        onChange={e => setFirstName(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
                     />
                 </div>
                 <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Sobrenome</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Sobrenome (Opcional)</label>
                     <input 
                         type="text" 
                         className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none text-sm"
                         value={lastName}
-                        onChange={e => setLastName(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
                     />
                 </div>
             </div>

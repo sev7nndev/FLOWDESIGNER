@@ -100,7 +100,7 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
                 throw new Error(errorBody.error || `Falha ao deletar imagem: Status ${response.status}`);
             }
 
-            setImages(prev => prev.filter(img => img.id !== imageId));
+            setImages((prev: GeneratedImage[]) => prev.filter((img: GeneratedImage) => img.id !== imageId));
             return true;
         } catch (e: any) {
             console.error("Failed to delete image:", e);

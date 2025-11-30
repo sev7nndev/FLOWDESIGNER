@@ -104,7 +104,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
     const { allImages, isLoadingAllImages, errorAllImages, deleteImage } = useAdminGeneratedImages(userRole);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
-    const [imagesWithSignedUrls, setImagesWithSignedUrls] = useState<GeneratedImage[]>([]);
+    const [imagesWithSignedUrls, setImagesWithSignedUrls] = useState<(GeneratedImage & { userId: string })[]>([]);
     const [isSigning, setIsSigning] = useState(false);
 
     // Função para gerar URLs assinadas para todas as imagens
@@ -145,14 +145,14 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
         setDeletingId(image.id);
         setDeleteError(null);
         try {
-            const path = (allImages.find(img => img.id === image.id) as any)?.image_url;
+            const path = (allImages.find((img: GeneratedImage) => img.id === image.id) as any)?.image_url;
             
             if (!path) {
                 throw new Error("Caminho do arquivo não encontrado no cache.");
             }
             
             await deleteImage(image.id, path);
-            setImagesWithSignedUrls(prev => prev.filter(img => img.id !== image.id));
+            setImagesWithSignedUrls((prev: (GeneratedImage & { userId: string })[]) => prev.filter((img: GeneratedImage & { userId: string }) => img.id !== image.id));
         } catch (e: any) {
             setDeleteError(e.message || "Falha ao deletar arte.");
         } finally {
@@ -181,7 +181,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
             )}
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {imagesWithSignedUrls.map((img) => (
+                {imagesWithSignedUrls.map((img: GeneratedImage & { userId: string }) => (
                     <div key={img.id} className="relative aspect-[3/4] rounded-lg overflow-hidden border border-white/10 group bg-black">
                         <img src={img.url} alt="Arte Gerada" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                         
@@ -265,7 +265,7 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
             )}
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {images.map((img) => (
+                {images.map((img: LandingImage) => (
                     <div key={img.id} className="relative aspect-[3/4] rounded-lg overflow-hidden border border-white/10 group">
                         <img src={img.url} alt="Carousel Asset" className="w-full h-full object-cover" />
                         

@@ -23,7 +23,7 @@ export const useGeneration = (user: User | null) => {
     const [state, setState] = useState<GenerationState>(INITIAL_STATE);
 
     const handleInputChange = useCallback((field: keyof BusinessInfo, value: string) => {
-        setForm(prev => ({ ...prev, [field]: value }));
+        setForm((prev: BusinessInfo) => ({ ...prev, [field]: value }));
     }, []);
 
     const handleLogoUpload = useCallback((file: File) => {
@@ -33,9 +33,9 @@ export const useGeneration = (user: User | null) => {
                 const base64String = reader.result as string;
                 if (base64String.length > MAX_LOGO_BASE64_LENGTH) {
                     alert(`O logo é muito grande. O tamanho máximo permitido é de ${MAX_LOGO_KB}KB.`);
-                    setForm(prev => ({ ...prev, logo: '' })); // Clear logo if too large
+                    setForm((prev: BusinessInfo) => ({ ...prev, logo: '' })); // Clear logo if too large
                 } else {
-                    setForm(prev => ({ ...prev, logo: base64String }));
+                    setForm((prev: BusinessInfo) => ({ ...prev, logo: base64String }));
                 }
             };
             reader.readAsDataURL(file);
@@ -51,7 +51,7 @@ export const useGeneration = (user: User | null) => {
         if (!user) return;
         try {
             const history = await api.getHistory();
-            setState(prev => ({ ...prev, history }));
+            setState((prev: GenerationState) => ({ ...prev, history }));
         } catch (e) {
             console.error("Failed to load history", e);
         }
@@ -60,12 +60,12 @@ export const useGeneration = (user: User | null) => {
     const handleGenerate = useCallback(async () => {
         if (!form.companyName || !form.details) return;
 
-        setState(prev => ({ ...prev, status: GenerationStatus.GENERATING, error: undefined }));
+        setState((prev: GenerationState) => ({ ...prev, status: GenerationStatus.GENERATING, error: undefined }));
 
         try {
             const newImage = await api.generate(form);
             
-            setState(prev => ({
+            setState((prev: GenerationState) => ({
                 status: GenerationStatus.SUCCESS,
                 currentImage: newImage,
                 history: [newImage, ...prev.history]
@@ -73,7 +73,7 @@ export const useGeneration = (user: User | null) => {
 
         } catch (err: any) {
             console.error(err);
-            setState(prev => ({ 
+            setState((prev: GenerationState) => ({ 
                 ...prev, 
                 status: GenerationStatus.ERROR, 
                 error: err.message || "Erro ao gerar arte. Verifique se o Backend está rodando." 

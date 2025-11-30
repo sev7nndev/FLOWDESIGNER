@@ -39,7 +39,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
       </div>
 
       <div className="flex-grow space-y-4 mb-8">
-        {features.map((feature, i) => (
+        {features.map((feature: string, i: number) => (
           <div key={i} className="flex items-start gap-3">
             <div className={`mt-0.5 p-0.5 rounded-full ${highlight ? 'bg-primary/30 text-primary' : 'bg-white/10 text-gray-400'}`}>
               <Check size={14} />

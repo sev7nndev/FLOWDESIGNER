@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button } from './Button';
-import { HeroSection } from './Hero';
 import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2 } from 'lucide-react';
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
@@ -59,7 +58,7 @@ const FALLBACK_FLYERS: FlyerData[] = [
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, landingImages, isLandingImagesLoading }) => {
   
   // Use dynamic images if available, otherwise use fallback
-  const carouselItems: FlyerData[] = landingImages.length > 0 ? landingImages.map(img => ({
+  const carouselItems: FlyerData[] = landingImages.length > 0 ? landingImages.map((img: LandingImage) => ({
     bg: img.url,
     title: "Design IA",
     subtitle: "Gerado por Inteligência Artificial",
@@ -155,7 +154,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             </div>
           ) : (
             <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-4 p-4">
-              {marqueeContent.map((item, idx) => (
+              {marqueeContent.map((item: FlyerData, idx: number) => (
                 <FlyerMockup 
                   key={idx} 
                   bg={item.bg} 
@@ -274,7 +273,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             
             <div className="flex w-max animate-scroll gap-6 px-6 hover:[animation-play-state:paused]">
                {/* Duplicating for infinite scroll effect */}
-               {[...Array(2)].map((_, i) => (
+               {[...Array(2)].map((_: undefined, i: number) => (
                  <React.Fragment key={i}>
                     <div className="w-[300px] md:w-[400px] flex-shrink-0">
                       <TestimonialCard 
