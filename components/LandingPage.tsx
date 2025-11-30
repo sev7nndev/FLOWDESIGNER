@@ -59,13 +59,14 @@ const FALLBACK_FLYERS: FlyerData[] = [
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, landingImages, isLandingImagesLoading }) => {
   
   // Use dynamic images if available, otherwise use fallback
-  const carouselItems = landingImages.length > 0 ? landingImages.map(img => ({
+  const carouselItems: FlyerData[] = landingImages.length > 0 ? landingImages.map(img => ({
     bg: img.url,
     title: "Design IA",
     subtitle: "Gerado por Inteligência Artificial",
     phone: "Flow Designer",
     theme: (['mechanic', 'food', 'law', 'tech'] as const)[Math.floor(Math.random() * 4)], // Random theme for mockup style
-    badge: "NOVO"
+    badge: "NOVO",
+    price: undefined // Explicitly set price as undefined to match FlyerData type
   })) : FALLBACK_FLYERS;
   
   // Duplicate items for infinite scroll effect
