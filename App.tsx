@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, UserRole } from './types';
 import { getSupabase } from './services/supabaseClient';
 import { AppTitleHeader } from './components/AppTitleHeader';
-import { LandingPage } from './components/LandingPage';
+import LandingPage from './components/LandingPage'; // FIX: Changed from named import to default import
 import { AuthScreens } from './components/AuthScreens';
 import { Sparkles } from 'lucide-react';
 import { useGeneration } from './hooks/useGeneration';
