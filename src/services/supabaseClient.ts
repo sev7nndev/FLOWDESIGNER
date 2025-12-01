@@ -1,8 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { UserRole } from '../types'; // Import UserRole
 
 // --- Supabase Database Types (Schema Definition) ---
-// This is a minimal definition based on the usage in authService and useProfile.
-// In a real project, this would be generated using the Supabase CLI.
 export type Json =
   | string
   | number
@@ -20,7 +19,7 @@ export interface Database {
           created_at: string
           first_name: string
           last_name: string
-          role: 'free' | 'pro' | 'business' | 'admin' | 'dev' | 'owner'
+          role: UserRole // FIX: Using imported UserRole
           credits: number
           last_login: string
         }
@@ -28,14 +27,14 @@ export interface Database {
           id: string
           first_name: string
           last_name: string
-          role?: 'free' | 'pro' | 'business' | 'admin' | 'dev' | 'owner'
+          role?: UserRole // FIX: Using imported UserRole
           credits?: number
           last_login?: string
         }
         Update: {
           first_name?: string
           last_name?: string
-          role?: 'free' | 'pro' | 'business' | 'admin' | 'dev' | 'owner'
+          role?: UserRole // FIX: Using imported UserRole
           credits?: number
           last_login?: string
         }

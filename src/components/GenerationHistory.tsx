@@ -18,7 +18,7 @@ export const GenerationHistory: React.FC<GenerationHistoryProps> = ({
     error,
     downloadImage,
 }) => {
-    const isLoading = status === 'loading';
+    const isLoading = status === GenerationStatus.LOADING; // FIX: Use enum value (Error 3)
     const displayImage = currentImage || history[0];
 
     return (

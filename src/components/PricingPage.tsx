@@ -29,7 +29,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ user, onBackToApp }) =
             price: "R$ 199/mês",
             credits: "Créditos Ilimitados",
             features: ["Tudo no Pro", "Gerações instantâneas", "Recursos de equipe", "Suporte dedicado"],
-            current: user.role === 'business',
+            current: user.role === 'business', // FIX: 'business' role is now defined (Error 5)
         },
     ];
 

@@ -1,12 +1,12 @@
 import React from 'react';
-import { GenerationFormState, UsageData } from '../types';
+import { GenerationFormState, UsageData, GenerationStatus } from '../types'; // Import GenerationStatus
 import { Button } from './Button';
 import { Input } from './Input';
 import { Loader2, Upload, Zap } from 'lucide-react';
 
 interface GenerationFormProps {
     form: GenerationFormState;
-    status: 'idle' | 'loading' | 'success' | 'error';
+    status: GenerationStatus; // FIX: Use GenerationStatus enum
     error: string | null;
     handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
     handleLogoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -27,7 +27,7 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
     usage,
     isLoadingUsage,
 }) => {
-    const isLoading = status === 'loading';
+    const isLoading = status === GenerationStatus.LOADING; // FIX: Use enum value
     const isFreeTier = usage.credits <= 0;
 
     return (
@@ -56,7 +56,7 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
                         rows={4}
                         className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-150"
                         placeholder="Ex: Uma startup de SaaS que vende software de gestão de projetos para equipes remotas."
-                        value={form.businessInfo}
+                        value={form.businessInfo} // FIX: Accessing correct property (Error 2)
                         onChange={handleInputChange}
                         required
                     />

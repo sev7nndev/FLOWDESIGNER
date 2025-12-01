@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './src/hooks/useAuth'; // FIX: Corrected path to include src/ (Error 12)
+import { useAuth } from './src/hooks/useAuth'; 
 import { useGeneration } from './src/hooks/useGeneration';
-import { UserRole } from './src/types'; 
+import { UserRole, GenerationStatus } from './src/types'; // Import GenerationStatus
 import { AppHeader } from './src/components/AppHeader';
 import { SettingsModal } from './src/components/Modals';
 import { GenerationForm } from './src/components/GenerationForm';
 import { GenerationHistory } from './src/components/GenerationHistory';
 import { PricingPage } from './src/components/PricingPage';
 import { LandingPage } from './src/pages/LandingPage';
-import { LoginPage } from './src/pages/LoginPage'; // FIX: Corrected path to include src/ (Error 13)
-import { RegisterPage } from './src/pages/RegisterPage'; // FIX: Corrected path to include src/ (Error 14)
+import { LoginPage } from './src/pages/LoginPage'; 
+import { RegisterPage } from './src/pages/RegisterPage'; 
 import { DevPanelPage } from './src/pages/DevPanelPage';
 import { OwnerPanelPage } from './src/pages/OwnerPanelPage';
 import { Button } from './src/components/Button';
@@ -27,7 +27,7 @@ const App: React.FC = () => {
     const { 
         form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, 
         usage, isLoadingUsage, downloadImage
-    } = useGeneration(user);
+    } = useGeneration(user, {}); 
 
     // Load history on initial load
     useEffect(() => {
@@ -85,12 +85,14 @@ const App: React.FC = () => {
 
     // Render Dev Panel if open
     if (isDevPanelOpen && isAdminOrDev) {
-        return <DevPanelPage user={user} onBackToApp={handleCloseDevPanel} onLogout={logout} />;
+        // FIX: Assert user is not null (Error 26)
+        return <DevPanelPage user={user!} onBackToApp={handleCloseDevPanel} onLogout={logout} />; 
     }
     
     // Render Owner Panel if open
     if (isOwnerPanelOpen && isOwner) {
-        return <OwnerPanelPage user={user} onBackToApp={handleCloseOwnerPanel} onLogout={logout} />;
+        // FIX: Assert user is not null (Error 27)
+        return <OwnerPanelPage user={user!} onBackToApp={handleCloseOwnerPanel} onLogout={logout} />; 
     }
 
     return (
@@ -100,7 +102,7 @@ const App: React.FC = () => {
                 {/* Header */}
                 {isAuthenticated && (
                     <AppHeader 
-                        user={user}
+                        user={user!} // Assert user is not null here
                         profileRole={profileRole}
                         onLogout={logout}
                         onShowSettings={handleShowSettings}
@@ -129,13 +131,13 @@ const App: React.FC = () => {
                                 <div className="lg:col-span-1">
                                     <GenerationForm 
                                         form={form}
-                                        status={state.status}
+                                        status={state.status} // FIX: status is now GenerationStatus (Error 28)
                                         error={state.error}
                                         handleInputChange={handleInputChange}
                                         handleLogoUpload={handleLogoUpload}
                                         handleGenerate={handleGenerate}
                                         loadExample={loadExample}
-                                        usage={usage as any} 
+                                        usage={usage} 
                                         isLoadingUsage={isLoadingUsage}
                                     />
                                 </div>
@@ -165,7 +167,7 @@ const App: React.FC = () => {
                     <SettingsModal 
                         user={user}
                         profileRole={profileRole}
-                        usage={usage as any} 
+                        usage={usage} 
                         onClose={handleCloseSettings}
                         onLogout={logout}
                         onShowPricing={handleShowPricing}

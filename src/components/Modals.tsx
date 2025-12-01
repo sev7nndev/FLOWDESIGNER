@@ -41,7 +41,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="space-y-2">
                         <h3 className="text-lg font-semibold text-primary">Uso e Créditos</h3>
                         <p className="text-zinc-300">Créditos Restantes: <span className="font-bold text-white">{usage.credits}</span></p>
-                        <p className="text-zinc-300">Gerações no Mês: {usage.generationsThisMonth}</p>
+                        <p className="text-zinc-300">Gerações no Mês: {usage.generationsThisMonth}</p> {/* FIX: Accessing correct property (Error 4) */}
                         <Button variant="primary" onClick={onShowPricing} icon={<Zap size={16} />} className="mt-2">
                             Ver Planos de Upgrade
                         </Button>

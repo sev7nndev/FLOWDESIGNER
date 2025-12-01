@@ -1,4 +1,5 @@
-import { getSupabase } from './supabaseClient';
+import { getSupabase, Database } from './supabaseClient'; 
+import { UserRole } from '../types'; // Import UserRole
 
 export const authService = {
     async login(email: string, password: string): Promise<void> {
@@ -30,15 +31,20 @@ export const authService = {
         
         // 2. Create the profile entry (Supabase RLS should handle this, but we ensure metadata is set)
         if (data.user) {
+            // Define Insert type for profiles table
+            type ProfileInsert = Database['public']['Tables']['profiles']['Insert']; 
+            
+            const profileData: ProfileInsert = {
+                id: data.user.id,
+                first_name: firstName,
+                last_name: lastName,
+                role: 'free' as UserRole, // Default role, cast to UserRole
+                credits: 10, // Initial credits
+            };
+
             const { error: profileError } = await supabase
                 .from('profiles')
-                .insert({
-                    id: data.user.id,
-                    first_name: firstName,
-                    last_name: lastName,
-                    role: 'free', // Default role
-                    credits: 10, // Initial credits
-                });
+                .insert([profileData]); // FIX: Use the typed object in an array (Error 1)
 
             if (profileError) {
                 // Log profile creation error but don't block registration success
