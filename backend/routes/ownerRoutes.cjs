@@ -1,25 +1,22 @@
 // backend/routes/ownerRoutes.cjs
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
 const { fetchOwnerMetrics } = require('../services/ownerService');
+const { protect } = require('../middleware/authMiddleware');
 
-// Middleware para verificar se o usuário é 'owner'
-const checkOwnerRole = (req, res, next) => {
-    if (req.user.role !== 'owner') {
-        return res.status(403).json({ error: 'Acesso negado. Apenas o proprietário pode acessar este painel.' });
-    }
-    next();
-};
-
-// Endpoint para buscar todas as métricas do proprietário
-router.get('/metrics', authenticateToken, checkOwnerRole, async (req, res, next) => {
+// Rota para buscar métricas do painel do proprietário
+router.get('/metrics', protect(['owner']), async (req, res) => {
     try {
         const metrics = await fetchOwnerMetrics();
-        res.json(metrics);
+        res.status(200).json(metrics);
     } catch (error) {
-        console.error('Error fetching owner metrics:', error);
-        res.status(500).json({ error: 'Falha ao buscar métricas do proprietário.' });
+        // Captura qualquer erro lançado pelo ownerService (incluindo falhas do Admin API)
+        console.error("Error fetching owner metrics:", error.message, error.stack);
+        
+        // Garante que uma resposta JSON estruturada seja SEMPRE enviada
+        res.status(500).json({ 
+            error: error.message || "Internal Server Error. Check backend logs for details." 
+        });
     }
 });
 
