@@ -88,8 +88,6 @@ export const SupportChat: React.FC<SupportChatProps> = ({ user }) => {
 
     return (
         <div className="h-full flex flex-col bg-zinc-950">
-            {/* Cabeçalho removido, agora gerenciado pelo App.tsx */}
-            
             {/* Área de Mensagens */}
             <div className="flex-grow p-4 space-y-4 overflow-y-auto custom-scrollbar">
                 {messages.map((msg) => (
