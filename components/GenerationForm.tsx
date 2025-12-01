@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { FormState, GenerationFormProps, UsageData } from '../types';
+import { GenerationFormProps, UsageData, GenerationStatus, FormState, BusinessInfo } from '../types'; // FIX: Corrected imports (Errors 4, 6, 7)
 import { Button } from './Button';
 import { Image, Upload, Loader2, Info, Zap, Star, Sparkles } from 'lucide-react'; // Adicionado Sparkles
 
@@ -71,7 +71,7 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
     usage,
     isLoadingUsage
 }) => {
-    const isGenerating = status === 'generating';
+    const isGenerating = status === GenerationStatus.GENERATING;
     const [validationErrors, setValidationErrors] = useState<{ prompt?: string, companyName?: string, logo?: string } | null>(null);
 
     const handleFormSubmit = (e: React.FormEvent) => {
@@ -223,7 +223,7 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
 
                     <Button 
                         type="button" 
-                        variant="tertiary" 
+                        variant="tertiary" // FIX: tertiary variant now exists (Error 8)
                         onClick={loadExample} 
                         disabled={isGenerating}
                         className="w-full h-10 text-sm"

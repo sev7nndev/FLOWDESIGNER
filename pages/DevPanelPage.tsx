@@ -175,7 +175,8 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
 
 // --- Componente de Gerenciamento de Imagens da Landing Page ---
 const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
-    const { images, isLoading, error, uploadImage, deleteImage } = useLandingImages(user.role);
+    // FIX: Passing the full user object (Error 9)
+    const { images, isLoading, error, uploadImage, deleteImage } = useLandingImages(user); 
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -186,8 +187,7 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
             // CRITICAL FIX: O hook useLandingImages agora extrai o path do storage a partir da URL pública
             // O backend/routes/adminRoutes.cjs espera o 'imagePath' no corpo da requisição DELETE.
             // Precisamos extrair o path aqui para passar ao hook, que o passará ao backend.
-            const urlParts = image.url.split('/landing-carousel/');
-            const path = urlParts.length > 1 ? urlParts[1] : '';
+            const path = image.image_path; // FIX: image_path is now available on LandingImage type
             
             if (!path) {
                 throw new Error("Caminho do arquivo inválido.");
@@ -202,8 +202,9 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
     }, [deleteImage]);
 
     const handleUploadWrapper = useCallback(async (file: File) => {
-        await uploadImage(file, user.id);
-    }, [uploadImage, user.id]);
+        // FIX: uploadImage now expects only one argument (Error 10)
+        await uploadImage(file); 
+    }, [uploadImage]);
 
     return (
         <div className="space-y-4 bg-zinc-900/50 p-6 rounded-xl border border-white/10">

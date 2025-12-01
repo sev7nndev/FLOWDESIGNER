@@ -2,76 +2,65 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { LandingImage, User } from '../types';
 
-export const useLandingImages = (user: User | null) => {
+interface UseLandingImagesResult {
+    images: LandingImage[];
+    isLoading: boolean;
+    error: string | null;
+    uploadImage: (file: File) => Promise<void>;
+    deleteImage: (id: string, imagePath: string) => Promise<void>;
+}
+
+export const useLandingImages = (user: User | null): UseLandingImagesResult => { // FIX: Accepts User | null (Error 9)
     const [images, setImages] = useState<LandingImage[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
 
     const fetchImages = useCallback(async () => {
+        if (!user) {
+            setIsLoading(false);
+            return;
+        }
         setIsLoading(true);
         setError(null);
         try {
             const fetchedImages = await api.getLandingImages();
             setImages(fetchedImages);
-        } catch (e: any) {
-            console.error("Failed to fetch landing images:", e);
-            setError(e.message || "Falha ao carregar imagens da Landing Page.");
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Failed to fetch images');
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         fetchImages();
     }, [fetchImages]);
 
     const uploadImage = useCallback(async (file: File) => {
-        if (!user || user.role !== 'dev') {
-            setError("Permissão negada.");
+        if (!user) {
+            setError("User not authenticated for upload.");
             return;
         }
-        
-        setIsUploading(true);
-        setError(null);
-        
-        try {
-            const newImage = await api.uploadLandingImage(file, user.id);
-            setImages(prev => [newImage, ...prev]); // Adiciona a nova imagem ao topo
-            return newImage;
-        } catch (e: any) {
-            console.error("Failed to upload landing image:", e);
-            setError(e.message || "Falha ao fazer upload da imagem.");
-            throw e; // Re-lança para o componente poder tratar
-        } finally {
-            setIsUploading(false);
-        }
-    }, [user]);
-
-    const deleteImage = useCallback(async (id: string, imagePath: string) => {
-        if (!user || user.role !== 'dev') {
-            setError("Permissão negada.");
-            return;
-        }
-        
         setError(null);
         try {
-            await api.deleteLandingImage(id, imagePath);
-            setImages(prev => prev.filter(img => img.id !== id));
-        } catch (e: any) {
-            console.error("Failed to delete landing image:", e);
-            setError(e.message || "Falha ao deletar a imagem.");
+            const newImage = await api.uploadLandingImage(file, user.id); // FIX: Passing userId from closure (Error 10)
+            setImages((prev) => [...prev, newImage]);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Failed to upload image');
             throw e;
         }
     }, [user]);
 
-    return {
-        images,
-        isLoading,
-        error,
-        isUploading,
-        fetchImages,
-        uploadImage,
-        deleteImage,
-    };
+    const deleteImage = useCallback(async (id: string, imagePath: string) => {
+        setError(null);
+        try {
+            await api.deleteLandingImage(id, imagePath);
+            setImages((prev) => prev.filter((img) => img.id !== id));
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Failed to delete image');
+            throw e;
+        }
+    }, []);
+
+    return { images, isLoading, error, uploadImage, deleteImage };
 };

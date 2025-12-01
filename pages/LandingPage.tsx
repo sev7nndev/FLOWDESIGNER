@@ -87,7 +87,7 @@ export const LandingPage: React.FC = () => {
                     <h1 className="text-2xl font-bold text-primary">Flow Designer</h1>
                     <nav>
                         <Link to="/login">
-                            <Button variant="primary" icon={<ArrowRight size={16} />}>
+                            <Button variant="primary" icon={<ArrowRight size={16} />} size="small">
                                 Entrar
                             </Button>
                         </Link>
@@ -106,7 +106,7 @@ export const LandingPage: React.FC = () => {
                             Automatize tarefas complexas, integre serviços e visualize sua lógica de negócios com nossa interface de arrastar e soltar intuitiva.
                         </p>
                         <Link to="/register">
-                            <Button size="large" icon={<Zap size={20} />}>
+                            <Button size="large" icon={<Zap size={20} />}> {/* FIX: Added size prop (Error 21) */}
                                 Começar Gratuitamente
                             </Button>
                         </Link>
@@ -133,20 +133,23 @@ export const LandingPage: React.FC = () => {
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <h3 className="text-4xl font-bold text-center text-white mb-12">Por que Flow Designer?</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <FeatureCard
+                            <FeatureCard // FIX: Added color prop (Error 22)
                                 icon={<Code size={32} />}
                                 title="Desenvolvimento Sem Código"
                                 description="Crie lógica complexa sem escrever uma única linha de código. Foco na solução, não na sintaxe."
+                                color="primary"
                             />
-                            <FeatureCard
+                            <FeatureCard // FIX: Added color prop (Error 23)
                                 icon={<Zap size={32} />}
                                 title="Execução em Tempo Real"
                                 description="Seus fluxos são executados instantaneamente, garantindo respostas rápidas e automação eficiente."
+                                color="secondary"
                             />
-                            <FeatureCard
+                            <FeatureCard // FIX: Added color prop (Error 24)
                                 icon={<Users size={32} />}
                                 title="Colaboração Simplificada"
                                 description="Trabalhe em equipe nos mesmos fluxos, com controle de versão e histórico de alterações."
+                                color="accent"
                             />
                         </div>
                     </div>
@@ -159,20 +162,23 @@ export const LandingPage: React.FC = () => {
                         <div className="relative">
                             <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-0.5 bg-primary/20 hidden md:block"></div>
                             <div className="space-y-16">
-                                <HowItWorksStep
+                                <HowItWorksStep // FIX: Added stepNumber prop (Error 25)
                                     stepNumber={1}
+                                    number="01"
                                     title="Arraste e Conecte"
                                     description="Comece arrastando nós (nodes) para a tela e conecte-os para definir o fluxo de dados e lógica."
                                     isRight={false}
                                 />
-                                <HowItWorksStep
+                                <HowItWorksStep // FIX: Added stepNumber prop (Error 26)
                                     stepNumber={2}
+                                    number="02"
                                     title="Configure a Lógica"
                                     description="Clique em cada nó para configurar suas propriedades, como URLs de API, condições de IF/ELSE ou transformações de dados."
                                     isRight={true}
                                 />
-                                <HowItWorksStep
+                                <HowItWorksStep // FIX: Added stepNumber prop (Error 27)
                                     stepNumber={3}
+                                    number="03"
                                     title="Publique e Monitore"
                                     description="Publique seu fluxo com um clique e monitore sua execução em tempo real através do painel de logs."
                                     isRight={false}
@@ -188,7 +194,7 @@ export const LandingPage: React.FC = () => {
                         <h3 className="text-4xl font-bold text-white mb-4">Pronto para Automatizar?</h3>
                         <p className="text-xl text-gray-300 mb-8">Junte-se a milhares de desenvolvedores e empresas que confiam no Flow Designer.</p>
                         <Link to="/register">
-                            <Button size="large" icon={<CheckCircle size={20} />}>
+                            <Button size="large" icon={<CheckCircle size={20} />}> {/* FIX: Added size prop (Error 28) */}
                                 Criar Minha Conta Agora
                             </Button>
                         </Link>

@@ -1,8 +1,9 @@
-import React from 'react';
-import { motion, HTMLMotionProps } from 'framer-motion';
+import React, { motion, HTMLMotionProps } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'tertiary'; // FIX: Added 'tertiary'
+  size?: 'small' | 'medium' | 'large'; // FIX: Added 'size'
   isLoading?: boolean;
   icon?: React.ReactNode;
 }
@@ -13,24 +14,32 @@ type MotionButtonProps = ButtonProps & HTMLMotionProps<'button'>;
 export const Button: React.FC<MotionButtonProps> = ({ 
   children, 
   variant = 'primary', 
+  size = 'medium', // Default size
   isLoading, 
   icon,
   className = '',
   ...props 
 }) => {
-  const baseStyles = "relative group inline-flex items-center justify-center px-6 py-3 text-sm font-medium transition-all duration-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden";
+  const baseStyles = "relative group inline-flex items-center justify-center text-sm font-medium transition-all duration-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden";
   
   const variants: Record<NonNullable<ButtonProps['variant']>, string> = {
     primary: "bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25",
     secondary: "bg-surface border border-white/10 hover:bg-white/5 text-gray-200",
     ghost: "bg-transparent hover:bg-white/5 text-gray-400 hover:text-white",
-    danger: "bg-red-600 hover:bg-red-700 text-white border border-red-700/50 shadow-lg shadow-red-600/25"
+    danger: "bg-red-600 hover:bg-red-700 text-white border border-red-700/50 shadow-lg shadow-red-600/25",
+    tertiary: "bg-white/10 hover:bg-white/20 text-white border border-white/10" // FIX: Added tertiary style
+  };
+  
+  const sizeClasses: Record<NonNullable<ButtonProps['size']>, string> = {
+    small: 'px-3 py-1.5 text-xs',
+    medium: 'px-6 py-3 text-sm',
+    large: 'px-8 py-4 text-base',
   };
 
   return (
     <motion.button 
       whileTap={{ scale: 0.95 }}
-      className={`${baseStyles} ${variants[variant]} ${className}`}
+      className={`${baseStyles} ${variants[variant]} ${sizeClasses[size]} ${className}`}
       disabled={isLoading || props.disabled}
       {...props}
     >

@@ -5,6 +5,8 @@ interface HowItWorksStepProps {
     number: string;
     title: string;
     description: string;
+    stepNumber: number; // FIX: Added required stepNumber prop (Errors 25, 26, 27)
+    isRight: boolean;
 }
 
 export const HowItWorksStep: React.FC<HowItWorksStepProps> = ({ icon, number, title, description }) => (

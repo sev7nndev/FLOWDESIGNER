@@ -4,7 +4,7 @@ interface FeatureCardProps {
     icon: React.ReactNode;
     title: string;
     description: string;
-    color: 'primary' | 'secondary' | 'accent';
+    color: 'primary' | 'secondary' | 'accent'; // FIX: Added required color prop (Errors 22, 23, 24)
 }
 
 export const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, color }) => {

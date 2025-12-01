@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, X, Zap, Star, Shield, Loader2, ArrowLeft } from 'lucide-react';
+import { Check, Zap, Star, Shield, ArrowLeft } from 'lucide-react'; // FIX: Removed unused X, Loader2 imports (Errors 15, 16)
 import { Button } from './Button';
 import { User } from '../types';
 import { api } from '../services/api';
@@ -63,7 +63,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ user, onBackToApp }) =
             price: 29.99,
             description: 'Perfeito para pequenos projetos e uso pessoal.',
             features: featuresList.starter,
-            isCurrent: user.role === 'starter',
+            isCurrent: user.role === 'starter', // FIX: UserRole now includes 'starter' (Error 17)
             isRecommended: true,
         },
         {
@@ -77,8 +77,8 @@ export const PricingPage: React.FC<PricingPageProps> = ({ user, onBackToApp }) =
         },
     ];
 
-    const handleSubscriptionAction = async (planId: 'starter' | 'pro') => {
-        if (user.role === planId) return; // Já está neste plano
+    const handleSubscriptionAction = async (planId: 'starter' | 'pro' | 'free') => { // FIX: Allow 'free' temporarily for logic check
+        if (planId === 'free' || user.role === planId) return; // Already on free or current plan
 
         setIsLoading(true);
         setError(null);
@@ -138,7 +138,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ user, onBackToApp }) =
             <Button 
                 variant={plan.isRecommended ? 'primary' : 'secondary'} 
                 className="w-full h-12" 
-                onClick={() => handleSubscriptionAction(plan.id)}
+                onClick={() => handleSubscriptionAction(plan.id)} // FIX: plan.id is now correctly typed (Error 18)
                 isLoading={isLoading}
                 disabled={isLoading}
             >
