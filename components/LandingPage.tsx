@@ -9,6 +9,8 @@ import { LandingImage } from '../types';
 import { HeroSection } from './Hero';
 import { PricingModal } from './PricingModal';
 import { useScrollDirection } from '../hooks/useScrollDirection';
+import { FeatureCard } from './FeatureCard'; // Import new component
+import { HowItWorksStep } from './HowItWorksStep'; // Import new component
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -23,7 +25,7 @@ const FALLBACK_FLYERS: FlyerData[] = [
     { bg: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=1000&auto=format&fit=crop", title: "AUTO CENTER", subtitle: "REVISÃO • FREIOS • SUSPENSÃO", phone: "(11) 9998-2020", theme: "mechanic", badge: "PROMOÇÃO" },
     { bg: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1000&auto-format&fit=crop", title: "RITA SALGADOS", subtitle: "Cento de Salgados fritos na hora. Coxinha & Kibe.", phone: "(21) 9888-7777", theme: "food", badge: "Oferta", price: "R$49" },
     { bg: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1000&auto-format&fit=crop", title: "SILVA ADVOCACIA", subtitle: "Direito Trabalhista e Previdenciário.", phone: "(11) 3030-4040", theme: "law", badge: "Consultoria" },
-    { bg: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=1000&auto-format&fit=crop", title: "SMART AUDIO", subtitle: "Fone Bluetooth Pro com cancelamento de ruído.", phone: "www.site.com", theme: "tech", badge: "50% OFF" },
+    { bg: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=1000&auto-format&fit:crop", title: "SMART AUDIO", subtitle: "Fone Bluetooth Pro com cancelamento de ruído.", phone: "www.site.com", theme: "tech", badge: "50% OFF" },
 ];
 
 const sectionVariants = {
@@ -31,7 +33,7 @@ const sectionVariants = {
   visible: { 
     opacity: 1, 
     y: 0,
-    transition: { duration: 0.6, ease: [0.42, 0, 0.58, 1] as [number, number, number, number] } // Fixed easing type
+    transition: { duration: 0.6, ease: [0.42, 0, 0.58, 1] as [number, number, number, number] }
   }
 };
 
@@ -47,47 +49,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   // Duplicamos o conteúdo 2x
   const marqueeContent = [...carouselItems, ...carouselItems];
 
-  const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string, color: 'primary' | 'secondary' | 'accent' }> = ({ icon, title, description, color }) => {
-    const colorClasses = {
-      primary: { bg: 'bg-primary/10', text: 'text-primary', hoverBorder: 'hover:border-primary/50', shadow: 'hover:shadow-primary/10', gradient: 'from-primary/5 to-transparent' },
-      secondary: { bg: 'bg-secondary/10', text: 'text-secondary', hoverBorder: 'hover:border-secondary/50', shadow: 'hover:shadow-secondary/10', gradient: 'from-secondary/5 to-transparent' },
-      accent: { bg: 'bg-accent/10', text: 'text-accent', hoverBorder: 'hover:border-accent/50', shadow: 'hover:shadow-accent/10', gradient: 'from-accent/5 to-transparent' }
-    }[color];
-
-    return (
-      <div className={`relative overflow-hidden rounded-3xl p-6 md:p-8 bg-zinc-900/80 border border-white/10 shadow-xl transition-all duration-500 group ${colorClasses.hoverBorder} ${colorClasses.shadow}`}>
-        <div className={`absolute inset-0 bg-gradient-to-br ${colorClasses.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-        <div className="relative z-10">
-          <div className={`${colorClasses.bg} w-fit p-3 rounded-xl mb-4 ${colorClasses.text}`}>{icon}</div>
-          <h4 className="text-xl font-bold text-white mb-2">{title}</h4>
-          <p className="text-gray-400 text-sm">{description}</p>
-        </div>
-      </div>
-    );
-  };
-
-  const HowItWorksStep: React.FC<{ icon: React.ReactNode, number: string, title: string, description: string }> = ({ icon, number, title, description }) => (
-    <div className="relative p-6 bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden transition-all hover:border-white/20 hover:-translate-y-1">
-      <div className="absolute top-0 left-0 h-full w-full bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 hover:opacity-100" />
-      <div className="relative">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-            {icon}
-          </div>
-          <span className="text-5xl font-extrabold text-white/10">{number}</span>
-        </div>
-        <h4 className="text-lg font-bold text-white mb-2">{title}</h4>
-        <p className="text-sm text-gray-400">{description}</p>
-      </div>
-    </div>
-  );
-
   return (
     <>
       <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden scroll-smooth">
         {/* Animated Aurora Background */}
         <div className="absolute -top-1/4 -left-1/4 h-[800px] w-[800px] bg-gradient-to-tr from-primary/30 to-secondary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow" />
-        {/* CORREÇÃO: Ajustando a posição do efeito de fundo inferior para usar bottom negativo em vez de translate-y-1/2 para evitar estender o scroll da página */}
         <div className="absolute bottom-[-300px] -right-1/4 h-[600px] w-[600px] bg-gradient-to-bl from-accent/30 to-primary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow animation-delay-4000" />
         
         <motion.nav 
@@ -131,7 +97,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                   <Loader2 size={24} className="animate-spin mr-2" /> Carregando galeria...
               </div>
             ) : (
-              <div className="flex w-max animate-marquee hover:[animation-play-state:paused] gap-4 p-4">
+              <div className="flex w-max animate-marquee hover:[animation-play-state:paused] gap-4 p-4 overflow-x-scroll no-scrollbar">
                 {marqueeContent.map((item: FlyerData, idx: number) => <FlyerMockup key={idx} {...item} />)}
               </div>
             )}
@@ -184,7 +150,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <div className="relative w-full">
               <div className="absolute inset-y-0 left-0 w-12 md:w-32 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
               <div className="absolute inset-y-0 right-0 w-12 md:w-32 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
-              <div className="flex w-max animate-marquee hover:[animation-play-state:paused] gap-6 px-6">
+              <div className="flex w-max animate-marquee hover:[animation-play-state:paused] gap-6 px-6 overflow-x-scroll no-scrollbar">
                  {[...Array(2)].map((_: undefined, i: number) => ( // Duplicação 2x
                    <React.Fragment key={i}>
                       <div className="w-[300px] md:w-[400px] flex-shrink-0"><TestimonialCard name="Carlos Mendes" role="Dono de Oficina" text="Eu gastava 300 reais por semana com designer. Agora faço os posts da oficina em 5 minutos tomando café. A qualidade impressiona." stars={5} image="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop" /></div>

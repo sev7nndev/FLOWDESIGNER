@@ -81,20 +81,9 @@ export const api = {
       // O backend agora retorna a URL pública (já assinada se necessário)
       // const finalImageUrl = resultData.imageUrl; // REMOVIDO: Variável não utilizada
       
-      // Como o backend já salvou o registro completo na tabela 'images', 
-      // precisamos buscar os metadados completos (prompt, businessInfo, createdAt)
-      // para retornar o objeto GeneratedImage completo.
-      
-      // Melhoria: O backend deve retornar o ID da imagem gerada para que possamos buscá-la.
-      // Como o backend não retorna o ID da imagem, vamos forçar o loadHistory no hook.
-      
-      // Por enquanto, retornamos um objeto mínimo que o hook pode usar para atualizar o estado
-      // antes de carregar o histórico completo.
-      
-      // O backend agora retorna a URL pública (já assinada se necessário)
+      // Buscamos o registro mais recente que corresponde à URL gerada
       const supabaseAnonClient = getSupabase();
       
-      // Buscamos o registro mais recente que corresponde à URL gerada
       const { data: imageRecord, error: fetchError } = await supabaseAnonClient!
         .from('images')
         .select('id, prompt, business_info, created_at, image_url')
@@ -192,9 +181,18 @@ export const api = {
                 });
 
                 if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || `Falha ao fazer upload da imagem da landing page: Status ${response.status}`);
+                    let errorMessage = `Falha ao fazer upload da imagem da landing page: Status ${response.status}`;
+                    try {
+                        // Tenta ler o JSON de erro do servidor
+                        const err = await response.json();
+                        errorMessage = err.error || errorMessage;
+                    } catch (e) {
+                        // Se falhar, usa a mensagem de status padrão
+                        console.warn("Failed to parse error response as JSON during landing image upload.");
+                    }
+                    throw new Error(errorMessage);
                 }
+                
                 const data = await response.json();
                 resolve(data.image); // Backend should return the full LandingImage object
             } catch (error) {

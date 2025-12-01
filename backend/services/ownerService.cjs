@@ -1,6 +1,13 @@
 // backend/services/ownerService.cjs
 const { supabaseService } = require('../config');
-const sanitizeHtml = require('sanitize-html'); // <-- ADDED
+const sanitizeHtml = require('sanitize-html');
+
+// Define prices for calculation
+const PLAN_PRICES = {
+    starter: 29.99,
+    pro: 49.99,
+    free: 0,
+};
 
 /**
  * Masks an email address (e.g., user@example.com -> u***@e***.com)
@@ -27,7 +34,7 @@ const maskEmail = (email) => {
 
 /**
  * Busca métricas agregadas de usuários (contagem por plano e status).
- * @returns {Promise<{planCounts: object, statusCounts: object}>}
+ * @returns {Promise<{planCounts: object, statusCounts: object, estimatedRevenue: number}>}
  */
 const fetchOwnerMetrics = async () => {
     // 1. Contagem de usuários por plano (role)
@@ -43,6 +50,12 @@ const fetchOwnerMetrics = async () => {
         acc[item.role] = item.count;
         return acc;
     }, { free: 0, starter: 0, pro: 0 }); // Inicializa para garantir que todos os planos apareçam
+
+    // 1.1 Calculate Estimated Monthly Revenue (MRR)
+    const estimatedRevenue = (
+        (countsByPlan.starter || 0) * PLAN_PRICES.starter +
+        (countsByPlan.pro || 0) * PLAN_PRICES.pro
+    ).toFixed(2); // Format to 2 decimal places
 
     // 2. Contagem de usuários por status
     const { data: statusCounts, error: statusError } = await supabaseService
@@ -87,6 +100,7 @@ const fetchOwnerMetrics = async () => {
         planCounts: countsByPlan,
         statusCounts: countsByStatus,
         clients: clientList,
+        estimatedRevenue: parseFloat(estimatedRevenue), // Return as number
     };
 };
 

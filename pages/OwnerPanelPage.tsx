@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star, LogOut, ShieldOff } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star, LogOut, ShieldOff, TrendingUp } from 'lucide-react';
 import { Button } from '../components/Button';
 import { useOwnerMetrics } from '../hooks/useOwnerMetrics';
 import { MetricCard } from '../components/MetricCard';
@@ -98,6 +98,12 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
     const totalClients = metrics.clients.length;
     const totalActive = metrics.statusCounts.on;
     const totalInactive = metrics.statusCounts.paused + metrics.statusCounts.cancelled;
+    
+    // Format revenue
+    const formattedRevenue = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+    }).format(metrics.estimatedRevenue);
 
     return (
         <div className="min-h-screen bg-zinc-950 text-gray-100 pt-20 pb-16 relative">
@@ -158,9 +164,20 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
 
                 {!isLoadingMetrics && activeTab === 'dashboard' && (
                     <div className="space-y-10">
-                        <h2 className="text-2xl font-bold text-white">Métricas de Assinatura</h2>
+                        <h2 className="text-2xl font-bold text-white">Métricas Financeiras e de Assinatura</h2>
+                        
+                        {/* Revenue Metric */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <MetricCard 
+                                title="Receita Mensal Estimada (MRR)" 
+                                value={formattedRevenue} 
+                                icon={<TrendingUp size={24} />} 
+                                color="accent"
+                            />
+                        </div>
                         
                         {/* Contagem por Plano */}
+                        <h2 className="text-2xl font-bold text-white pt-6">Contagem de Planos</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <MetricCard 
                                 title="Plano Free" 
@@ -219,7 +236,6 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
                         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                             <MessageSquare size={24} className="text-primary" /> Chat com Clientes
                         </h2>
-                        {/* O componente OwnerChatPanel precisa ser implementado para funcionar */}
                         <OwnerChatPanel owner={user} clients={metrics.clients} />
                     </div>
                 )}

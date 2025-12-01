@@ -24,12 +24,14 @@ interface OwnerMetrics {
         cancelled: number;
     };
     clients: ClientData[];
+    estimatedRevenue: number; // Added revenue
 }
 
 const INITIAL_METRICS: OwnerMetrics = {
     planCounts: { free: 0, starter: 0, pro: 0 },
     statusCounts: { on: 0, paused: 0, cancelled: 0 },
     clients: [],
+    estimatedRevenue: 0, // Initialize revenue
 };
 
 export const useOwnerMetrics = (user: User | null) => {
