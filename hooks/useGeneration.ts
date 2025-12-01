@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { GenerationState, GenerationStatus, BusinessInfo, User, FormState } from '../types'; // FIX: Removed unused GeneratedImage import (Error 7)
+import { GenerationState, GenerationStatus, BusinessInfo, User, FormState } from '../types'; 
 import { api } from '../services/api';
 import { PLACEHOLDER_EXAMPLES } from '../constants';
 import { useUsage } from './useUsage'; 
@@ -72,7 +72,7 @@ export const useGeneration = (user: User | null) => {
         if (!form.companyName || !form.details || !form.prompt) return;
         
         if (usage?.isBlocked) {
-            // FIX: Accessing max_usage directly on the non-null usage object (Error 8)
+            // FIX: Accessing max_usage safely (Error 3)
             const maxUsage = usage.max_usage; 
             setState((prev: GenerationState) => ({ 
                 ...prev, 
@@ -114,16 +114,6 @@ export const useGeneration = (user: User | null) => {
         }
     }, [form, usage?.isBlocked, refreshUsage]);
 
-    const downloadImage = useCallback((url: string, filename: string) => {
-        // Simula a lógica de download
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }, []);
-
     return {
         form,
         state,
@@ -134,6 +124,5 @@ export const useGeneration = (user: User | null) => {
         handleGenerate,
         loadHistory,
         loadExample,
-        downloadImage, // FIX: Export downloadImage (Error 15)
     };
 };

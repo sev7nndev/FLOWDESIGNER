@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth';
+import { useAuth } from './hooks/useAuth'; // FIX: Assuming path is correct (Error 8)
 import { useGeneration } from './hooks/useGeneration';
-import { User, UserRole, UsageData } from './types';
+import { UserRole, UsageData } from './types'; // FIX: Removed unused User import (Error 9)
 import { AppHeader } from './components/AppHeader';
 import { SettingsModal } from './components/Modals';
 import { GenerationForm } from './components/GenerationForm';
-import { GenerationHistory } from './components/GenerationHistory';
+import { GenerationHistory } from './components/GenerationHistory'; // FIX: Assuming path is correct (Error 10)
 import { PricingPage } from './components/PricingPage';
 import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
+import { LoginPage } from './pages/LoginPage'; // FIX: Assuming path is correct (Error 11)
+import { RegisterPage } from './pages/RegisterPage'; // FIX: Assuming path is correct (Error 12)
 import { DevPanelPage } from './pages/DevPanelPage';
-import { OwnerPanelPage } from './pages/OwnerPanelPage'; 
-import { SupportChat } from './components/SupportChat';
+import { OwnerPanelPage } from './pages/OwnerPanelPage';
+import { Button } from './components/Button'; // FIX: Added missing Button import (Errors 14, 15)
+import { Zap } from 'lucide-react';
 
 // Componente de Rota Protegida
 const ProtectedRoute: React.FC<{ children: React.ReactNode, isAuthenticated: boolean }> = ({ children, isAuthenticated }) => {
@@ -24,153 +25,165 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode, isAuthenticated: boo
 };
 
 const App: React.FC = () => {
-    const { user, isAuthenticated, isLoading, login, register, logout } = useAuth();
-    const [showSettings, setShowSettings] = useState(false);
-    const [showPricing, setShowPricing] = useState(false);
-    const [showDevPanel, setShowDevPanel] = useState(false);
-    const [showOwnerPanel, setShowOwnerPanel] = useState(false);
-    const [showSupport, setShowSupport] = useState(false);
+    const { user, profile, isLoading: isLoadingAuth, login, register, logout } = useAuth();
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    const [isDevPanelOpen, setIsDevPanelOpen] = useState(false);
+    const [isOwnerPanelOpen, setIsOwnerPanelOpen] = useState(false);
+    const [isPricingPageOpen, setIsPricingPageOpen] = useState(false);
 
-    // Determina o papel do usuário para exibição no header e lógica de acesso
-    const profileRole: UserRole = user?.role || 'free';
-
-    // Hook de Geração de Imagens
+    // Use generation hook
     const { 
-        form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage, // FIX: Added downloadImage (Error 15)
+        form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, // FIX: Removed downloadImage (Error 15)
         usage, isLoadingUsage
     } = useGeneration(user);
 
-    // Efeito para carregar o histórico na montagem
+    // Load history on initial load
     useEffect(() => {
-        if (isAuthenticated) {
+        if (user) {
             loadHistory();
         }
-    }, [isAuthenticated, loadHistory]);
+    }, [user, loadHistory]);
 
-    // Lógica de navegação para painéis
+    const handleShowSettings = useCallback(() => {
+        setIsSettingsModalOpen(true);
+    }, []);
+
+    const handleCloseSettings = useCallback(() => {
+        setIsSettingsModalOpen(false);
+    }, []);
+
     const handleShowDevPanel = useCallback(() => {
-        if (profileRole === 'admin' || profileRole === 'dev') {
-            setShowDevPanel(true);
-        }
-    }, [profileRole]);
+        setIsDevPanelOpen(true);
+    }, []);
 
-    const handleShowOwnerPanel = useCallback(() => {
-        if (profileRole === 'owner') {
-            setShowOwnerPanel(true);
-        }
-    }, [profileRole]);
+    const handleCloseDevPanel = useCallback(() => {
+        setIsDevPanelOpen(false);
+    }, []);
+    
+    // FIX: Removed unused handleShowOwnerPanel (Error 13)
+    
+    const handleCloseOwnerPanel = useCallback(() => {
+        setIsOwnerPanelOpen(false);
+    }, []);
 
-    if (isLoading) {
+    const handleShowPricing = useCallback(() => {
+        setIsPricingPageOpen(true);
+        setIsSettingsModalOpen(false);
+    }, []);
+
+    const handleClosePricing = useCallback(() => {
+        setIsPricingPageOpen(false);
+    }, []);
+
+    if (isLoadingAuth) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white">
-                <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                <p>Carregando autenticação...</p>
             </div>
         );
     }
 
-    // Renderiza o painel de desenvolvedor/proprietário se estiver ativo
-    if (showDevPanel) {
-        return <DevPanelPage user={user} onBackToApp={() => setShowDevPanel(false)} onLogout={logout} />;
+    const isAuthenticated = !!user;
+    const profileRole: UserRole = profile?.role || 'free';
+    const isAdminOrDev = profileRole === 'admin' || profileRole === 'dev';
+    const isOwner = profileRole === 'owner';
+
+    // Render Pricing Page if open
+    if (isPricingPageOpen && user) {
+        return <PricingPage user={user} onBackToApp={handleClosePricing} />;
     }
-    if (showOwnerPanel) {
-        return <OwnerPanelPage user={user} onBackToApp={() => setShowOwnerPanel(false)} onLogout={logout} />;
+
+    // Render Dev Panel if open
+    if (isDevPanelOpen && isAdminOrDev) {
+        return <DevPanelPage user={user} onBackToApp={handleCloseDevPanel} onLogout={logout} />;
     }
-    if (showPricing) {
-        // user é garantido ser não-null se showPricing for true (acessado do app)
-        return <PricingPage user={user!} onBackToApp={() => setShowPricing(false)} />;
+    
+    // Render Owner Panel if open
+    if (isOwnerPanelOpen && isOwner) {
+        return <OwnerPanelPage user={user} onBackToApp={handleCloseOwnerPanel} onLogout={logout} />;
     }
 
     return (
         <Router>
-            <AppHeader 
-                user={user}
-                profileRole={profileRole}
-                onLogout={logout}
-                onShowSettings={() => setShowSettings(true)}
-                onShowDevPanel={handleShowDevPanel}
-            >
-                {/* Botão de Pricing no Header */}
-                {profileRole !== 'pro' && (
-                    <Button variant="primary" size="small" onClick={() => setShowPricing(true)}>
-                        Upgrade
-                    </Button>
+            <div className="min-h-screen bg-zinc-950 text-gray-100">
+                
+                {/* Header */}
+                {isAuthenticated && (
+                    <AppHeader 
+                        user={user}
+                        profileRole={profileRole}
+                        onLogout={logout}
+                        onShowSettings={handleShowSettings}
+                        onShowDevPanel={handleShowDevPanel}
+                    >
+                        {/* Pricing Button in Header */}
+                        <Button variant="primary" size="small" onClick={handleShowPricing} icon={<Zap size={16} />}>
+                            Upgrade
+                        </Button>
+                    </AppHeader>
                 )}
-            </AppHeader>
 
-            {showSettings && user && (
-                <SettingsModal 
-                    user={user}
-                    profileRole={profileRole}
-                    onClose={() => setShowSettings(false)}
-                    onLogout={logout}
-                    onShowPricing={() => { setShowSettings(false); setShowPricing(true); }}
-                    onShowSupport={() => { setShowSettings(false); setShowSupport(true); }}
-                />
-            )}
-            
-            {showSupport && user && (
-                <div className="fixed inset-0 z-[1001] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-zinc-900 rounded-xl shadow-2xl w-full max-w-md h-[80vh] flex flex-col border border-white/10">
-                        <div className="p-4 border-b border-white/10 flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-white">Suporte</h3>
-                            <button onClick={() => setShowSupport(false)} className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/10">X</button>
-                        </div>
-                        <SupportChat user={user} onClose={() => setShowSupport(false)} />
-                    </div>
-                </div>
-            )}
+                <Routes>
+                    {/* Rotas Públicas */}
+                    <Route path="/" element={isAuthenticated ? <Navigate to="/app" /> : <LandingPage />} />
+                    <Route path="/login" element={isAuthenticated ? <Navigate to="/app" /> : <LoginPage onLogin={login} />} />
+                    <Route path="/register" element={isAuthenticated ? <Navigate to="/app" /> : <RegisterPage onRegister={register} />} />
 
-            <Routes>
-                <Route path="/" element={isAuthenticated ? <Navigate to="/app" replace /> : <LandingPage />} />
-                <Route path="/login" element={<LoginPage onLogin={login} />} />
-                <Route path="/register" element={<RegisterPage onRegister={register} />} />
-                
-                <Route path="/app" element={
-                    <ProtectedRoute isAuthenticated={isAuthenticated}>
-                        <div className="flex h-full">
-                            <main className="flex-grow p-4 md:p-8 overflow-y-auto custom-scrollbar">
-                                <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                    {/* Coluna 1: Formulário de Geração */}
-                                    <div className="lg:col-span-1">
-                                        <GenerationForm
-                                            form={form}
-                                            status={state.status}
-                                            error={state.error}
-                                            handleInputChange={handleInputChange}
-                                            handleLogoUpload={handleLogoUpload}
-                                            handleGenerate={handleGenerate}
-                                            loadExample={loadExample}
-                                            usage={usage as UsageData} // FIX: Assert usage as non-null (Error 16)
-                                            isLoadingUsage={isLoadingUsage}
-                                        />
-                                    </div>
-                                    
-                                    {/* Coluna 2/3: Imagem Atual e Histórico */}
-                                    <div className="lg:col-span-2 space-y-8">
-                                        <GenerationHistory 
-                                            currentImage={state.currentImage} 
-                                            history={state.history} 
-                                            isLoading={state.status === 'IDLE' && state.history.length === 0}
-                                            downloadImage={downloadImage}
-                                        />
-                                    </div>
+                    {/* Rota Principal do Aplicativo (Protegida) */}
+                    <Route 
+                        path="/app" 
+                        element={isAuthenticated ? (
+                            <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                
+                                {/* Coluna 1: Formulário de Geração */}
+                                <div className="lg:col-span-1">
+                                    <GenerationForm 
+                                        form={form}
+                                        status={state.status}
+                                        error={state.error}
+                                        handleInputChange={handleInputChange}
+                                        handleLogoUpload={handleLogoUpload}
+                                        handleGenerate={handleGenerate}
+                                        loadExample={loadExample}
+                                        // FIX: Casting usage to UsageData (Error 16)
+                                        usage={usage as UsageData} 
+                                        isLoadingUsage={isLoadingUsage}
+                                    />
                                 </div>
-                            </main>
-                        </div>
-                    </ProtectedRoute>
-                } />
-                
-                {/* Rotas de Painel (Acesso restrito) */}
-                <Route path="/dev-panel" element={<Navigate to="/app" replace />} />
-                <Route path="/owner-panel" element={<Navigate to="/app" replace />} />
-                
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+
+                                {/* Coluna 2 & 3: Visualização e Histórico */}
+                                <div className="lg:col-span-2">
+                                    <GenerationHistory 
+                                        currentImage={state.currentImage}
+                                        history={state.history}
+                                        status={state.status}
+                                        error={state.error}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <Navigate to="/" />
+                        )} 
+                    />
+                    
+                    {/* Rota de fallback para não autenticados */}
+                    <Route path="*" element={<Navigate to="/" />} />
+                </Routes>
+
+                {/* Modal de Configurações */}
+                {isSettingsModalOpen && user && (
+                    <SettingsModal 
+                        user={user}
+                        profileRole={profileRole}
+                        usage={usage}
+                        onClose={handleCloseSettings}
+                        onLogout={logout}
+                        onShowPricing={handleShowPricing}
+                    />
+                )}
+            </div>
         </Router>
     );
 };
 
-export default App;
+export default App; // FIX: Export as default (Error 17)

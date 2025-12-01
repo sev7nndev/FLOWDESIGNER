@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { User, UserRole } from '../types';
-import { Settings, LogOut, Zap, Star, Shield, MessageSquare, X, User as UserIcon, DollarSign } from 'lucide-react';
+import { User, UserRole, UsageData } from '../types';
+// FIX: Removed unused Star and Shield imports (Errors 4, 5)
+import { Settings, LogOut, Zap, MessageSquare, X, User as UserIcon, DollarSign } from 'lucide-react'; 
 import { Button } from './Button';
 import { SupportChat } from './SupportChat';
 import { api } from '../services/api';
@@ -8,24 +9,25 @@ import { api } from '../services/api';
 interface SettingsModalProps {
     user: User;
     profileRole: UserRole;
+    usage: UsageData | null;
     onClose: () => void;
     onLogout: () => Promise<void>;
     onShowPricing: () => void;
-    onShowSupport: () => void;
+    // FIX: Removed onShowSupport (Error 6)
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ user, profileRole, onClose, onLogout, onShowPricing, onShowSupport }) => {
+// FIX: Removed onShowSupport from destructuring (Error 6)
+export const SettingsModal: React.FC<SettingsModalProps> = ({ user, profileRole, usage, onClose, onLogout, onShowPricing }) => {
+    const [activeTab, setActiveTab] = useState<'profile' | 'billing' | 'support'>('profile');
     const [isLoggingOut, setIsLoggingOut] = useState(false);
-    const [showSupport, setShowSupport] = useState(false);
 
-    // FIX: Added 'starter' to roleDisplay (Error 9)
     const roleDisplay: Record<UserRole, { name: string, color: string }> = { 
         admin: { name: 'Administrador', color: 'bg-red-600' },
         dev: { name: 'Desenvolvedor', color: 'bg-cyan-600' },
-        owner: { name: 'Proprietário', color: 'bg-yellow-600' },
+        owner: { name: 'Proprietário', color: 'bg-yellow-600' }, 
         client: { name: 'Cliente', color: 'bg-blue-600' },
         free: { name: 'Grátis', color: 'bg-gray-500' },
-        starter: { name: 'Starter', color: 'bg-blue-500' }, 
+        starter: { name: 'Starter', color: 'bg-blue-500' },
         pro: { name: 'Pro', color: 'bg-primary' },
     };
 
@@ -33,124 +35,165 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ user, profileRole,
 
     const handleLogout = useCallback(async () => {
         setIsLoggingOut(true);
-        try {
-            await onLogout();
-        } catch (e) {
-            console.error("Logout failed", e);
-        } finally {
-            setIsLoggingOut(false);
-        }
+        await onLogout();
+        setIsLoggingOut(false);
     }, [onLogout]);
 
-    const handleManageSubscription = useCallback(async () => {
+    const handleManageSubscription = async () => {
         try {
             const redirectUrl = await api.createBillingPortalSession();
             window.location.href = redirectUrl;
         } catch (e) {
-            alert("Falha ao acessar o portal de faturamento.");
-            console.error("Billing portal error:", e);
+            alert("Falha ao acessar o portal de faturamento. Tente novamente.");
         }
-    }, []);
+    };
+
+    const renderProfileTab = () => (
+        <div className="space-y-6">
+            <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2">Informações do Perfil</h3>
+            
+            <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-zinc-800 p-3 rounded-lg">
+                    <p className="text-gray-400">Nome Completo</p>
+                    <p className="text-white font-medium">{user.firstName} {user.lastName}</p>
+                </div>
+                <div className="bg-zinc-800 p-3 rounded-lg">
+                    <p className="text-gray-400">Email</p>
+                    <p className="text-white font-medium">{user.email}</p>
+                </div>
+                <div className="bg-zinc-800 p-3 rounded-lg col-span-2">
+                    <p className="text-gray-400">Função/Plano</p>
+                    <span className={`text-white text-sm font-bold uppercase px-3 py-1 rounded-full ${currentRole.color}`}>
+                        {currentRole.name}
+                    </span>
+                </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/5">
+                <Button 
+                    variant="danger" 
+                    onClick={handleLogout} 
+                    isLoading={isLoggingOut}
+                    className="w-full"
+                    icon={<LogOut size={18} />}
+                >
+                    {isLoggingOut ? 'Saindo...' : 'Sair da Conta'}
+                </Button>
+            </div>
+        </div>
+    );
+
+    const renderBillingTab = () => (
+        <div className="space-y-6">
+            <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2">Gerenciamento de Assinatura</h3>
+            
+            {usage ? (
+                <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
+                    <div className="flex items-center gap-3">
+                        {profileRole === 'pro' ? <svg className="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.381-1.81.588-1.81h3.461a1 1 0 00.95-.69l1.07-3.292z" /></svg> : <Zap size={24} className="text-blue-400" />}
+                        <p className="text-lg font-semibold text-white">Plano Atual: {currentRole.name}</p>
+                    </div>
+                    <p className="text-sm text-gray-400">
+                        {usage.max_usage === -1 ? 'Gerações Ilimitadas.' : `Limite mensal: ${usage.max_usage} gerações.`}
+                    </p>
+                    <p className="text-sm text-gray-400">
+                        Uso atual: {usage.current_usage} gerações.
+                    </p>
+                </div>
+            ) : (
+                <div className="bg-zinc-800 p-4 rounded-lg text-gray-400 text-sm">
+                    Informações de uso não disponíveis.
+                </div>
+            )}
+
+            {/* Botão de Gerenciamento de Assinatura */}
+            {(profileRole === 'starter' || profileRole === 'pro') && ( 
+                <div className="pt-4 border-t border-white/5">
+                    <Button 
+                        variant="primary" 
+                        onClick={handleManageSubscription}
+                        className="w-full"
+                        icon={<DollarSign size={18} />}
+                    >
+                        Gerenciar Assinatura (Portal)
+                    </Button>
+                </div>
+            )}
+            
+            <div className="pt-4 border-t border-white/5">
+                <Button 
+                    variant="secondary" 
+                    onClick={onShowPricing}
+                    className="w-full"
+                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>}
+                >
+                    Ver Opções de Planos
+                </Button>
+            </div>
+        </div>
+    );
+
+    const renderSupportTab = () => (
+        <div className="space-y-6">
+            <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2">Suporte ao Vivo</h3>
+            <div className="h-[400px] border border-white/10 rounded-xl overflow-hidden">
+                <SupportChat user={user} onClose={() => {}} />
+            </div>
+        </div>
+    );
 
     return (
-        <div className="fixed inset-0 z-[1000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-zinc-900 rounded-xl shadow-2xl w-full max-w-lg border border-white/10 relative">
+        <div className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
                 
-                {/* Header */}
+                {/* Header do Modal */}
                 <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <Settings size={24} className="text-primary" /> Configurações Pessoais
+                    <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                        <Settings size={24} className="text-primary" /> Configurações
                     </h2>
                     <button onClick={onClose} className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/10">
-                        <X size={20} />
+                        <X size={24} />
                     </button>
                 </div>
 
-                {/* Conteúdo */}
-                <div className="p-6 space-y-6">
-                    
-                    {/* Informações do Usuário */}
-                    <div className="bg-zinc-800 p-4 rounded-lg border border-white/5">
-                        <div className="flex items-center gap-4">
-                            <UserIcon size={24} className="text-gray-400" />
-                            <div>
-                                <p className="text-white font-semibold">{user.firstName} {user.lastName}</p>
-                                <p className="text-sm text-gray-400">{user.email}</p>
-                            </div>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
-                            <span className="text-xs text-gray-400">Seu Plano Atual:</span>
-                            <span className={`text-white text-xs font-bold uppercase px-3 py-1 rounded-full ${currentRole.color}`}>
-                                {currentRole.name}
-                            </span>
-                        </div>
+                {/* Conteúdo do Modal */}
+                <div className="flex flex-grow overflow-hidden">
+                    {/* Navegação Lateral */}
+                    <div className="w-48 flex-shrink-0 border-r border-white/10 p-4 space-y-2">
+                        <button 
+                            onClick={() => setActiveTab('profile')}
+                            className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium ${
+                                activeTab === 'profile' ? 'bg-primary/20 text-primary' : 'text-gray-300 hover:bg-white/5'
+                            }`}
+                        >
+                            <Settings size={18} /> Perfil
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('billing')}
+                            className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium ${
+                                activeTab === 'billing' ? 'bg-primary/20 text-primary' : 'text-gray-300 hover:bg-white/5'
+                            }`}
+                        >
+                            <DollarSign size={18} /> Assinatura
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('support')}
+                            className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium ${
+                                activeTab === 'support' ? 'bg-primary/20 text-primary' : 'text-gray-300 hover:bg-white/5'
+                            }`}
+                        >
+                            <MessageSquare size={18} /> Suporte
+                        </button>
                     </div>
 
-                    {/* Botão de Gerenciamento de Assinatura */}
-                    {(profileRole === 'starter' || profileRole === 'pro') && ( 
-                        <div className="pt-4 border-t border-white/5">
-                            <Button 
-                                variant="secondary" 
-                                onClick={handleManageSubscription} 
-                                className="w-full"
-                                icon={<DollarSign size={18} />}
-                            >
-                                Gerenciar Assinatura
-                            </Button>
-                        </div>
-                    )}
-                    
-                    {/* Botão de Upgrade/Pricing */}
-                    {(profileRole === 'free' || profileRole === 'starter') && (
-                        <Button 
-                            variant="primary" 
-                            onClick={onShowPricing} 
-                            className="w-full"
-                            icon={<Zap size={18} />}
-                        >
-                            Fazer Upgrade
-                        </Button>
-                    )}
-
-                    {/* Botão de Suporte */}
-                    <Button 
-                        variant="tertiary" 
-                        onClick={() => setShowSupport(true)} 
-                        className="w-full"
-                        icon={<MessageSquare size={18} />}
-                    >
-                        Abrir Chat de Suporte
-                    </Button>
-
-                    {/* Botão de Logout */}
-                    <Button 
-                        variant="danger" 
-                        onClick={handleLogout} 
-                        isLoading={isLoggingOut}
-                        className="w-full"
-                        icon={<LogOut size={18} />}
-                    >
-                        Sair da Conta
-                    </Button>
+                    {/* Conteúdo da Aba */}
+                    <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
+                        {activeTab === 'profile' && renderProfileTab()}
+                        {activeTab === 'billing' && renderBillingTab()}
+                        {activeTab === 'support' && renderSupportTab()}
+                    </div>
                 </div>
             </div>
-            
-            {/* Modal de Suporte */}
-            {showSupport && (
-                <div className="fixed inset-0 z-[1001] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-zinc-900 rounded-xl shadow-2xl w-full max-w-md h-[80vh] flex flex-col border border-white/10">
-                        <div className="p-4 border-b border-white/10 flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                <MessageSquare size={20} className="text-primary" /> Suporte
-                            </h3>
-                            <button onClick={() => setShowSupport(false)} className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/10">
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <SupportChat user={user} onClose={() => setShowSupport(false)} />
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
