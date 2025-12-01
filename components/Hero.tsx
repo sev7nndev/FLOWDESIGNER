@@ -23,9 +23,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
         <div className="mt-8">
           <HoverBorderGradient 
             onClick={onGetStarted} 
-            className="text-lg font-semibold"
-            containerClassName="h-14 px-8 rounded-full" // Usando rounded-full para garantir o formato
-            duration={3} // Aumentando a duração para 3s para um efeito mais suave
+            className="text-lg font-semibold px-6 py-3" // Ajustando o padding interno
+            containerClassName="h-14 px-10 rounded-full"
+            duration={3} 
           >
             Começar Agora <ChevronRight className="ml-2" />
           </HoverBorderGradient>
