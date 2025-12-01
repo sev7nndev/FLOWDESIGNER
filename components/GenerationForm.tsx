@@ -1,9 +1,9 @@
 import React from 'react';
 import { GenerationFormState, GenerationStatus, UsageData } from '../types';
-import { UploadLogo } from './UploadLogo';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
-import { Textarea } from './ui/Textarea';
+import { UploadLogo } from "@/components/UploadLogo"; // Corrigido para usar o alias @
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
+import { Textarea } from "./ui/Textarea";
 import { Sparkles, Loader2, Zap, Info } from 'lucide-react';
 import { Tooltip } from './ui/Tooltip';
 
@@ -14,9 +14,9 @@ interface GenerationFormProps {
     handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
     handleLogoUpload: (file: File | null) => void;
     handleGenerate: () => Promise<void>;
-    loadExample: () => void; // Adicionado
-    usage: UsageData | null; // Adicionado
-    isLoadingUsage: boolean; // Adicionado
+    loadExample: () => void;
+    usage: UsageData | null;
+    isLoadingUsage: boolean;
 }
 
 export const GenerationForm: React.FC<GenerationFormProps> = ({
@@ -26,9 +26,9 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
     handleInputChange,
     handleLogoUpload,
     handleGenerate,
-    loadExample, // Desestruturado
-    usage, // Desestruturado
-    isLoadingUsage, // Desestruturado
+    loadExample,
+    usage,
+    isLoadingUsage,
 }) => {
     const isGenerating = status === 'PENDING';
     const isBlocked = usage?.quotaStatus === 'BLOCKED';
@@ -147,7 +147,7 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
                 <div className="flex justify-between items-center">
                     <Button 
                         variant="secondary" 
-                        onClick={loadExample} // Chamada corrigida
+                        onClick={loadExample}
                         disabled={isGenerating}
                         className="w-full mr-2"
                     >

@@ -4,6 +4,7 @@ import { ImageResult } from './ImageResult';
 import { GalleryModal } from './Modals';
 import { History, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from './Button';
+import { AILoadingProgress } from './AILoadingProgress'; // Importando o componente de progresso
 
 interface ResultDisplayProps {
     state: GenerationState;
@@ -25,16 +26,15 @@ const ResultDisplayComponent: React.FC<ResultDisplayProps> = ({ state, downloadI
 
     const renderContent = () => {
         if (state.status === GenerationStatus.GENERATING) {
+            // Usando o componente de progresso detalhado
             return (
-                <div className="flex flex-col items-center justify-center h-96 bg-zinc-900/50 rounded-3xl border border-white/10 p-8 shadow-xl">
-                    <Loader2 size={40} className="animate-spin text-primary mb-4" />
-                    <p className="text-white font-medium text-lg">Gerando arte profissional...</p>
-                    <p className="text-gray-500 text-sm mt-1">Isso pode levar até 30 segundos.</p>
+                <div className="animate-fade-in">
+                    <AILoadingProgress />
                 </div>
             );
         }
 
-        if (state.currentImage) {
+        if (state.status === GenerationStatus.SUCCESS && state.currentImage) {
             return (
                 <section className="animate-fade-in pt-4">
                     <div className="text-center mb-8">
@@ -52,8 +52,22 @@ const ResultDisplayComponent: React.FC<ResultDisplayProps> = ({ state, downloadI
                 </section>
             );
         }
+        
+        if (state.status === GenerationStatus.ERROR) {
+             return (
+                <div className="flex flex-col items-center justify-center h-96 bg-red-900/50 rounded-3xl border border-red-700/50 p-8 text-center shadow-xl animate-fade-in">
+                    <Sparkles size={48} className="text-red-500 mb-4" />
+                    <p className="text-white font-medium mb-2">Ocorreu um erro na geração:</p>
+                    <p className="text-red-300 text-sm mb-6">{state.error}</p>
+                    
+                    <Button variant="secondary" onClick={() => setShowGallery(true)} className="text-sm">
+                        <History size={16} className="mr-2" /> Ver Histórico ({state.history.length})
+                    </Button>
+                </div>
+            );
+        }
 
-        // Initial Empty State
+        // Initial Idle State
         return (
             <div className="flex flex-col items-center justify-center h-96 bg-zinc-900/50 rounded-3xl border border-white/10 p-8 text-center shadow-xl">
                 <Sparkles size={48} className="text-primary/50 mb-4" />
