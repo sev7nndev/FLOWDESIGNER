@@ -63,8 +63,8 @@ export function HoverBorderGradient({
       }}
       onMouseLeave={() => setHovered(false)}
       className={cn(
-        // CORREÇÃO 1: Removendo a classe 'border' para evitar borda dupla
-        "relative flex rounded-full content-center bg-black/20 hover:bg-black/10 transition duration-500 dark:bg-white/20 items-center flex-col flex-nowrap gap-10 h-min justify-center overflow-visible p-px decoration-clone w-fit",
+        // Container: Totalmente transparente, define a espessura da borda com p-[2px]
+        "relative flex rounded-full content-center bg-transparent items-center flex-col flex-nowrap gap-10 h-min justify-center overflow-visible p-[2px] decoration-clone w-fit",
         containerClassName
       )}
       {...props}
@@ -95,8 +95,8 @@ export function HoverBorderGradient({
         }}
         transition={{ ease: "linear", duration: duration ?? 1 }}
       />
-      {/* CORREÇÃO 2 & 3: Ajustando inset para 1px e usando rounded-[inherit] para corresponder ao container */}
-      <div className="bg-black absolute z-1 flex-none inset-[1px] rounded-[inherit]" />
+      {/* Máscara: Cobre o gradiente, deixando uma borda de 2px visível */}
+      <div className="bg-black absolute z-1 flex-none inset-[2px] rounded-[inherit]" />
     </Tag>
   );
 }
