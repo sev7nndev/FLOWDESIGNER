@@ -7,10 +7,11 @@
     "install:frontend": "cd frontend && npm install",
     "install:backend": "cd backend && npm install",
     "install:all": "npm run install:frontend && npm run install:backend",
-    "frontend": "cd frontend && npm run dev",
-    "backend": "cd backend && node server.js",
-    "dev": "dotenv -e backend/.env -- nodemon backend/server.js",
-    "start": "concurrently \"npm run frontend\" \"npm run dev\""
+    "frontend": "vite",
+    "backend": "node backend/server.cjs",
+    "dev": "concurrently \"npm run frontend\" \"npm run dev:backend\"",
+    "dev:backend": "dotenv -e .env.local -- nodemon backend/server.cjs",
+    "start": "concurrently \"npm run frontend\" \"npm run backend\""
   },
   "keywords": [
     "saas",
