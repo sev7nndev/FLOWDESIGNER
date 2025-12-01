@@ -1,9 +1,10 @@
 // backend/server.cjs
 const express = require('express');
 const cors = require('cors');
-const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config'); // Import the anonymous client and limits
-const generationRoutes = require('./routes/generationRoutes'); // Import the new routes
-const ownerRoutes = require('./routes/ownerRoutes'); // NOVO: Importando rotas do proprietário
+// CORREÇÃO: Importando do config.cjs
+const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config.cjs'); 
+const generationRoutes = require('./routes/generationRoutes');
+const ownerRoutes = require('./routes/ownerRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
