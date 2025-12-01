@@ -27,9 +27,19 @@ const App: React.FC = () => {
 
     // Use generation hook
     const { 
-        form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, 
-        usage, isLoadingUsage, downloadImage // ADDED downloadImage
+        form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory,
+        usage, isLoadingUsage
     } = useGeneration(user);
+
+    // Function to handle image download
+    const downloadImage = useCallback((url: string, filename: string) => {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }, []);
 
     // Load history on initial load
     useEffect(() => {
@@ -137,7 +147,7 @@ const App: React.FC = () => {
                                         handleLogoUpload={handleLogoUpload}
                                         handleGenerate={handleGenerate}
                                         loadExample={loadExample}
-                                        // FIX: Casting usage to any to resolve TS2352 (Error 8)
+                                        // FIX: Casting usage to any to resolve type conflict (Error 8)
                                         usage={usage as any} 
                                         isLoadingUsage={isLoadingUsage}
                                     />
@@ -150,7 +160,7 @@ const App: React.FC = () => {
                                         history={state.history}
                                         status={state.status}
                                         error={state.error}
-                                        downloadImage={downloadImage} // Pass the download function
+                                        downloadImage={downloadImage} // Passing download function
                                     />
                                 </div>
                             </div>
@@ -168,7 +178,7 @@ const App: React.FC = () => {
                     <SettingsModal 
                         user={user}
                         profileRole={profileRole}
-                        // FIX: Casting usage to any to resolve TS2322 (Error 9)
+                        // FIX: Casting usage to any to resolve type conflict (Error 9)
                         usage={usage as any} 
                         onClose={handleCloseSettings}
                         onLogout={logout}
