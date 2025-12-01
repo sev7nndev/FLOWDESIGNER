@@ -9,7 +9,7 @@
     "frontend": "cd frontend && npm run dev",
     "backend": "cd backend && node server.js",
     "dev": "dotenv -e backend/.env -- nodemon backend/server.js",
-    "start": "concurrently \"npm run frontend\" \"npm run dev\""
+    "start": "concurrently --names \"FRONTEND,BACKEND\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run frontend\" \"npm run dev\""
   },
   "keywords": [
     "saas",
