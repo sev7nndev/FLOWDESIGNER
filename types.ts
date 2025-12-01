@@ -33,7 +33,8 @@ export interface GenerationState {
   debugPrompt?: string;
 }
 
-export type UserRole = 'admin' | 'dev' | 'client' | 'free' | 'pro' | 'owner' | 'starter'; // Added 'starter' for consistency
+// FIX: Added 'starter' to UserRole for correct comparison (Errors 15, 36)
+export type UserRole = 'admin' | 'dev' | 'client' | 'free' | 'pro' | 'owner' | 'starter'; 
 
 export interface User {
   id: string;
@@ -44,13 +45,11 @@ export interface User {
   role: UserRole;
 }
 
-// Apenas configs que o frontend precisa saber (URLs públicas)
 export interface AppSettings {
   supabaseUrl: string;
-  supabaseKey: string; // Anon Key is fine
+  supabaseKey: string; 
 }
 
-// Fix: Add ArtStyle interface used by StyleCard
 export interface ArtStyle {
   id: string;
   name: string;
@@ -58,31 +57,30 @@ export interface ArtStyle {
   previewColor: string;
 }
 
-// NEW: Landing Page Carousel Image Type
+// FIX: Added missing property for DevPanelPage (Errors 22, 39)
 export interface LandingImage {
   id: string;
   url: string;
   sortOrder: number;
-  image_path: string; // Added missing property for DevPanelPage
+  image_path: string; 
 }
 
-// NEW: Types for GenerationForm and useGeneration hook
+// FIX: Exported types for GenerationForm (Errors 16, 17, 18, 19, 20)
 export interface FormState {
   prompt: string;
   companyName: string;
-  logoFile: File | null; // Temporary file object for display
-  // All other BusinessInfo fields are handled by the hook internally
+  logoFile: File | null; 
 }
 
-export interface UsageData {
+export interface UsageData { 
     current_usage: number;
     max_usage: number;
     plan_id: UserRole;
     isBlocked: boolean;
 }
 
-export interface GenerationFormProps {
-    form: FormState & BusinessInfo; // Combines form state and business info
+export interface GenerationFormProps { 
+    form: FormState & BusinessInfo; 
     status: GenerationStatus;
     error: string | undefined;
     handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
@@ -93,5 +91,4 @@ export interface GenerationFormProps {
     isLoadingUsage: boolean;
 }
 
-// Type for API history response
 export type HistoryItem = GeneratedImage;

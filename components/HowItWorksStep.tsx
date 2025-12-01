@@ -1,16 +1,17 @@
 import React from 'react';
 
 interface HowItWorksStepProps {
-    icon: React.ReactNode;
+    icon: React.ReactNode; // Required
     number: string;
     title: string;
     description: string;
-    stepNumber: number; // FIX: Added required stepNumber prop (Errors 25, 26, 27)
-    isRight: boolean;
+    stepNumber: number; // Required
+    isRight: boolean; // Required
 }
 
-export const HowItWorksStep: React.FC<HowItWorksStepProps> = ({ icon, number, title, description }) => (
-    <div className="relative p-6 bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden transition-all hover:border-primary/20 hover:-translate-y-1 group">
+// FIX: Destructure all props and use isRight for layout
+export const HowItWorksStep: React.FC<HowItWorksStepProps> = ({ icon, number, title, description, stepNumber, isRight }) => (
+    <div className={`relative p-6 bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden transition-all hover:border-primary/20 hover:-translate-y-1 group ${isRight ? 'md:ml-auto md:w-[calc(50%-1rem)]' : 'md:mr-auto md:w-[calc(50%-1rem)]'}`}>
         <div className="absolute top-0 left-0 h-full w-full bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
         <div className="relative">
             <div className="flex items-center gap-4 mb-4">

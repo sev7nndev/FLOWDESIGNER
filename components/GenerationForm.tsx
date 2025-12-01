@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { GenerationFormProps, UsageData, GenerationStatus, FormState, BusinessInfo } from '../types'; // FIX: Corrected imports (Errors 4, 6, 7)
+import { GenerationFormProps, UsageData, GenerationStatus, FormState, BusinessInfo } from '../types'; // FIX: Corrected imports (Errors 16, 17, 18, 19, 20)
 import { Button } from './Button';
-import { Image, Upload, Loader2, Info, Zap, Star, Sparkles } from 'lucide-react'; // Adicionado Sparkles
+import { Image, Upload, Loader2, Info, Zap, Star, Sparkles } from 'lucide-react'; 
 
 // Componente de exibição de uso
 interface UsageDisplayProps {
@@ -223,7 +223,7 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
 
                     <Button 
                         type="button" 
-                        variant="tertiary" // FIX: tertiary variant now exists (Error 8)
+                        variant="tertiary" 
                         onClick={loadExample} 
                         disabled={isGenerating}
                         className="w-full h-10 text-sm"

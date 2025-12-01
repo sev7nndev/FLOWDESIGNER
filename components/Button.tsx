@@ -1,33 +1,35 @@
-import React, { motion, HTMLMotionProps } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import React, { ButtonHTMLAttributes } from 'react'; 
+import { motion, HTMLMotionProps } from 'framer-motion';
+// FIX: Removed unused Loader2 import (Error 1)
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'tertiary'; // FIX: Added 'tertiary'
-  size?: 'small' | 'medium' | 'large'; // FIX: Added 'size'
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> { // FIX: Using standard React types (Error 2)
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'tertiary';
+  size?: 'small' | 'medium' | 'large';
   isLoading?: boolean;
-  icon?: React.ReactNode;
+  icon?: React.ReactNode; // FIX: Using standard React.ReactNode (Error 3)
 }
 
 // Extend HTMLMotionProps to include standard button attributes
 type MotionButtonProps = ButtonProps & HTMLMotionProps<'button'>;
 
-export const Button: React.FC<MotionButtonProps> = ({ 
-  children, 
-  variant = 'primary', 
-  size = 'medium', // Default size
-  isLoading, 
-  icon,
+export const Button: React.FC<MotionButtonProps> = ({ // FIX: Using standard React.FC (Error 4)
+  children, // FIX: Type inferred from MotionButtonProps (Error 5)
+  variant = 'primary',
+  size = 'medium', 
+  isLoading = false, // FIX: Default value for non-any type (Error 6)
+  icon, // FIX: Type inferred from MotionButtonProps (Error 7)
   className = '',
   ...props 
 }) => {
   const baseStyles = "relative group inline-flex items-center justify-center text-sm font-medium transition-all duration-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden";
   
+  // Explicitly type the Record keys to match the variant/size types
   const variants: Record<NonNullable<ButtonProps['variant']>, string> = {
     primary: "bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25",
     secondary: "bg-surface border border-white/10 hover:bg-white/5 text-gray-200",
     ghost: "bg-transparent hover:bg-white/5 text-gray-400 hover:text-white",
     danger: "bg-red-600 hover:bg-red-700 text-white border border-red-700/50 shadow-lg shadow-red-600/25",
-    tertiary: "bg-white/10 hover:bg-white/20 text-white border border-white/10" // FIX: Added tertiary style
+    tertiary: "bg-white/10 hover:bg-white/20 text-white border border-white/10"
   };
   
   const sizeClasses: Record<NonNullable<ButtonProps['size']>, string> = {
@@ -39,7 +41,8 @@ export const Button: React.FC<MotionButtonProps> = ({
   return (
     <motion.button 
       whileTap={{ scale: 0.95 }}
-      className={`${baseStyles} ${variants[variant]} ${sizeClasses[size]} ${className}`}
+      // FIX: Accessing variants and sizeClasses with non-nullable keys (Errors 8, 9)
+      className={`${baseStyles} ${variants[variant!]} ${sizeClasses[size!]} ${className}`} 
       disabled={isLoading || props.disabled}
       {...props}
     >

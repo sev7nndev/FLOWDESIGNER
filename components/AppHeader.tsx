@@ -8,17 +8,18 @@ interface AppHeaderProps {
   onLogout: () => Promise<void>;
   onShowSettings: () => void;
   onShowDevPanel: () => void; 
-  children?: React.ReactNode; // FIX: Added children prop (Error 19)
+  children?: React.ReactNode; 
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel, children }) => {
+  // FIX: Explicitly type the Record to include all UserRole keys (Error 21)
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Admin', color: 'bg-red-600' },
     dev: { name: 'Dev', color: 'bg-cyan-600' },
     owner: { name: 'Owner', color: 'bg-yellow-600' }, 
     client: { name: 'Client', color: 'bg-blue-600' },
     free: { name: 'Grátis', color: 'bg-gray-500' },
-    starter: { name: 'Starter', color: 'bg-blue-500' }, // Added starter
+    starter: { name: 'Starter', color: 'bg-blue-500' }, 
     pro: { name: 'Pro', color: 'bg-primary' },
   };
 

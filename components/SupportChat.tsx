@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
-import { Send, Loader2, User as UserIcon, Zap, Star, Shield } from 'lucide-react'; // FIX: Removed unused MessageSquare import (Error 12)
+import { Send, Loader2 } from 'lucide-react'; // FIX: Removed unused imports (Errors 31, 32, 33, 34)
 import { Button } from './Button';
 import { api } from '../services/api';
 
 interface SupportChatProps {
     user: User;
-    onClose: () => void; // Mantido para compatibilidade, mas não usado internamente
+    onClose: () => void; 
 }
 
 interface Message {
@@ -15,8 +15,6 @@ interface Message {
     content: string;
     timestamp: string;
 }
-
-// FIX: Removed unused getRoleIcon function (Error 13)
 
 export const SupportChat: React.FC<SupportChatProps> = ({ user }) => {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -55,7 +53,7 @@ export const SupportChat: React.FC<SupportChatProps> = ({ user }) => {
 
         try {
             // Simula o envio da mensagem para o backend e a resposta do suporte
-            const response = await api.sendSupportMessage(user.id, trimmedInput); // FIX: api.sendSupportMessage now exists (Error 14)
+            const response = await api.sendSupportMessage(user.id, trimmedInput); 
             
             const supportResponse: Message = {
                 id: Date.now() + 1,

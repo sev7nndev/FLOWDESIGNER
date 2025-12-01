@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Zap, Code, Users, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, Zap, Code, Users, CheckCircle, Loader2, Edit3, Bot, Download } from 'lucide-react'; // FIX: Added missing icons
 import { Button } from '../components/Button';
 import { FeatureCard } from '../components/FeatureCard';
 import { HowItWorksStep } from '../components/HowItWorksStep';
@@ -106,7 +106,7 @@ export const LandingPage: React.FC = () => {
                             Automatize tarefas complexas, integre serviços e visualize sua lógica de negócios com nossa interface de arrastar e soltar intuitiva.
                         </p>
                         <Link to="/register">
-                            <Button size="large" icon={<Zap size={20} />}> {/* FIX: Added size prop (Error 21) */}
+                            <Button size="large" icon={<Zap size={20} />}> 
                                 Começar Gratuitamente
                             </Button>
                         </Link>
@@ -133,19 +133,19 @@ export const LandingPage: React.FC = () => {
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <h3 className="text-4xl font-bold text-center text-white mb-12">Por que Flow Designer?</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <FeatureCard // FIX: Added color prop (Error 22)
+                            <FeatureCard 
                                 icon={<Code size={32} />}
                                 title="Desenvolvimento Sem Código"
                                 description="Crie lógica complexa sem escrever uma única linha de código. Foco na solução, não na sintaxe."
                                 color="primary"
                             />
-                            <FeatureCard // FIX: Added color prop (Error 23)
+                            <FeatureCard 
                                 icon={<Zap size={32} />}
                                 title="Execução em Tempo Real"
                                 description="Seus fluxos são executados instantaneamente, garantindo respostas rápidas e automação eficiente."
                                 color="secondary"
                             />
-                            <FeatureCard // FIX: Added color prop (Error 24)
+                            <FeatureCard 
                                 icon={<Users size={32} />}
                                 title="Colaboração Simplificada"
                                 description="Trabalhe em equipe nos mesmos fluxos, com controle de versão e histórico de alterações."
@@ -162,26 +162,29 @@ export const LandingPage: React.FC = () => {
                         <div className="relative">
                             <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-0.5 bg-primary/20 hidden md:block"></div>
                             <div className="space-y-16">
-                                <HowItWorksStep // FIX: Added stepNumber prop (Error 25)
+                                <HowItWorksStep // FIX: Added missing props (Errors 10, 40)
                                     stepNumber={1}
                                     number="01"
                                     title="Arraste e Conecte"
                                     description="Comece arrastando nós (nodes) para a tela e conecte-os para definir o fluxo de dados e lógica."
                                     isRight={false}
+                                    icon={<Edit3 size={24} />} 
                                 />
-                                <HowItWorksStep // FIX: Added stepNumber prop (Error 26)
+                                <HowItWorksStep // FIX: Added missing props (Errors 11, 41)
                                     stepNumber={2}
                                     number="02"
                                     title="Configure a Lógica"
                                     description="Clique em cada nó para configurar suas propriedades, como URLs de API, condições de IF/ELSE ou transformações de dados."
                                     isRight={true}
+                                    icon={<Bot size={24} />}
                                 />
-                                <HowItWorksStep // FIX: Added stepNumber prop (Error 27)
+                                <HowItWorksStep // FIX: Added missing props (Errors 12, 42)
                                     stepNumber={3}
                                     number="03"
                                     title="Publique e Monitore"
                                     description="Publique seu fluxo com um clique e monitore sua execução em tempo real através do painel de logs."
                                     isRight={false}
+                                    icon={<Download size={24} />}
                                 />
                             </div>
                         </div>
@@ -194,7 +197,7 @@ export const LandingPage: React.FC = () => {
                         <h3 className="text-4xl font-bold text-white mb-4">Pronto para Automatizar?</h3>
                         <p className="text-xl text-gray-300 mb-8">Junte-se a milhares de desenvolvedores e empresas que confiam no Flow Designer.</p>
                         <Link to="/register">
-                            <Button size="large" icon={<CheckCircle size={20} />}> {/* FIX: Added size prop (Error 28) */}
+                            <Button size="large" icon={<CheckCircle size={20} />}> 
                                 Criar Minha Conta Agora
                             </Button>
                         </Link>
