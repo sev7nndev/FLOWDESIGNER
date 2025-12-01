@@ -15,11 +15,11 @@ View your app in AI Studio: https://ai.studio/apps/drive/1A8UVm-5tINifrUBgaDIc6f
 
 1. Install dependencies:
    `npm install`
-2. Set the following keys in [.env.local](.env.local) (These keys are used by the secure backend server and frontend):
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY` (Public key for client-side Supabase interactions)
-   - `SUPABASE_SERVICE_KEY` (Crucial for server-side auth and storage access)
-   - `GEMINI_API_KEY`
-   - `FREEPIK_API_KEY`
+2. Set the following keys in [.env.local](.env.local):
+   - `VITE_SUPABASE_URL` (Frontend/Backend)
+   - `VITE_SUPABASE_ANON_KEY` (Frontend/Backend - Chave pública)
+   - `SUPABASE_SERVICE_KEY` (Backend ONLY - Chave secreta de serviço)
+   - `GEMINI_API_KEY` (Backend ONLY - Chave secreta da API Gemini)
+   - `FREEPIK_API_KEY` (Backend ONLY - Chave secreta da API Freepik)
 3. Run the app:
    `npm run dev`

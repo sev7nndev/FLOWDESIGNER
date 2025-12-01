@@ -2,8 +2,16 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const { authenticateToken } = require('../middleware/auth');
-const { processImageGeneration, checkAndIncrementQuota } = require('../services/generationService'); // Importando checkAndIncrementQuota
-const { supabaseService } = require('../config');
+const { processImageGeneration, checkAndIncrementQuota } = require('../services/generationService');
+const { supabaseService, supabaseAnon } = require('../config');
+
+// Helper para obter URL pública (usado para retornar o objeto GeneratedImage completo)
+const getPublicUrl = (bucketName, path) => {
+    const { data: { publicUrl } } = supabaseAnon.storage
+        .from(bucketName)
+        .getPublicUrl(path);
+    return publicUrl;
+};
 
 // Rate Limiting for generation endpoint (user-based)
 const generationLimiter = rateLimit({
@@ -84,7 +92,7 @@ router.get('/job-status/:jobId', authenticateToken, async (req, res) => {
             .from('generation_jobs')
             .select('status, image_url, error_message')
             .eq('id', jobId)
-            .eq('user_id', user.id)
+            .eq('user_id', user.id) // Garante que o usuário só veja seus próprios jobs
             .single();
 
         if (error || !data) {
@@ -100,6 +108,38 @@ router.get('/job-status/:jobId', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error(`Erro ao buscar status do trabalho ${jobId}:`, error);
         res.status(500).json({ error: 'Falha ao buscar o status do trabalho.' });
+    }
+});
+
+// NOVO ENDPOINT: /api/history
+router.get('/history', authenticateToken, async (req, res, next) => {
+    const user = req.user;
+    
+    try {
+        // CRITICAL FIX: Filtra explicitamente pelo user_id para evitar IDOR
+        const { data, error } = await supabaseService
+            .from('images')
+            .select('*')
+            .eq('user_id', user.id) 
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Error fetching user history:", error);
+            throw new Error(error.message);
+        }
+        
+        // Mapeia para o formato GeneratedImage e adiciona a URL pública
+        const imagesWithUrls = data.map((row) => ({
+            id: row.id,
+            url: getPublicUrl('generated-arts', row.image_url),
+            prompt: row.prompt,
+            businessInfo: row.business_info,
+            createdAt: new Date(row.created_at).getTime(),
+        }));
+
+        res.json(imagesWithUrls);
+    } catch (error) {
+        next(error);
     }
 });
 
