@@ -12,8 +12,16 @@ import { PricingModal } from './PricingModal';
 import { PricingCard } from './PricingCard';
 import { useScrollDirection } from '../hooks/useScrollDirection';
 import { BeamsBackground } from './BeamsBackground';
-import { cn } from "@/lib/utils"; // <-- IMPORTAÇÃO ADICIONADA
+import { cn } from "@/lib/utils";
 
 interface LandingPageProps {
   onGetStarted: () => void;
+  onLogin: () => void;
+  landingImages: LandingImage[];
+  isLandingImagesLoading: boolean;
+}
+
+type FlyerData = Omit<FlyerMockupProps, 'theme'> & { theme: 'mechanic' | 'food' | 'law' | 'tech' };
+
+const FALLBACK_FLYERS: FlyerData[] = [
 // ... restante do código
