@@ -6,7 +6,8 @@ import { Accordion } from './Accordion';
 import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
 import { LandingImage } from '../types';
 import { HeroSection } from './Hero';
-import { PricingModal } from './PricingModal'; // Importando o novo modal
+import { PricingModal } from './PricingModal';
+import { PricingCard } from './PricingCard'; // Importando o PricingCard
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -158,7 +159,45 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             </div>
           </section>
 
-          {/* A SEÇÃO DE PREÇOS FOI REMOVIDA DAQUI */}
+          {/* NOVA SEÇÃO DE PREÇOS NA PÁGINA */}
+          <section className="py-20 px-6 bg-zinc-950/50 border-y border-white/5">
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-12">
+                <h3 className="text-3xl md:text-4xl font-bold text-white">Planos Flexíveis para o seu Sucesso</h3>
+                <p className="text-gray-400 mt-3">Escolha o plano ideal e comece a criar. Cancele quando quiser.</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-end">
+                <PricingCard 
+                  name="Free"
+                  price="R$ 0"
+                  description="Para testar a tecnologia."
+                  buttonText="Criar Conta Grátis"
+                  features={["3 Gerações Gratuitas", "Qualidade Padrão", "Marca d'água", "Suporte Comunitário"]}
+                  onClick={onGetStarted}
+                />
+                <PricingCard 
+                  name="Start"
+                  price="R$ 29,99"
+                  period="/mês"
+                  description="Ideal para autônomos."
+                  buttonText="Assinar Start"
+                  features={["20 Imagens Profissionais", "Qualidade 4K", "Sem marca d'água", "Uso Comercial Liberado", "Suporte por Email"]}
+                  onClick={onGetStarted}
+                />
+                <PricingCard 
+                  name="Pro"
+                  price="R$ 49,99"
+                  period="/mês"
+                  description="Para agências e power users."
+                  buttonText="Assinar Pro"
+                  features={["50 Imagens Profissionais", "Qualidade Ultra 8K", "Geração Instantânea (Turbo)", "Sem marca d'água", "Acesso ao Painel Dev", "Prioridade no Suporte"]}
+                  highlight={true}
+                  badge="Melhor Custo-Benefício"
+                  onClick={onGetStarted}
+                />
+              </div>
+            </div>
+          </section>
 
           <section className="py-20 px-0 overflow-hidden bg-zinc-950 border-t border-white/5">
             <div className="max-w-5xl mx-auto px-6 mb-12 text-center">
