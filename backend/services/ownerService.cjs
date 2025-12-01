@@ -13,7 +13,7 @@ const fetchOwnerMetrics = async () => {
         .not('role', 'in', '("admin", "dev", "owner")') // Exclui roles de gestão
         .rollup();
 
-    if (planError) throw planError;
+    if (planError) throw new Error(planError.message || "Failed to fetch plan counts.");
     
     const countsByPlan = planCounts.reduce((acc, item) => {
         acc[item.role] = item.count;
@@ -27,7 +27,7 @@ const fetchOwnerMetrics = async () => {
         .not('role', 'in', '("admin", "dev", "owner")')
         .rollup();
         
-    if (statusError) throw statusError;
+    if (statusError) throw new Error(statusError.message || "Failed to fetch status counts.");
     
     const countsByStatus = statusCounts.reduce((acc, item) => {
         acc[item.status] = item.count;
@@ -35,27 +35,31 @@ const fetchOwnerMetrics = async () => {
     }, { on: 0, paused: 0, cancelled: 0 });
     
     // 3. Lista de Clientes (Nome, Email, Plano, Status)
-    // CORREÇÃO: Removendo o join complexo que estava causando falhas.
     const { data: clients, error: clientsError } = await supabaseService
         .from('profiles')
-        .select('first_name, last_name, role, status, id') // Removendo o join 'auth_user:id(email)'
+        .select('first_name, last_name, role, status, id')
         .not('role', 'in', '("admin", "dev", "owner")')
         .order('updated_at', { ascending: false });
         
-    if (clientsError) throw clientsError;
+    if (clientsError) throw new Error(clientsError.message || "Failed to fetch client profiles.");
     
     // Buscando emails usando o Admin API (mais seguro)
     const clientIds = clients.map(c => c.id);
     
-    // Busca todos os usuários (limitado a 1000 por padrão, o que é suficiente para a maioria dos SaaS)
     const { data: authUsers, error: authError } = await supabaseService.auth.admin.listUsers({
         page: 1,
         perPage: 1000, 
     });
     
-    if (authError) throw authError;
+    if (authError) {
+        console.error("Supabase Admin API Error:", authError);
+        throw new Error("Failed to fetch user list from Supabase Admin API.");
+    }
     
-    const emailMap = authUsers.users.reduce((acc, user) => {
+    // Garantindo que a lista de usuários existe para evitar crash
+    const usersList = authUsers?.users || [];
+
+    const emailMap = usersList.reduce((acc, user) => {
         if (clientIds.includes(user.id)) {
             acc[user.id] = user.email;
         }
