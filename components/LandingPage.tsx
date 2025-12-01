@@ -46,8 +46,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
     theme: (['mechanic', 'food', 'law', 'tech'] as const)[Math.floor(Math.random() * 4)], badge: "NOVO", price: undefined
   })) : FALLBACK_FLYERS;
   
-  // Triplicamos o conteúdo para garantir a transição suave
-  const marqueeContent = [...carouselItems, ...carouselItems, ...carouselItems];
+  // Duplicamos o conteúdo para garantir a transição suave
+  const marqueeContent = [...carouselItems, ...carouselItems];
 
   const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string, color: 'primary' | 'secondary' | 'accent' }> = ({ icon, title, description, color }) => {
     const colorClasses = {
@@ -186,7 +186,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               <div className="absolute inset-y-0 left-0 w-12 md:w-32 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
               <div className="absolute inset-y-0 right-0 w-12 md:w-32 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
               <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-6 px-6">
-                 {[...Array(3)].map((_: undefined, i: number) => ( // Triplicando o conteúdo dos depoimentos também
+                 {[...Array(2)].map((_: undefined, i: number) => ( // Revertendo para 2x
                    <React.Fragment key={i}>
                       <div className="w-[300px] md:w-[400px] flex-shrink-0"><TestimonialCard name="Carlos Mendes" role="Dono de Oficina" text="Eu gastava 300 reais por semana com designer. Agora faço os posts da oficina em 5 minutos tomando café. A qualidade impressiona." stars={5} image="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop" /></div>
                       <div className="w-[300px] md:w-[400px] flex-shrink-0"><TestimonialCard name="Dra. Julia Santos" role="Esteticista" text="Minha clínica precisava de uma identidade mais premium. O Flow Designer capturou exatamente o estilo 'clean' que eu queria. Recomendo!" stars={5} image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop" /></div>
