@@ -1,7 +1,10 @@
 import React from 'react';
-import { User } from '../types';
+import { User, UserRole } from '../types';
 import { Button } from '../components/Button';
-import { ArrowLeft, LogOut, Crown } from 'lucide-react';
+import { ArrowLeft, LogOut, Crown, Users, DollarSign, Zap, Loader2, AlertTriangle } from 'lucide-react';
+import { useOwnerMetrics } from '../hooks/useOwnerMetrics';
+import { MetricCard } from '../components/MetricCard';
+import { ClientManager } from '../components/ClientManager';
 
 interface OwnerPanelPageProps {
     user: User;
@@ -10,6 +13,16 @@ interface OwnerPanelPageProps {
 }
 
 export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToApp, onLogout }) => {
+    const { metrics, isLoadingMetrics, errorMetrics, refreshMetrics } = useOwnerMetrics(user);
+
+    if (user.role !== 'owner') {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white p-4">
+                <p className="text-red-400">Acesso negado.</p>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-zinc-950 p-8 text-white">
             <div className="max-w-7xl mx-auto">
@@ -28,17 +41,54 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
                     </div>
                 </div>
 
-                <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 space-y-4">
-                    <h2 className="text-xl font-semibold">Informações de Administração</h2>
-                    <p>ID: {user.id}</p>
-                    <p>Email: {user.email}</p>
-                    <p>Role: <span className="text-yellow-400 font-medium">{user.role}</span></p>
-                    
-                    <div className="pt-4 border-t border-zinc-800">
-                        <h3 className="text-lg font-semibold mb-2">Gestão de Usuários e Faturamento</h3>
-                        <p className="text-zinc-400">Aqui você pode adicionar ferramentas para gerenciar todos os usuários, planos e faturamento.</p>
+                {isLoadingMetrics ? (
+                    <div className="text-center py-10 text-zinc-400 flex items-center justify-center gap-2">
+                        <Loader2 size={24} className="animate-spin" /> Carregando métricas...
                     </div>
-                </div>
+                ) : errorMetrics ? (
+                    <div className="p-4 bg-red-900/20 border border-red-500/20 text-red-400 rounded-lg">
+                        <AlertTriangle size={20} className="inline mr-2" /> Falha ao carregar dados: {errorMetrics}
+                    </div>
+                ) : (
+                    <div className="space-y-10">
+                        
+                        {/* Seção de Métricas */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <MetricCard 
+                                title="Receita Mensal Estimada (MRR)"
+                                value={`R$ ${metrics.estimatedRevenue.toFixed(2)}`}
+                                icon={<DollarSign size={24} />}
+                                color="primary"
+                            />
+                            <MetricCard 
+                                title="Total de Clientes"
+                                value={metrics.clients.length}
+                                icon={<Users size={24} />}
+                                color="secondary"
+                            />
+                            <MetricCard 
+                                title="Clientes Pagantes (Pro/Business)"
+                                value={metrics.planCounts.pro + metrics.planCounts.business}
+                                icon={<Zap size={24} />}
+                                color="accent"
+                            />
+                        </div>
+
+                        {/* Seção de Gerenciamento de Clientes */}
+                        <ClientManager owner={user} />
+                        
+                        {/* Detalhes de Contagem de Planos */}
+                        <div className="bg-zinc-900/50 p-6 rounded-xl border border-white/10 shadow-lg">
+                            <h3 className="text-xl font-bold text-white mb-4 border-b border-zinc-700 pb-2">Distribuição de Planos</h3>
+                            <div className="grid grid-cols-4 gap-4 text-sm text-zinc-300">
+                                <div><span className="font-semibold text-primary">{metrics.planCounts.business}</span> Business</div>
+                                <div><span className="font-semibold text-primary">{metrics.planCounts.pro}</span> Pro</div>
+                                <div><span className="font-semibold text-primary">{metrics.planCounts.starter}</span> Starter</div>
+                                <div><span className="font-semibold text-primary">{metrics.planCounts.free}</span> Free</div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
