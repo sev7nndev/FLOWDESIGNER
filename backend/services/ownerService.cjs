@@ -68,11 +68,14 @@ const fetchOwnerMetrics = async () => {
     if (clientsError) throw clientsError;
     
     const clientList = clients.map(client => {
-        const fullName = `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A';
+        const rawFullName = `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A';
+        
+        // Apply sanitization to the full name before returning
+        const safeFullName = sanitizeHtml(rawFullName, { allowedTags: [], allowedAttributes: {} });
+        
         return {
             id: client.id,
-            // Aplica sanitização ao nome
-            name: sanitizeHtml(fullName, { allowedTags: [], allowedAttributes: {} }),
+            name: safeFullName,
             // Aplica a máscara ao e-mail
             email: maskEmail(client.auth_user?.email || 'N/A'), 
             plan: client.role,

@@ -141,7 +141,7 @@ router.get('/job-status/:jobId', authenticateToken, async (req, res) => {
 });
 
 // NOVO ENDPOINT: /api/history
-router.get('/history', authenticateToken, generationLimiter, async (req, res, next) => { // <-- ADDED generationLimiter
+router.get('/history', authenticateToken, generationLimiter, async (req, res, next) => {
     const user = req.user;
     
     try {
