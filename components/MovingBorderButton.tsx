@@ -44,12 +44,11 @@ export function MovingBorderButton({
         className="absolute inset-0"
         style={{ borderRadius: `calc(${borderRadius} * 0.96)` }}
       >
-        {/* Passando borderRadius como rx e ry para sincronizar o caminho do SVG com o CSS */}
         <MovingBorder duration={duration} rx={borderRadius} ry={borderRadius}> 
           <div
             className={cn(
-              // CORREÇÃO: Reduzindo o tamanho do glow para h-4 w-4 para caber na curva
-              "h-4 w-4 opacity-[0.8] bg-[radial-gradient(theme(colors.primary)_40%,transparent_60%)]",
+              // CORREÇÃO FINAL: Reduzindo o tamanho do glow para h-3 w-3 (12px)
+              "h-3 w-3 opacity-[0.8] bg-[radial-gradient(theme(colors.primary)_40%,transparent_60%)]",
               borderClassName
             )}
           />
@@ -130,8 +129,8 @@ export const MovingBorder = ({
           stroke="transparent" 
           width="100%"
           height="100%"
-          rx={rx} // Garantindo que o raio de borda seja aplicado ao caminho
-          ry={ry} // Garantindo que o raio de borda seja aplicado ao caminho
+          rx={rx} 
+          ry={ry} 
           ref={pathRef}
         />
       </svg>
