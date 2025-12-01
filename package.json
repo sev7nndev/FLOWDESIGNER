@@ -10,7 +10,7 @@
     "frontend": "vite",
     "backend": "node backend/server.cjs",
     "dev": "concurrently \"npm run frontend\" \"npm run dev:backend\"",
-    "dev:backend": "dotenv -e .env.local -- nodemon backend/server.cjs",
+    "dev:backend": "dotenv -e .env.local -- node backend/server.cjs",
     "start": "concurrently \"npm run frontend\" \"npm run backend\""
   },
   "keywords": [
