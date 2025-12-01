@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, memo } from 'react';
+import React, { useRef, useEffect, memo, useState } from 'react';
 import { GeneratedImage, GenerationState, GenerationStatus } from '../types';
 import { ImageResult } from './ImageResult';
 import { GalleryModal } from './Modals';
@@ -8,12 +8,11 @@ import { Button } from './Button';
 interface ResultDisplayProps {
     state: GenerationState;
     downloadImage: (image: GeneratedImage) => void;
-    showGallery: boolean;
-    setShowGallery: (show: boolean) => void;
 }
 
-const ResultDisplayComponent: React.FC<ResultDisplayProps> = ({ state, downloadImage, showGallery, setShowGallery }) => {
+const ResultDisplayComponent: React.FC<ResultDisplayProps> = ({ state, downloadImage }) => {
     const resultRef = useRef<HTMLDivElement>(null);
+    const [isGalleryOpen, setIsGalleryOpen] = useState(false); // Internal state for modal
 
     useEffect(() => {
         if (state.status === GenerationStatus.SUCCESS && state.currentImage) {
@@ -45,7 +44,7 @@ const ResultDisplayComponent: React.FC<ResultDisplayProps> = ({ state, downloadI
                     
                     {/* Adicionando botão de histórico após o resultado */}
                     <div className="mt-6 text-center">
-                        <Button variant="secondary" onClick={() => setShowGallery(true)} className="text-sm">
+                        <Button variant="secondary" onClick={() => setIsGalleryOpen(true)} className="text-sm">
                             <History size={16} className="mr-2" /> Ver Histórico Completo ({state.history.length})
                         </Button>
                     </div>
@@ -60,9 +59,11 @@ const ResultDisplayComponent: React.FC<ResultDisplayProps> = ({ state, downloadI
                 <p className="text-gray-400 font-medium mb-6">Preencha os dados ao lado e clique em GERAR ARTE FLOW para começar.</p>
                 
                 {/* Botão de Histórico mais proeminente */}
-                <Button variant="secondary" onClick={() => setShowGallery(true)} className="text-sm">
-                    <History size={16} className="mr-2" /> Ver Histórico ({state.history.length})
-                </Button>
+                {state.history.length > 0 && (
+                    <Button variant="secondary" onClick={() => setIsGalleryOpen(true)} className="text-sm">
+                        <History size={16} className="mr-2" /> Ver Histórico ({state.history.length})
+                    </Button>
+                )}
             </div>
         );
     };
@@ -70,7 +71,7 @@ const ResultDisplayComponent: React.FC<ResultDisplayProps> = ({ state, downloadI
     return (
         <div ref={resultRef} className="sticky top-20">
             {renderContent()}
-            {showGallery && <GalleryModal history={state.history} onClose={() => setShowGallery(false)} onDownload={downloadImage} />}
+            {isGalleryOpen && <GalleryModal history={state.history} onClose={() => setIsGalleryOpen(false)} onDownload={downloadImage} />}
         </div>
     );
 };

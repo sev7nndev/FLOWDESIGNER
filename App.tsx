@@ -134,8 +134,6 @@ export const App: React.FC = () => {
             <ResultDisplay 
                 state={state}
                 downloadImage={downloadImage}
-                showGallery={state.history.length > 0} // Simplificado
-                setShowGallery={() => {}} // Gerenciado internamente agora
             />
           </div>
         </div>
