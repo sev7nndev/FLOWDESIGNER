@@ -1,7 +1,6 @@
 // --- AUTH & USER TYPES ---
 
-// FIX: Added 'business' role (Error 5)
-export type UserRole = 'free' | 'pro' | 'business' | 'admin' | 'dev' | 'owner'; 
+export type UserRole = 'free' | 'pro' | 'business' | 'admin' | 'dev' | 'owner' | 'starter'; 
 
 export interface User {
     id: string;
@@ -23,7 +22,6 @@ export interface UserProfile {
 
 // --- GENERATION TYPES ---
 
-// FIX: Corrected enum values to match string literals used in components (Error 3, 15, 17, 20)
 export enum GenerationStatus {
     IDLE = 'idle',
     LOADING = 'loading',
@@ -31,7 +29,6 @@ export enum GenerationStatus {
     ERROR = 'error',
 }
 
-// FIX: Added missing properties to GeneratedImage (Error 18)
 export interface GeneratedImage {
     id: string;
     url: string;
@@ -43,7 +40,6 @@ export interface GeneratedImage {
     userId: string;
 }
 
-// FIX: Added missing 'businessInfo' property (Error 2, 14, 19, 23, 24)
 export interface GenerationFormState {
     businessInfo: string; 
     logoFile: File | null;
@@ -56,11 +52,10 @@ export interface GenerationState {
     history: GeneratedImage[];
 }
 
-// FIX: Added missing properties to UsageData (Error 4, 16, 21, 22, 25)
 export interface UsageData { 
     totalGenerations: number;
     monthlyGenerations: number;
     maxMonthlyGenerations: number;
     credits: number;
-    generationsThisMonth: number; // FIX: Added for Modals.tsx (Error 4)
+    generationsThisMonth: number;
 }

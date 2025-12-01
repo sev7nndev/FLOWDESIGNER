@@ -1,7 +1,7 @@
 import React from 'react';
-import { User, UserRole } from '../types';
+import { User } from '../types';
 import { Button } from '../components/Button';
-import { ArrowLeft, LogOut, Crown, Users, DollarSign, Zap, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, LogOut, Crown, Users, DollarSign, Zap, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useOwnerMetrics } from '../hooks/useOwnerMetrics';
 import { MetricCard } from '../components/MetricCard';
 import { ClientManager } from '../components/ClientManager';
@@ -32,6 +32,9 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
                         Painel do Proprietário
                     </h1>
                     <div className="space-x-3">
+                        <Button variant="ghost" size="small" onClick={refreshMetrics} icon={<RefreshCw size={16} />}>
+                            Atualizar
+                        </Button>
                         <Button variant="secondary" onClick={onBackToApp} icon={<ArrowLeft size={18} />}>
                             Voltar para o App
                         </Button>
@@ -52,7 +55,6 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
                 ) : (
                     <div className="space-y-10">
                         
-                        {/* Seção de Métricas */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <MetricCard 
                                 title="Receita Mensal Estimada (MRR)"
@@ -67,17 +69,15 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
                                 color="secondary"
                             />
                             <MetricCard 
-                                title="Clientes Pagantes (Pro/Business)"
-                                value={metrics.planCounts.pro + metrics.planCounts.business}
+                                title="Clientes Pagantes"
+                                value={metrics.planCounts.pro + metrics.planCounts.business + metrics.planCounts.starter}
                                 icon={<Zap size={24} />}
                                 color="accent"
                             />
                         </div>
 
-                        {/* Seção de Gerenciamento de Clientes */}
                         <ClientManager owner={user} />
                         
-                        {/* Detalhes de Contagem de Planos */}
                         <div className="bg-zinc-900/50 p-6 rounded-xl border border-white/10 shadow-lg">
                             <h3 className="text-xl font-bold text-white mb-4 border-b border-zinc-700 pb-2">Distribuição de Planos</h3>
                             <div className="grid grid-cols-4 gap-4 text-sm text-zinc-300">

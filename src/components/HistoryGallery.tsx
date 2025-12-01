@@ -1,12 +1,11 @@
 import React from 'react';
 import { GeneratedImage } from '../types';
-import { Download, Clock, Trash2 } from 'lucide-react';
+import { Download, Clock } from 'lucide-react';
 import { Button } from './Button';
 
 interface HistoryGalleryProps {
     history: GeneratedImage[];
     downloadImage: (url: string, filename: string) => void;
-    // onDelete: (id: string) => void; // Adicionar se a exclusão for implementada
 }
 
 export const HistoryGallery: React.FC<HistoryGalleryProps> = ({ history, downloadImage }) => {
@@ -29,7 +28,6 @@ export const HistoryGallery: React.FC<HistoryGalleryProps> = ({ history, downloa
                         className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                     />
                     
-                    {/* Overlay de Ação */}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                         <p className="text-xs text-zinc-400 truncate mb-1">{item.prompt.substring(0, 50)}...</p>
                         <div className="flex gap-2">
@@ -42,7 +40,6 @@ export const HistoryGallery: React.FC<HistoryGalleryProps> = ({ history, downloa
                             >
                                 Baixar
                             </Button>
-                            {/* <Button variant="danger" size="small" icon={<Trash2 size={14} />} /> */}
                         </div>
                     </div>
                 </div>

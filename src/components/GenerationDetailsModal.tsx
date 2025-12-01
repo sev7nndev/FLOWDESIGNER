@@ -1,7 +1,8 @@
 import React from 'react';
 import { GeneratedImage } from '../types';
-import { X, Info, Clock, Code, Image, Download } from 'lucide-react';
+import { Info, Clock, Code, Image, Download } from 'lucide-react';
 import { Modal } from './Modal'; 
+import { Button } from './Button';
 
 interface GenerationDetailsModalProps {
     image: GeneratedImage;
@@ -38,7 +39,6 @@ export const GenerationDetailsModal: React.FC<GenerationDetailsModalProps> = ({ 
         <Modal isOpen={true} onClose={onClose} title="Detalhes da Geração" size="lg">
             <div className="space-y-6">
                 
-                {/* Imagem de Preview */}
                 <div className="w-full h-auto rounded-lg overflow-hidden border border-zinc-700">
                     <img 
                         src={image.url} 
@@ -57,7 +57,6 @@ export const GenerationDetailsModal: React.FC<GenerationDetailsModalProps> = ({ 
                     </Button>
                 </div>
 
-                {/* Metadados */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <DetailItem 
                         icon={<Clock size={20} />} 
@@ -81,13 +80,11 @@ export const GenerationDetailsModal: React.FC<GenerationDetailsModalProps> = ({ 
                     />
                 </div>
 
-                {/* Prompt Principal */}
                 <div className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
                     <p className="text-sm font-medium text-zinc-400 mb-2">Prompt (Descrição do Negócio)</p>
                     <p className="text-white whitespace-pre-wrap">{image.prompt}</p>
                 </div>
 
-                {/* Negative Prompt */}
                 <div className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
                     <p className="text-sm font-medium text-zinc-400 mb-2">Negative Prompt</p>
                     <p className="text-white whitespace-pre-wrap">{image.negativePrompt || 'N/A'}</p>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, UserRole } from '../types';
 import { Button } from './Button';
-import { ArrowLeft, Check, X, Zap, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, Zap, Loader2 } from 'lucide-react';
 import { api } from '../services/api';
 
 interface PricingPageProps {
@@ -80,14 +80,11 @@ export const PricingPage: React.FC<PricingPageProps> = ({ user, onBackToApp }) =
         setMessage(null);
 
         try {
-            // Simula a chamada de API para o Owner Panel para alterar o plano do próprio usuário
-            // Nota: Em um app real, isso seria um endpoint de pagamento/assinatura.
             await api.updateClientPlan(user.id, newPlan, 'on');
             
             setCurrentRole(newPlan);
             setMessage({ type: 'success', text: `Parabéns! Seu plano foi alterado para ${newPlan.toUpperCase()}.` });
             
-            // Recarrega a página após um pequeno delay para refletir as mudanças no App.tsx
             setTimeout(() => {
                 window.location.reload();
             }, 1500);

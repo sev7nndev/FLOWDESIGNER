@@ -1,9 +1,8 @@
 import { useState, useCallback } from 'react';
-import { User, GenerationFormState, GeneratedImage, GenerationStatus, GenerationState } from '../types';
+import { User, GenerationFormState, GenerationStatus, GenerationState } from '../types';
 import { useUsage } from './useUsage';
 import { api } from '../services/api';
 
-// Define o estado inicial do formulário
 const INITIAL_FORM_STATE: GenerationFormState = {
     businessInfo: '', 
     logoFile: null,
@@ -16,7 +15,6 @@ const INITIAL_STATE: GenerationState = {
     error: null,
 };
 
-// Define o retorno esperado
 interface GenerationResult {
     form: GenerationFormState;
     state: GenerationState;
@@ -36,7 +34,6 @@ export const useGeneration = (user: User | null, _config?: any): GenerationResul
     const [form, setForm] = useState<GenerationFormState>(INITIAL_FORM_STATE);
     const [state, setState] = useState<GenerationState>(INITIAL_STATE);
     
-    // Integração do hook de uso
     const { usage, isLoadingUsage, refreshUsage } = useUsage(user);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -67,13 +64,10 @@ export const useGeneration = (user: User | null, _config?: any): GenerationResul
     }, []);
 
     const loadHistory = useCallback(() => {
-        // Simulação de carregamento de histórico
-        // Em um app real, isso chamaria a API para buscar o histórico do usuário
         setState(prev => ({ ...prev, history: [] }));
     }, []);
 
     const downloadImage = useCallback((url: string, filename: string) => {
-        // Lógica de download (simplesmente abre a URL para download)
         const link = document.createElement('a');
         link.href = url;
         link.download = filename;
@@ -105,7 +99,6 @@ export const useGeneration = (user: User | null, _config?: any): GenerationResul
         try {
             let logoBase64: string | null = null;
             if (form.logoFile) {
-                // Converte o arquivo para Base64 para envio (simplificado)
                 logoBase64 = await new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onloadend = () => resolve(reader.result as string);
@@ -127,7 +120,6 @@ export const useGeneration = (user: User | null, _config?: any): GenerationResul
                 status: GenerationStatus.SUCCESS, 
             }));
             
-            // Atualiza o uso após a geração
             refreshUsage();
 
         } catch (e: any) {
