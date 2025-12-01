@@ -211,14 +211,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                   <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
                       Comece a gerar artes de alta conversão em segundos com a inteligência artificial do Flow Designer.
                   </p>
-                  <HoverBorderGradient 
+                  {/* CORREÇÃO: Usando o componente Button para replicar o estilo da imagem */}
+                  <Button 
                     onClick={() => setModalOpen(true)} 
-                    className="text-lg font-semibold px-6 py-3"
-                    containerClassName="h-14 px-10 rounded-full"
-                    duration={3}
+                    className="h-14 px-10 text-lg font-semibold rounded-full"
                   >
                       Quero Minhas Artes Agora <ChevronRight className="ml-2" />
-                  </HoverBorderGradient>
+                  </Button>
               </div>
           </motion.section>
 
