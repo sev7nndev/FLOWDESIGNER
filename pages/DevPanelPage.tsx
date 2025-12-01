@@ -1,12 +1,13 @@
-import React, { useState, useCallback } from 'react'; // FIX: Removed unused useEffect, useRef imports (Errors 12, 13)
+import React, { useState, useCallback } from 'react';
 import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage } from '../types';
 import { useLandingImages } from '../hooks/useLandingImages';
 import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
+// import { api } from '../services/api'; // Removendo importação desnecessária
 
 interface DevPanelPageProps {
-  user: User | null; 
+  user: User | null; // User can be null if profile is still loading or not authenticated
   onBackToApp: () => void;
   onLogout: () => void;
 }
@@ -104,12 +105,14 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     
+    // Não precisamos mais de imagesWithSignedUrls ou isSigning
     const imagesToDisplay = allImages; 
 
     const handleDelete = useCallback(async (image: GeneratedImage) => {
         setDeletingId(image.id);
         setDeleteError(null);
         try {
+            // O hook useAdminGeneratedImages agora extrai o path do storage a partir da URL pública
             await deleteImage(image.id, image.url); 
         } catch (e: any) {
             setDeleteError(e.message || "Falha ao deletar arte.");
@@ -172,8 +175,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
 
 // --- Componente de Gerenciamento de Imagens da Landing Page ---
 const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
-    // FIX: Removed unused isUploading from destructuring (Error 14)
-    const { images, isLoading, error, uploadImage, deleteImage } = useLandingImages(user); 
+    const { images, isLoading, error, uploadImage, deleteImage } = useLandingImages(user.role);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -181,7 +183,11 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
         setDeletingId(image.id);
         setDeleteError(null);
         try {
-            const path = image.image_path; 
+            // CRITICAL FIX: O hook useLandingImages agora extrai o path do storage a partir da URL pública
+            // O backend/routes/adminRoutes.cjs espera o 'imagePath' no corpo da requisição DELETE.
+            // Precisamos extrair o path aqui para passar ao hook, que o passará ao backend.
+            const urlParts = image.url.split('/landing-carousel/');
+            const path = urlParts.length > 1 ? urlParts[1] : '';
             
             if (!path) {
                 throw new Error("Caminho do arquivo inválido.");
@@ -196,8 +202,8 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
     }, [deleteImage]);
 
     const handleUploadWrapper = useCallback(async (file: File) => {
-        await uploadImage(file); 
-    }, [uploadImage]);
+        await uploadImage(file, user.id);
+    }, [uploadImage, user.id]);
 
     return (
         <div className="space-y-4 bg-zinc-900/50 p-6 rounded-xl border border-white/10">
@@ -253,6 +259,7 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
 
 // --- Main Dev Panel Page ---
 export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, onLogout }) => {
+    // Conditional rendering for access control
     if (!user || (user.role !== 'admin' && user.role !== 'dev')) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-gray-100 p-4 text-center">
@@ -289,10 +296,10 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
 
                 <div className="space-y-12">
                     {/* Seção 1: Gerenciamento de Artes Geradas por Usuários */}
-                    {user && <GeneratedImagesManager userRole={user.role} />}
+                    <GeneratedImagesManager userRole={user.role} />
 
                     {/* Seção 2: Gerenciamento de Imagens da Landing Page */}
-                    {user && <LandingImagesManager user={user} />}
+                    <LandingImagesManager user={user} />
                 </div>
             </div>
         </div>

@@ -5,21 +5,18 @@ import { User, UserRole } from '../types';
 interface AppHeaderProps {
   user: User | null;
   profileRole: UserRole;
-  onLogout: () => Promise<void>;
+  onLogout: () => void;
   onShowSettings: () => void;
-  onShowDevPanel: () => void; 
-  children?: React.ReactNode; 
+  onShowDevPanel: () => void; // New prop
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel, children }) => {
-  // FIX: Explicitly type the Record to include all UserRole keys (Error 21)
+export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel }) => {
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Admin', color: 'bg-red-600' },
     dev: { name: 'Dev', color: 'bg-cyan-600' },
-    owner: { name: 'Owner', color: 'bg-yellow-600' }, 
+    owner: { name: 'Owner', color: 'bg-yellow-600' }, // Adicionado 'owner'
     client: { name: 'Client', color: 'bg-blue-600' },
     free: { name: 'Grátis', color: 'bg-gray-500' },
-    starter: { name: 'Starter', color: 'bg-blue-500' }, 
     pro: { name: 'Pro', color: 'bg-primary' },
   };
 
@@ -42,9 +39,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
         {/* User Actions */}
         <div className="flex items-center gap-4">
           
-          {/* Children slot (for Pricing Button) */}
-          {children} 
-
           {/* Dev Panel Button (Visible only to Admin/Dev) */}
           {isAdminOrDev && (
             <button 

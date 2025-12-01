@@ -1,237 +1,218 @@
-import React, { useMemo, useState } from 'react';
-import { GenerationFormProps, UsageData, GenerationStatus } from '../types'; 
+import React, { memo } from 'react';
+import { BusinessInfo, GenerationStatus } from '../types';
 import { Button } from './Button';
-import { Image, Upload, Loader2, Info, Zap, Star, Sparkles } from 'lucide-react'; 
+import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { UsageData } from '../hooks/useUsage'; // Importando o tipo de dado de uso
 
-// Componente de exibição de uso
-interface UsageDisplayProps {
-    usage: UsageData;
-    isLoading: boolean;
+interface InputFieldProps {
+  label: string;
+  value: string;
+  field: keyof BusinessInfo;
+  placeholder: string;
+  icon?: React.ReactNode;
+  onChange: (field: keyof BusinessInfo, value: string) => void;
+  maxLength?: number;
 }
 
-const UsageDisplay: React.FC<UsageDisplayProps> = ({ usage, isLoading }) => {
-    const { current_usage, max_usage, plan_id } = usage;
+const InputField: React.FC<InputFieldProps> = ({ label, value, field, placeholder, icon, onChange, maxLength }) => (
+  <div className="space-y-1.5 group">
+    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 group-focus-within:text-primary transition-colors flex items-center gap-1.5">
+      {icon} {label}
+    </label>
+    <input
+      type="text"
+      value={value}
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field, e.target.value)}
+      placeholder={placeholder}
+      maxLength={maxLength}
+      // Refined input styling: darker background, subtle focus ring
+      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-primary focus:ring-2 focus:ring-primary/30 transition-all outline-none"
+    />
+  </div>
+);
+
+interface GenerationFormProps {
+    form: BusinessInfo;
+    status: GenerationStatus;
+    error?: string;
+    handleInputChange: (field: keyof BusinessInfo, value: string) => void;
+    handleLogoUpload: (file: File) => void;
+    handleGenerate: () => void;
+    loadExample: () => void;
+    // NOVAS PROPS DE USO
+    usage: UsageData | null;
+    isLoadingUsage: boolean;
+}
+
+const GenerationFormComponent: React.FC<GenerationFormProps> = ({
+    form, status, error, handleInputChange, handleLogoUpload, handleGenerate, loadExample, usage, isLoadingUsage
+}) => {
+    const isGenerating = status === GenerationStatus.THINKING || status === GenerationStatus.GENERATING;
+    const canGenerate = form.companyName && form.details;
     
-    const isUnlimited = max_usage === -1;
-    const remaining = isUnlimited ? 'Ilimitado' : max_usage - current_usage;
-    const percentage = isUnlimited ? 100 : (current_usage / max_usage) * 100;
+    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            handleLogoUpload(file);
+        }
+    };
     
-    const planName = plan_id === 'pro' ? 'Pro' : plan_id === 'starter' ? 'Starter' : 'Free';
-    const planIcon = plan_id === 'pro' ? <Star size={16} className="text-yellow-400" /> : <Zap size={16} className="text-blue-400" />;
-    
-    if (isLoading) {
-        return <p className="text-sm text-gray-500 flex items-center"><Loader2 size={16} className="animate-spin mr-2" /> Carregando uso...</p>;
-    }
+    const isQuotaExceeded = usage?.isBlocked ?? false;
+    const isUnlimited = usage?.maxQuota === 0 && usage?.planId !== 'free';
 
     return (
-        <div className="p-4 bg-zinc-800/50 rounded-xl border border-white/10 shadow-inner">
-            <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-semibold text-white flex items-center gap-2">
-                    {planIcon} Plano {planName}
-                </span>
-                <span className="text-xs font-medium text-gray-400">
-                    {isUnlimited ? 'Uso Ilimitado' : `${current_usage} de ${max_usage} gerações`}
-                </span>
+        <div className="space-y-6">
+            {/* Quota Display */}
+            <div className="p-4 bg-zinc-900/90 border border-white/10 rounded-xl shadow-inner">
+                <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        Uso Mensal
+                    </span>
+                    {isLoadingUsage ? (
+                        <Loader2 size={16} className="animate-spin text-primary" />
+                    ) : isUnlimited ? (
+                        <span className="text-sm font-bold text-primary">Ilimitado ({usage?.planId.toUpperCase()})</span>
+                    ) : usage && usage.maxQuota > 0 ? (
+                        <span className={`text-sm font-bold ${isQuotaExceeded ? 'text-red-400' : 'text-primary'}`}>
+                            {usage.currentUsage} / {usage.maxQuota}
+                        </span>
+                    ) : (
+                        <span className="text-sm font-bold text-gray-500">Carregando...</span>
+                    )}
+                </div>
+                {isQuotaExceeded && (
+                    <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 rounded-lg">
+                        <AlertTriangle size={14} />
+                        <p>Limite atingido. Faça upgrade para o plano Pro para continuar gerando artes.</p>
+                    </div>
+                )}
             </div>
             
-            {!isUnlimited && (
-                <div className="w-full bg-gray-700 rounded-full h-2.5">
-                    <div 
-                        className={`h-2.5 rounded-full transition-all duration-500 ${percentage > 80 ? 'bg-red-500' : 'bg-primary'}`} 
-                        style={{ width: `${Math.min(percentage, 100)}%` }}
-                    ></div>
-                </div>
-            )}
-            
-            <p className="text-xs text-gray-500 mt-2">
-                {isUnlimited 
-                    ? 'Você tem gerações ilimitadas.' 
-                    : `Restantes: ${remaining} gerações.`
-                }
-            </p>
-            
-            {remaining === 0 && !isUnlimited && (
-                <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
-                    <Info size={14} /> Seu limite de uso foi atingido. Considere o upgrade.
-                </p>
-            )}
-        </div>
-    );
-};
-
-
-export const GenerationForm: React.FC<GenerationFormProps> = ({ 
-    form, 
-    status, 
-    error, 
-    handleInputChange, 
-    handleLogoUpload, 
-    handleGenerate, 
-    loadExample,
-    usage,
-    isLoadingUsage
-}) => {
-    const isGenerating = status === GenerationStatus.GENERATING;
-    const [validationErrors, setValidationErrors] = useState<{ prompt?: string, companyName?: string, logo?: string } | null>(null);
-
-    const handleFormSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setValidationErrors(null);
-        
-        const errors: { prompt?: string, companyName?: string } = {};
-        
-        // 1. Validação do Prompt
-        if (!form.prompt.trim()) {
-            errors.prompt = 'O prompt de descrição é obrigatório.';
-        } else if (form.prompt.trim().length < 10) {
-            errors.prompt = 'O prompt deve ter pelo menos 10 caracteres.';
-        }
-        
-        // 2. Validação do Nome da Empresa
-        if (!form.companyName.trim()) {
-            errors.companyName = 'O nome da empresa é obrigatório.';
-        } else if (form.companyName.trim().length > 50) {
-            errors.companyName = 'O nome da empresa não pode exceder 50 caracteres.';
-        }
-        
-        if (Object.keys(errors).length > 0) {
-            setValidationErrors(errors);
-            return;
-        }
-        
-        // Se a validação passar, chama a função de geração
-        handleGenerate();
-    };
-
-    const isUsageExceeded = useMemo(() => {
-        if (isLoadingUsage || usage.max_usage === -1) return false;
-        return usage.current_usage >= usage.max_usage;
-    }, [usage, isLoadingUsage]);
-
-    return (
-        <div className="bg-zinc-900 p-6 md:p-8 rounded-2xl shadow-xl border border-white/10 space-y-6">
-            <h2 className="text-2xl font-bold text-white border-b border-white/10 pb-3 mb-4">
-                <Image size={24} className="inline mr-2 text-primary" /> Gerador de Arte IA
-            </h2>
-            
-            <UsageDisplay usage={usage} isLoading={isLoadingUsage} />
-
-            <form onSubmit={handleFormSubmit} className="space-y-6">
+            {/* Section 1: Identity */}
+            <div className="bg-zinc-900/90 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
                 
-                {/* 1. Prompt de Descrição */}
-                <div>
-                    <label htmlFor="prompt" className="block text-sm font-medium text-gray-300 mb-2">
-                        Descrição da Arte (Prompt)
-                    </label>
-                    <textarea
-                        id="prompt"
-                        name="prompt"
-                        rows={4}
-                        placeholder="Ex: Um logo minimalista de um leão dourado em estilo geométrico, fundo preto, alta definição."
-                        value={form.prompt}
-                        onChange={handleInputChange}
-                        className={`w-full bg-black/50 border rounded-lg px-4 py-3 text-white focus:border-primary outline-none text-sm resize-none ${
-                            validationErrors?.prompt ? 'border-red-500' : 'border-white/10'
-                        }`}
-                        disabled={isGenerating}
-                    />
-                    {validationErrors?.prompt && (
-                        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                            <Info size={14} /> {validationErrors.prompt}
-                        </p>
-                    )}
-                </div>
+                <div className="relative space-y-6">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                                <Building2 size={18} />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-white text-lg">1. Identidade Visual</h3>
+                                <p className="text-xs text-gray-500">Dados principais do negócio</p>
+                            </div>
+                        </div>
+                        <button onClick={loadExample} className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 font-medium px-3 py-1 rounded-full bg-primary/10">
+                            <Wand2 size={14} /> Usar Exemplo
+                        </button>
+                    </div>
 
-                {/* 2. Nome da Empresa */}
-                <div>
-                    <label htmlFor="companyName" className="block text-sm font-medium text-gray-300 mb-2">
-                        Nome da Empresa (Para Marca d'Água)
-                    </label>
-                    <input
-                        id="companyName"
-                        name="companyName"
-                        type="text"
-                        placeholder="Flow Designer"
-                        value={form.companyName}
-                        onChange={handleInputChange}
-                        className={`w-full bg-black/50 border rounded-lg px-4 py-3 text-white focus:border-primary outline-none text-sm ${
-                            validationErrors?.companyName ? 'border-red-500' : 'border-white/10'
-                        }`}
-                        disabled={isGenerating}
-                    />
-                    {validationErrors?.companyName && (
-                        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                            <Info size={14} /> {validationErrors.companyName}
-                        </p>
-                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <InputField 
+                            label="Nome da Empresa" 
+                            value={form.companyName} 
+                            field="companyName" 
+                            placeholder="Ex: Calors Automóveis" 
+                            onChange={handleInputChange} 
+                            maxLength={100} // Limite de 100 caracteres
+                        />
+                        <div className="space-y-1.5 group">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                                <Upload size={10} /> Logotipo (Opcional)
+                            </label>
+                            <div className="relative">
+                                <input type="file" accept="image/*" onChange={onFileChange} className="hidden" id="logo-upload" />
+                                <label htmlFor="logo-upload" className={`w-full bg-zinc-900 border rounded-xl px-4 py-3 text-sm cursor-pointer transition-all flex items-center justify-between hover:border-white/20 ${form.logo ? 'text-green-400 border-green-500/30 bg-green-900/30' : 'text-gray-500 border-white/10'}`}>
+                                    <span className="truncate">{form.logo ? 'Logo Carregada' : 'Enviar Imagem (Max 30KB)'}</span>
+                                    {form.logo ? <CheckCircle2 size={16} className="text-green-400" /> : <Upload size={16} />}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
 
-                {/* 3. Upload de Logo (Opcional) */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Logo para Referência (Opcional)
-                    </label>
-                    <input
-                        id="logoFile"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        className="hidden"
-                        disabled={isGenerating}
-                    />
-                    <label 
-                        htmlFor="logoFile" 
-                        className={`flex items-center justify-center w-full h-16 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-                            isGenerating ? 'bg-gray-700/50 border-gray-600 text-gray-500' : 'bg-black/50 border-primary/50 hover:bg-primary/10 text-primary'
-                        }`}
-                    >
-                        <Upload size={20} className="mr-2" />
-                        {form.logoFile ? `Arquivo Selecionado: ${form.logoFile.name}` : 'Clique para fazer upload de um logo'}
-                    </label>
-                    {validationErrors?.logo && (
-                        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                            <Info size={14} /> {validationErrors.logo}
-                        </p>
-                    )}
+            {/* Section 2: Contact */}
+            <div className="bg-zinc-900/90 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                <div className="relative space-y-6">
+                    <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                        <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20">
+                            <MapPin size={18} />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-white text-lg">2. Endereço & Contato</h3>
+                            <p className="text-xs text-gray-500">Para o cliente te encontrar</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-12 md:col-span-8">
+                            <InputField label="Rua / Avenida" value={form.addressStreet} field="addressStreet" placeholder="Rua Silenciosa" onChange={handleInputChange} />
+                        </div>
+                        <div className="col-span-4 md:col-span-4">
+                            <InputField label="Número" value={form.addressNumber} field="addressNumber" placeholder="278" onChange={handleInputChange} />
+                        </div>
+                        <div className="col-span-8 md:col-span-6">
+                            <InputField label="Bairro" value={form.addressNeighborhood} field="addressNeighborhood" placeholder="São José" onChange={handleInputChange} />
+                        </div>
+                        <div className="col-span-12 md:col-span-6">
+                            <InputField label="Cidade" value={form.addressCity} field="addressCity" placeholder="Rio de Janeiro" onChange={handleInputChange} />
+                        </div>
+                        <div className="col-span-12">
+                            <InputField label="WhatsApp / Telefone" value={form.phone} field="phone" placeholder="(21) 99999-9999" icon={<Phone size={10} />} onChange={handleInputChange} />
+                        </div>
+                    </div>
                 </div>
+            </div>
 
-                {/* Mensagem de Erro Geral do Backend */}
+            {/* Section 3: Briefing */}
+            <div className="bg-gradient-to-b from-zinc-900 to-zinc-950 border border-white/10 rounded-3xl p-6 shadow-2xl flex-grow flex flex-col group hover:border-primary/30 transition-colors">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-4">
+                    <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
+                        <Layers size={18} />
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-white text-lg">3. O Pedido (Briefing)</h3>
+                        <p className="text-xs text-gray-500">Descreva o que você precisa que a I.A. crie</p>
+                    </div>
+                </div>
+                <textarea
+                    value={form.details}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('details', e.target.value)}
+                    placeholder="Ex: Oficina especializada em importados. Promoção de troca de óleo. Cores escuras e neon."
+                    // Refined textarea styling
+                    className="w-full flex-grow min-h-[150px] bg-transparent border-0 text-white placeholder-gray-600 focus:ring-0 transition-all outline-none resize-none text-sm leading-relaxed"
+                    maxLength={1000} // Limite de 1000 caracteres
+                />
+                <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">A I.A. vai ler isso</p>
+                    <span className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded-full">{form.details.length}/1000</span>
+                </div>
+            </div>
+
+            {/* Generation Button & Error */}
+            <div className="space-y-4 pt-4">
+                <Button 
+                    onClick={handleGenerate} 
+                    isLoading={isGenerating}
+                    className="w-full h-16 text-lg font-bold tracking-wide rounded-2xl shadow-[0_0_40px_-10px_rgba(139,92,246,0.5)] bg-gradient-to-r from-primary via-purple-600 to-secondary hover:brightness-110 active:scale-[0.98] transition-all border border-white/20 relative overflow-hidden group"
+                    disabled={!canGenerate || isQuotaExceeded || isLoadingUsage} // Desabilita se não puder gerar, se a quota estiver bloqueada ou se estiver carregando
+                >
+                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out" />
+                    <span className="relative flex items-center justify-center gap-3">
+                        {isGenerating ? 'Criando Design (Secure)...' : 
+                        <> <Sparkles className="fill-white" /> GERAR ARTE FLOW </>}
+                    </span>
+                </Button>
                 {error && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm flex items-center gap-2">
-                        <Info size={16} />
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 animate-fade-in">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />
                         <p>{error}</p>
                     </div>
                 )}
-
-                {/* Botão de Ação */}
-                <div className="flex flex-col gap-3 pt-4">
-                    <Button 
-                        type="submit" 
-                        isLoading={isGenerating} 
-                        disabled={isGenerating || isUsageExceeded}
-                        className="w-full h-12 text-lg"
-                        icon={!isGenerating ? <Sparkles size={20} /> : null}
-                    >
-                        {isGenerating ? 'Gerando Arte...' : 'Gerar Arte com IA'}
-                    </Button>
-                    
-                    {isUsageExceeded && (
-                        <p className="text-center text-sm text-red-400">
-                            Seu limite de uso foi atingido. Não é possível gerar mais artes.
-                        </p>
-                    )}
-
-                    <Button 
-                        type="button" 
-                        variant="tertiary" 
-                        onClick={loadExample} 
-                        disabled={isGenerating}
-                        className="w-full h-10 text-sm"
-                    >
-                        Carregar Exemplo
-                    </Button>
-                </div>
-            </form>
+            </div>
         </div>
     );
 };
+
+export const GenerationForm = memo(GenerationFormComponent);

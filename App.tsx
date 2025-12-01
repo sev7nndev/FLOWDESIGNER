@@ -1,179 +1,212 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './src/hooks/useAuth'; // FIX: Corrected path to include src/ (Error 12)
-import { useGeneration } from './src/hooks/useGeneration';
-import { UserRole } from './src/types'; 
-import { AppHeader } from './src/components/AppHeader';
-import { SettingsModal } from './src/components/Modals';
-import { GenerationForm } from './src/components/GenerationForm';
-import { GenerationHistory } from './src/components/GenerationHistory';
-import { PricingPage } from './src/components/PricingPage';
-import { LandingPage } from './src/pages/LandingPage';
-import { LoginPage } from './src/pages/LoginPage'; // FIX: Corrected path to include src/ (Error 13)
-import { RegisterPage } from './src/pages/RegisterPage'; // FIX: Corrected path to include src/ (Error 14)
-import { DevPanelPage } from './src/pages/DevPanelPage';
-import { OwnerPanelPage } from './src/pages/OwnerPanelPage';
-import { Button } from './src/components/Button';
-import { Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, UserRole } from './types';
+import { getSupabase } from './services/supabaseClient';
+import { AppTitleHeader } from './components/AppTitleHeader';
+import { LandingPage } from './components/LandingPage';
+import { AuthScreens } from './components/AuthScreens';
+import { Sparkles } from 'lucide-react';
+import { useGeneration } from './hooks/useGeneration';
+import { ResultDisplay } from './components/ResultDisplay';
+import { SettingsModal } from './components/Modals';
+import { useProfile } from './hooks/useProfile';
+import { GenerationForm } from './components/GenerationForm';
+import { AppHeader } from './components/AppHeader';
+import { useLandingImages } from './hooks/useLandingImages';
+import { DevPanelPage } from './pages/DevPanelPage';
+import { OwnerPanelPage } from './pages/OwnerPanelPage'; // Importando o novo painel
+import { Session } from '@supabase/supabase-js'; // Import Session type
 
-const App: React.FC = () => {
-    const { user, profile, isLoading: isLoadingAuth, login, register, logout } = useAuth();
-    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-    const [isDevPanelOpen, setIsDevPanelOpen] = useState(false);
-    const [isOwnerPanelOpen, setIsOwnerPanelOpen] = useState(false);
-    const [isPricingPageOpen, setIsPricingPageOpen] = useState(false);
+// Define a minimal structure for the authenticated user before profile is loaded
+interface AuthUser {
+  id: string;
+  email: string;
+  createdAt: number;
+}
 
-    // Use generation hook
-    const { 
-        form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, 
-        usage, isLoadingUsage, downloadImage
-    } = useGeneration(user);
+export const App: React.FC = () => {
+  // Auth State
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'OWNER_PANEL'>('LANDING'); // Adicionando OWNER_PANEL
+  const [showGallery, setShowGallery] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  
+  // Profile Hook
+  const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
 
-    // Load history on initial load
-    useEffect(() => {
-        if (user) {
-            loadHistory();
+  // Combined User State (passed to hooks/components)
+  const profileRole = (profile?.role || 'free') as UserRole;
+  
+  const user: User | null = authUser && profile ? {
+    id: authUser.id,
+    email: authUser.email,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    createdAt: authUser.createdAt,
+    role: profileRole, // Add role to user object
+  } : null;
+
+  // Generation Logic Hook
+  const { 
+    form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage,
+    usage, isLoadingUsage // NOVOS: Quota e Status de Uso
+  } = useGeneration(user);
+  
+  // Landing Images Hook (Used by LandingPage and DevPanel)
+  const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
+
+
+  const fetchAuthUser = (supabaseUser: any) => {
+    const newAuthUser: AuthUser = {
+      id: supabaseUser.id,
+      email: supabaseUser.email || '',
+      createdAt: Date.parse(supabaseUser.created_at) || Date.now()
+    };
+    setAuthUser(newAuthUser);
+    
+    // Redirecionamento baseado no role após o perfil ser carregado
+    if (profileRole === 'owner') {
+        setView('OWNER_PANEL');
+    } else if (profileRole === 'admin' || profileRole === 'dev') {
+        setView('DEV_PANEL');
+    } else {
+        setView('APP');
+    }
+  };
+
+  // Init Auth & History
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (supabase) {
+      // Check Session
+      supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
+        if (session?.user) {
+          fetchAuthUser(session.user);
+        } else {
+          setView('LANDING');
         }
-    }, [user, loadHistory]);
+      });
 
-    const handleShowSettings = useCallback(() => {
-        setIsSettingsModalOpen(true);
-    }, []);
+      // Listen for Auth Changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session: Session | null) => {
+        if (session?.user) {
+          fetchAuthUser(session.user);
+        } else {
+          setAuthUser(null);
+          setView('LANDING');
+        }
+      });
 
-    const handleCloseSettings = useCallback(() => {
-        setIsSettingsModalOpen(false);
-    }, []);
-
-    const handleShowDevPanel = useCallback(() => {
-        setIsDevPanelOpen(true);
-    }, []);
-
-    const handleCloseDevPanel = useCallback(() => {
-        setIsDevPanelOpen(false);
-    }, []);
-    
-    const handleCloseOwnerPanel = useCallback(() => {
-        setIsOwnerPanelOpen(false);
-    }, []);
-
-    const handleShowPricing = useCallback(() => {
-        setIsPricingPageOpen(true);
-        setIsSettingsModalOpen(false);
-    }, []);
-
-    const handleClosePricing = useCallback(() => {
-        setIsPricingPageOpen(false);
-    }, []);
-
-    if (isLoadingAuth) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white">
-                <p>Carregando autenticação...</p>
-            </div>
-        );
+      // Corrigindo TS18048: subscription é garantido existir aqui.
+      return () => subscription.unsubscribe();
     }
+  }, []);
 
-    const isAuthenticated = !!user;
-    const profileRole: UserRole = profile?.role || 'free';
-    const isAdminOrDev = profileRole === 'admin' || profileRole === 'dev';
-    const isOwner = profileRole === 'owner';
-
-    // Render Pricing Page if open
-    if (isPricingPageOpen && user) {
-        return <PricingPage user={user} onBackToApp={handleClosePricing} />;
+  useEffect(() => {
+    if (user) {
+      loadHistory();
+      
+      // Se o usuário for carregado e tiver um role especial, redireciona
+      if (user.role === 'owner' && view !== 'OWNER_PANEL') {
+          setView('OWNER_PANEL');
+      } else if ((user.role === 'admin' || user.role === 'dev') && view !== 'DEV_PANEL') {
+          setView('DEV_PANEL');
+      } else if (view !== 'APP' && user.role !== 'owner' && user.role !== 'admin' && user.role !== 'dev') {
+          setView('APP');
+      }
     }
+  }, [user, loadHistory, view]);
 
-    // Render Dev Panel if open
-    if (isDevPanelOpen && isAdminOrDev) {
-        return <DevPanelPage user={user} onBackToApp={handleCloseDevPanel} onLogout={logout} />;
-    }
-    
-    // Render Owner Panel if open
-    if (isOwnerPanelOpen && isOwner) {
-        return <OwnerPanelPage user={user} onBackToApp={handleCloseOwnerPanel} onLogout={logout} />;
-    }
+  const handleLogout = async () => {
+    const supabase = getSupabase();
+    if (supabase) await supabase.auth.signOut();
+    setAuthUser(null);
+    setView('LANDING');
+  };
 
+  // Show loading state while profile is being fetched after successful authentication
+  if (view !== 'LANDING' && view !== 'AUTH' && !user && authUser && isProfileLoading) {
     return (
-        <Router>
-            <div className="min-h-screen bg-zinc-950 text-gray-100">
-                
-                {/* Header */}
-                {isAuthenticated && (
-                    <AppHeader 
-                        user={user}
-                        profileRole={profileRole}
-                        onLogout={logout}
-                        onShowSettings={handleShowSettings}
-                        onShowDevPanel={handleShowDevPanel}
-                    >
-                        {/* Pricing Button in Header */}
-                        <Button variant="primary" size="small" onClick={handleShowPricing} icon={<Zap size={16} />}>
-                            Upgrade
-                        </Button>
-                    </AppHeader>
-                )}
-
-                <Routes>
-                    {/* Rotas Públicas */}
-                    <Route path="/" element={isAuthenticated ? <Navigate to="/app" /> : <LandingPage />} />
-                    <Route path="/login" element={isAuthenticated ? <Navigate to="/app" /> : <LoginPage onLogin={login} />} />
-                    <Route path="/register" element={isAuthenticated ? <Navigate to="/app" /> : <RegisterPage onRegister={register} />} />
-
-                    {/* Rota Principal do Aplicativo (Protegida) */}
-                    <Route 
-                        path="/app" 
-                        element={isAuthenticated ? (
-                            <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                
-                                {/* Coluna 1: Formulário de Geração */}
-                                <div className="lg:col-span-1">
-                                    <GenerationForm 
-                                        form={form}
-                                        status={state.status}
-                                        error={state.error}
-                                        handleInputChange={handleInputChange}
-                                        handleLogoUpload={handleLogoUpload}
-                                        handleGenerate={handleGenerate}
-                                        loadExample={loadExample}
-                                        usage={usage as any} 
-                                        isLoadingUsage={isLoadingUsage}
-                                    />
-                                </div>
-
-                                {/* Coluna 2 & 3: Visualização e Histórico */}
-                                <div className="lg:col-span-2">
-                                    <GenerationHistory 
-                                        currentImage={state.currentImage}
-                                        history={state.history}
-                                        status={state.status}
-                                        error={state.error}
-                                        downloadImage={downloadImage}
-                                    />
-                                </div>
-                            </div>
-                        ) : (
-                            <Navigate to="/" />
-                        )} 
-                    />
-                    
-                    {/* Rota de fallback para não autenticados */}
-                    <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
-
-                {/* Modal de Configurações */}
-                {isSettingsModalOpen && user && (
-                    <SettingsModal 
-                        user={user}
-                        profileRole={profileRole}
-                        usage={usage as any} 
-                        onClose={handleCloseSettings}
-                        onLogout={logout}
-                        onShowPricing={handleShowPricing}
-                    />
-                )}
-            </div>
-        </Router>
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+        <Sparkles size={32} className="animate-spin text-primary" />
+      </div>
     );
-};
+  }
+  
+  // --- RENDER VIEWS ---
 
-export default App;
+  if (view === 'LANDING') {
+    return (
+      <LandingPage 
+        onGetStarted={() => setView('AUTH')} 
+        onLogin={() => setView('AUTH')} 
+        landingImages={landingImages}
+        isLandingImagesLoading={isLandingImagesLoading}
+      />
+    );
+  }
+
+  if (view === 'AUTH') {
+    return <AuthScreens onSuccess={() => {}} onBack={() => setView('LANDING')} />;
+  }
+  
+  if (view === 'OWNER_PANEL') {
+      return <OwnerPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
+  }
+  
+  if (view === 'DEV_PANEL') {
+    // Pass user directly, DevPanelPage will handle access check internally
+    return <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
+  }
+  
+  // MAIN APP UI (Protected)
+  return (
+    <div className="min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
+      <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
+      
+      <AppHeader 
+        user={user} 
+        profileRole={profileRole} 
+        onLogout={handleLogout} 
+        onShowSettings={() => setShowSettings(true)} 
+        onShowDevPanel={() => setView('DEV_PANEL')}
+      />
+
+      <div className="relative z-10 -mt-8 md:-mt-10">
+        <AppTitleHeader />
+      </div>
+
+      {/* Margem negativa ajustada para o novo LampHeader mais simples */}
+      <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 relative z-20 mt-[-2rem] md:mt-[-4rem] p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* Coluna 1: Formulário de Geração */}
+          <div className="lg:col-span-7">
+            <GenerationForm 
+                form={form}
+                status={state.status}
+                error={state.error}
+                handleInputChange={handleInputChange}
+                handleLogoUpload={handleLogoUpload}
+                handleGenerate={handleGenerate}
+                loadExample={loadExample}
+                usage={usage} // PASSANDO O USO
+                isLoadingUsage={isLoadingUsage} // PASSANDO O STATUS DE CARREGAMENTO
+            />
+          </div>
+
+          {/* Coluna 2: Resultado e Histórico */}
+          <div className="lg:col-span-5">
+            <ResultDisplay 
+                state={state}
+                downloadImage={downloadImage}
+                showGallery={showGallery}
+                setShowGallery={setShowGallery}
+            />
+          </div>
+        </div>
+      </main>
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profileRole} />}
+    </div>
+  );
+};

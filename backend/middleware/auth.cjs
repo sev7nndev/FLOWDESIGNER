@@ -1,6 +1,6 @@
 const { supabaseAnon, supabaseService } = require('../config');
 
-// Helper function to verify JWT token and fetch user role
+// Helper function to verify JWT token
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -10,7 +10,7 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    // 1. Use supabaseAnon to verify the token and get the user
+    // Use supabaseAnon to verify the token and get the user
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
 
     if (error || !user) {
@@ -18,21 +18,7 @@ const authenticateToken = async (req, res, next) => {
       return res.status(403).json({ error: 'Token inválido ou expirado.' });
     }
 
-    // 2. Fetch user role from profiles table using the Service Key (supabaseService)
-    const { data: profile, error: profileError } = await supabaseService
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-      
-    const role = profile?.role || 'free'; // Default to 'free' if profile not found
-
-    if (profileError && profileError.code !== 'PGRST116') {
-        console.warn(`Error fetching profile role for user ${user.id}:`, profileError.message);
-    }
-
-    // 3. Attach user info and role to request object
-    req.user = { id: user.id, email: user.email, token: token, role: role };
+    req.user = { id: user.id, email: user.email, token: token };
     next();
   } catch (e) {
     console.error("Error during token authentication:", e.message);
@@ -47,11 +33,21 @@ const checkAdminOrDev = async (req, res, next) => {
     return res.status(401).json({ error: 'Não autenticado.' });
   }
 
-  // CRITICAL FIX: Role is now available on req.user
-  if (!['admin', 'dev', 'owner'].includes(user.role)) {
-    return res.status(403).json({ error: 'Acesso negado. Apenas administradores e desenvolvedores podem realizar esta ação.' });
+  try {
+    const { data: profile, error } = await supabaseService
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !profile || !['admin', 'dev'].includes(profile.role)) {
+      return res.status(403).json({ error: 'Acesso negado. Apenas administradores e desenvolvedores podem realizar esta ação.' });
+    }
+    next();
+  } catch (e) {
+    console.error("Error checking admin/dev role:", e.message);
+    return res.status(500).json({ error: 'Erro interno do servidor ao verificar permissões.' });
   }
-  next();
 };
 
 module.exports = {

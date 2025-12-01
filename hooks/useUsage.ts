@@ -2,8 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { getSupabase } from '../services/supabaseClient';
 
 export interface UsageData {
-    current_usage: number; // Standardized property name
-    max_usage: number;     // Standardized property name
+    currentUsage: number;
+    maxQuota: number;
     planId: string;
     isBlocked: boolean;
 }
@@ -31,8 +31,8 @@ export const useUsage = (userId: string | undefined) => {
                 .single();
 
             if (usageError || !usageData) {
-                // Default for new users
-                setUsage({ current_usage: 0, max_usage: 3, planId: 'free', isBlocked: false });
+                // Se não encontrar, pode ser um usuário recém-criado antes do trigger rodar
+                setUsage({ currentUsage: 0, maxQuota: 3, planId: 'free', isBlocked: false });
                 setIsLoading(false);
                 return;
             }
@@ -44,15 +44,15 @@ export const useUsage = (userId: string | undefined) => {
                 .eq('id', usageData.plan_id)
                 .single();
                 
-            const max_usage = planData?.max_images_per_month || 0;
-            const current_usage = usageData.current_usage || 0;
+            const maxQuota = planData?.max_images_per_month || 0;
+            const currentUsage = usageData.current_usage || 0;
             const planId = usageData.plan_id;
             
-            const isBlocked = current_usage >= max_usage && planId !== 'admin' && planId !== 'dev';
+            const isBlocked = currentUsage >= maxQuota && planId !== 'admin' && planId !== 'dev';
 
             setUsage({
-                current_usage,
-                max_usage,
+                currentUsage,
+                maxQuota,
                 planId,
                 isBlocked
             });

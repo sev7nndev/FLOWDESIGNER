@@ -35,9 +35,69 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', publicRoutes);
 
 
-// --- Quota/Usage Endpoint (REMOVIDO: O frontend agora usa o cliente Supabase autenticado, protegido por RLS) ---
-// O endpoint /api/usage/:userId foi removido para evitar exposição de IDs de usuário e depender
-// exclusivamente do RLS do Supabase para controle de acesso.
+// --- Quota/Usage Endpoint (Public, but requires user ID/token for data retrieval) ---
+app.get('/api/usage/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        // 1. Get Role from profiles
+        const { data: profileData, error: profileError } = await supabaseAnon
+            .from('profiles')
+            .select('role')
+            .eq('id', userId)
+            .single();
+            
+        const role = profileData?.role || 'free';
+
+        // 2. Get Usage Count from user_usage
+        const { data: usageData, error: usageError } = await supabaseAnon
+            .from('user_usage')
+            .select('current_usage')
+            .eq('user_id', userId)
+            .single();
+            
+        const current_usage = usageData?.current_usage || 0;
+
+        // Define limits based on role (must match backend/services/generationService.cjs)
+        let limit = 0;
+        let isUnlimited = false;
+
+        switch (role) {
+            case 'owner':
+            case 'dev':
+            case 'admin':
+                isUnlimited = true;
+                break;
+            case 'pro':
+                limit = PRO_LIMIT; 
+                break;
+            case 'starter':
+                limit = STARTER_LIMIT;
+                break;
+            case 'free':
+            default:
+                limit = FREE_LIMIT;
+                break;
+        }
+
+        res.status(200).json({
+            role,
+            current: current_usage,
+            limit,
+            isUnlimited,
+        });
+
+    } catch (error) {
+        // If any error occurs (e.g., user not found in profiles/usage), return default free plan
+        console.error('Error fetching usage data:', error);
+        res.status(200).json({
+            role: 'free',
+            current: 0,
+            limit: FREE_LIMIT,
+            isUnlimited: false,
+        });
+    }
+});
 
 // --- Start Server ---
 app.listen(PORT, () => {

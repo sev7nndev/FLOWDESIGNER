@@ -1,197 +1,193 @@
-import React, { useState, useCallback } from 'react';
-import { User, UserRole, UsageData } from '../types';
-// FIX: Removed unused User as UserIcon import (Error 2)
-import { Settings, LogOut, Zap, MessageSquare, X, DollarSign } from 'lucide-react'; 
+import React, { useState, useEffect } from 'react';
+import { GeneratedImage, User, UserRole } from '../types';
+import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download } from 'lucide-react';
 import { Button } from './Button';
-import { SupportChat } from './SupportChat';
-import { api } from '../services/api';
 
-interface SettingsModalProps {
-    user: User;
-    profileRole: UserRole;
-    usage: UsageData | null;
-    onClose: () => void;
-    onLogout: () => Promise<void>;
-    onShowPricing: () => void;
+// --- Generic Modal Wrapper ---
+interface ModalWrapperProps {
+  title: string;
+  onClose: () => void;
+  children?: React.ReactNode;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ user, profileRole, usage, onClose, onLogout, onShowPricing }) => {
-    const [activeTab, setActiveTab] = useState<'profile' | 'billing' | 'support'>('profile');
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
+const ModalWrapper: React.FC<ModalWrapperProps> = ({ title, onClose, children }) => (
+  <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+    <div className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div className="p-4 border-b border-white/10 flex justify-between items-center bg-zinc-900 z-10 sticky top-0">
+        <h3 className="text-lg font-bold text-white">{title}</h3>
+        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white">
+          <X size={20} />
+        </button>
+      </div>
+      <div className="overflow-y-auto p-6 custom-scrollbar">
+        {children}
+      </div>
+    </div>
+  </div>
+);
 
-    const roleDisplay: Record<UserRole, { name: string, color: string }> = { 
-        admin: { name: 'Administrador', color: 'bg-red-600' },
-        dev: { name: 'Desenvolvedor', color: 'bg-cyan-600' },
-        owner: { name: 'Proprietário', color: 'bg-yellow-600' }, 
-        client: { name: 'Cliente', color: 'bg-blue-600' },
-        free: { name: 'Grátis', color: 'bg-gray-500' },
-        starter: { name: 'Starter', color: 'bg-blue-500' },
-        pro: { name: 'Pro', color: 'bg-primary' },
-    };
+// --- Gallery Modal ---
+interface GalleryModalProps {
+  history: GeneratedImage[];
+  onClose: () => void;
+  onDownload: (img: GeneratedImage) => void;
+}
 
-    const currentRole = roleDisplay[profileRole] || roleDisplay.free;
-
-    const handleLogout = useCallback(async () => {
-        setIsLoggingOut(true);
-        await onLogout();
-        setIsLoggingOut(false);
-    }, [onLogout]);
-
-    const handleManageSubscription = async () => {
-        try {
-            const redirectUrl = await api.createBillingPortalSession();
-            window.location.href = redirectUrl;
-        } catch (e) {
-            alert("Falha ao acessar o portal de faturamento. Tente novamente.");
-        }
-    };
-
-    const renderProfileTab = () => (
-        <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2">Informações do Perfil</h3>
-            
-            <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-zinc-800 p-3 rounded-lg">
-                    <p className="text-gray-400">Nome Completo</p>
-                    <p className="text-white font-medium">{user.firstName} {user.lastName}</p>
-                </div>
-                <div className="bg-zinc-800 p-3 rounded-lg">
-                    <p className="text-gray-400">Email</p>
-                    <p className="text-white font-medium">{user.email}</p>
-                </div>
-                <div className="bg-zinc-800 p-3 rounded-lg col-span-2">
-                    <p className="text-gray-400">Função/Plano</p>
-                    <span className={`text-white text-sm font-bold uppercase px-3 py-1 rounded-full ${currentRole.color}`}>
-                        {currentRole.name}
-                    </span>
-                </div>
-            </div>
-
-            <div className="pt-4 border-t border-white/5">
-                <Button 
-                    variant="danger" 
-                    onClick={handleLogout} 
-                    isLoading={isLoggingOut}
-                    className="w-full"
-                    icon={<LogOut size={18} />}
-                >
-                    {isLoggingOut ? 'Saindo...' : 'Sair da Conta'}
-                </Button>
-            </div>
+export const GalleryModal: React.FC<GalleryModalProps> = ({ history, onClose, onDownload }) => {
+  return (
+    <ModalWrapper title={`Minha Galeria (${history.length})`} onClose={onClose}>
+      {history.length === 0 ? (
+        <div className="text-center py-20 text-gray-500">
+          <ImageIcon size={48} className="mx-auto mb-4 opacity-20" />
+          <p>Nenhuma arte gerada ainda.</p>
         </div>
-    );
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {history.map((img: GeneratedImage) => (
+            <div key={img.id} className="group relative aspect-[3/4] bg-black rounded-xl overflow-hidden border border-white/10 shadow-lg transition-all hover:border-primary/50">
+              <img 
+                src={img.url} 
+                alt="Arte" 
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+              />
+              
+              {/* Overlay de Ação */}
+              <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                <p className="text-[10px] text-gray-400 truncate mb-2">{img.businessInfo.companyName}</p>
+                <Button 
+                  variant="primary" 
+                  onClick={() => onDownload(img)} 
+                  className="h-8 px-3 text-xs w-full"
+                  icon={<Download size={14} />}
+                >
+                  Baixar
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </ModalWrapper>
+  );
+};
 
-    const renderBillingTab = () => (
-        <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2">Gerenciamento de Assinatura</h3>
+// --- User Settings Modal ---
+interface SettingsModalProps {
+  onClose: () => void;
+  user: User | null;
+  updateProfile: (firstName: string, lastName: string) => Promise<boolean | undefined>;
+  profileRole: UserRole;
+}
+
+export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, updateProfile, profileRole }) => {
+  const [firstName, setFirstName] = useState(user?.firstName || '');
+  const [lastName, setLastName] = useState(user?.lastName || '');
+  const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName);
+      setLastName(user.lastName);
+    }
+  }, [user]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setIsLoading(true);
+    setStatusMessage(null);
+
+    const success = await updateProfile(firstName, lastName);
+
+    if (success) {
+      setStatusMessage({ type: 'success', message: 'Perfil atualizado com sucesso!' });
+    } else {
+      setStatusMessage({ type: 'error', message: 'Falha ao salvar. Tente novamente.' });
+    }
+    setIsLoading(false);
+  };
+  
+  const roleDisplay: Record<UserRole, { name: string, color: string }> = {
+    admin: { name: 'Administrador', color: 'bg-red-600' },
+    dev: { name: 'Desenvolvedor', color: 'bg-cyan-600' },
+    owner: { name: 'Proprietário', color: 'bg-yellow-600' }, // Adicionado 'owner'
+    client: { name: 'Cliente', color: 'bg-blue-600' },
+    free: { name: 'Grátis', color: 'bg-gray-500' },
+    pro: { name: 'Pro', color: 'bg-primary' },
+  };
+
+  const currentRole = roleDisplay[profileRole] || roleDisplay.free;
+
+  return (
+    <ModalWrapper title="Configurações Pessoais" onClose={onClose}>
+      <div className="max-w-xl mx-auto space-y-8">
+        
+        {/* Status Section */}
+        <div className="p-6 bg-zinc-800/50 border border-white/10 rounded-xl space-y-4 shadow-inner shadow-black/20">
+            <h4 className="text-lg font-semibold text-white border-b border-white/5 pb-2 mb-4">Status da Conta</h4>
             
-            {usage ? (
-                <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
-                    <div className="flex items-center gap-3">
-                        {profileRole === 'pro' ? <svg className="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.381-1.81.588-1.81h3.461a1 1 0 00.95-.69l1.07-3.292z" /></svg> : <Zap size={24} className="text-blue-400" />}
-                        <p className="text-lg font-semibold text-white">Plano Atual: {currentRole.name}</p>
-                    </div>
-                    <p className="text-sm text-gray-400">
-                        {usage.max_usage === -1 ? 'Gerações Ilimitadas.' : `Limite mensal: ${usage.max_usage} gerações.`}
-                    </p>
-                    <p className="text-sm text-gray-400">
-                        Uso atual: {usage.current_usage} gerações.
-                    </p>
+            <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm flex items-center gap-2"><Mail size={16} className="text-primary" /> Email:</span>
+                <span className="text-white font-medium text-sm">{user?.email}</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm flex items-center gap-2"><UserIcon size={16} className="text-primary" /> Plano:</span>
+                <span className={`text-white text-xs font-bold uppercase px-3 py-1 rounded-full ${currentRole.color}`}>
+                    {currentRole.name}
+                </span>
+            </div>
+            
+            {profileRole === 'free' && (
+                <div className="pt-4 border-t border-white/5 text-sm text-gray-400 flex items-start gap-2">
+                    <Info size={16} className="text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <p>Seu plano atual é Grátis. Para remover a marca d'água e ter acesso ilimitado, considere o upgrade para o plano Pro.</p>
                 </div>
-            ) : (
-                <div className="bg-zinc-800 p-4 rounded-lg text-gray-400 text-sm">
-                    Informações de uso não disponíveis.
+            )}
+        </div>
+
+        {/* Profile Update Form */}
+        <form onSubmit={handleSave} className="space-y-6 p-6 bg-zinc-900/50 border border-white/10 rounded-xl shadow-lg">
+            <h4 className="text-lg font-semibold text-white border-b border-white/5 pb-2 mb-4">Atualizar Perfil</h4>
+            
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Primeiro Nome</label>
+                    <input 
+                        type="text" 
+                        required 
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none text-sm"
+                        value={firstName}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
+                    />
+                </div>
+                <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Sobrenome (Opcional)</label>
+                    <input 
+                        type="text" 
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none text-sm"
+                        value={lastName}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            {statusMessage && (
+                <div className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
+                    statusMessage.type === 'success' ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                }`}>
+                    {statusMessage.type === 'success' ? <CheckCircle2 size={16} /> : <Info size={16} />}
+                    <p>{statusMessage.message}</p>
                 </div>
             )}
 
-            {/* Botão de Gerenciamento de Assinatura */}
-            {(profileRole === 'starter' || profileRole === 'pro') && ( 
-                <div className="pt-4 border-t border-white/5">
-                    <Button 
-                        variant="primary" 
-                        onClick={handleManageSubscription}
-                        className="w-full"
-                        icon={<DollarSign size={18} />}
-                    >
-                        Gerenciar Assinatura (Portal)
-                    </Button>
-                </div>
-            )}
-            
-            <div className="pt-4 border-t border-white/5">
-                <Button 
-                    variant="secondary" 
-                    onClick={onShowPricing}
-                    className="w-full"
-                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>}
-                >
-                    Ver Opções de Planos
-                </Button>
-            </div>
-        </div>
-    );
-
-    const renderSupportTab = () => (
-        <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2">Suporte ao Vivo</h3>
-            <div className="h-[400px] border border-white/10 rounded-xl overflow-hidden">
-                <SupportChat user={user} onClose={() => {}} />
-            </div>
-        </div>
-    );
-
-    return (
-        <div className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-                
-                {/* Header do Modal */}
-                <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                        <Settings size={24} className="text-primary" /> Configurações
-                    </h2>
-                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/10">
-                        <X size={24} />
-                    </button>
-                </div>
-
-                {/* Conteúdo do Modal */}
-                <div className="flex flex-grow overflow-hidden">
-                    {/* Navegação Lateral */}
-                    <div className="w-48 flex-shrink-0 border-r border-white/10 p-4 space-y-2">
-                        <button 
-                            onClick={() => setActiveTab('profile')}
-                            className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium ${
-                                activeTab === 'profile' ? 'bg-primary/20 text-primary' : 'text-gray-300 hover:bg-white/5'
-                            }`}
-                        >
-                            <Settings size={18} /> Perfil
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('billing')}
-                            className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium ${
-                                activeTab === 'billing' ? 'bg-primary/20 text-primary' : 'text-gray-300 hover:bg-white/5'
-                            }`}
-                        >
-                            <DollarSign size={18} /> Assinatura
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('support')}
-                            className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium ${
-                                activeTab === 'support' ? 'bg-primary/20 text-primary' : 'text-gray-300 hover:bg-white/5'
-                            }`}
-                        >
-                            <MessageSquare size={18} /> Suporte
-                        </button>
-                    </div>
-
-                    {/* Conteúdo da Aba */}
-                    <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
-                        {activeTab === 'profile' && renderProfileTab()}
-                        {activeTab === 'billing' && renderBillingTab()}
-                        {activeTab === 'support' && renderSupportTab()}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+            <Button type="submit" isLoading={isLoading} className="w-full h-12 rounded-xl" icon={!isLoading ? <Save size={18} /> : null}>
+                Salvar Alterações
+            </Button>
+        </form>
+      </div>
+    </ModalWrapper>
+  );
 };

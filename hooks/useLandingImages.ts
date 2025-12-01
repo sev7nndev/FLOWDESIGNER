@@ -1,71 +1,63 @@
 import { useState, useEffect, useCallback } from 'react';
+import { LandingImage, UserRole } from '../types';
 import { api } from '../services/api';
-import { LandingImage, User } from '../types';
 
-interface UseLandingImagesResult {
-    images: LandingImage[];
-    isLoading: boolean;
-    error: string | null;
-    isUploading: boolean; // FIX: Added missing property (Error 38)
-    uploadImage: (file: File) => Promise<void>;
-    deleteImage: (id: string, imagePath: string) => Promise<void>;
-}
-
-export const useLandingImages = (user: User | null): UseLandingImagesResult => {
+export const useLandingImages = (userRole: UserRole) => {
     const [images, setImages] = useState<LandingImage[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isUploading, setIsUploading] = useState(false); // FIX: Added state for isUploading
 
     const fetchImages = useCallback(async () => {
-        if (!user) {
-            setIsLoading(false);
-            return;
-        }
         setIsLoading(true);
         setError(null);
         try {
             const fetchedImages = await api.getLandingImages();
             setImages(fetchedImages);
-        } catch (e) {
-            setError(e instanceof Error ? e.message : 'Failed to fetch images');
+        } catch (e: any) {
+            console.error("Failed to fetch landing images:", e);
+            setError("Falha ao carregar imagens da Landing Page.");
         } finally {
             setIsLoading(false);
         }
-    }, [user]);
+    }, []);
 
     useEffect(() => {
         fetchImages();
     }, [fetchImages]);
-
-    const uploadImage = useCallback(async (file: File) => {
-        if (!user) {
-            setError("User not authenticated for upload.");
-            return;
+    
+    const uploadImage = useCallback(async (file: File, userId: string) => {
+        if (userRole !== 'admin' && userRole !== 'dev') {
+            throw new Error("Acesso negado. Apenas administradores e desenvolvedores podem fazer upload.");
         }
-        setError(null);
-        setIsUploading(true); // Set to true before upload
+        
         try {
-            const newImage = await api.uploadLandingImage(file, user.id); 
-            setImages((prev) => [...prev, newImage]);
-        } catch (e) {
-            setError(e instanceof Error ? e.message : 'Failed to upload image');
-            throw e;
-        } finally {
-            setIsUploading(false); // Set to false after upload
+            const newImage = await api.uploadLandingImage(file, userId);
+            setImages((prev: LandingImage[]) => [...prev, newImage].sort((a, b) => a.sortOrder - b.sortOrder));
+        } catch (e: any) {
+            throw new Error(e.message || "Erro ao fazer upload da imagem.");
         }
-    }, [user]);
-
-    const deleteImage = useCallback(async (id: string, imagePath: string) => {
-        setError(null);
+    }, [userRole]);
+    
+    // CORREÇÃO: Agora aceita imagePath e o passa para a API
+    const deleteImage = useCallback(async (id: string, path: string) => {
+        if (userRole !== 'admin' && userRole !== 'dev') {
+            throw new Error("Acesso negado. Apenas administradores e desenvolvedores podem deletar.");
+        }
+        
         try {
-            await api.deleteLandingImage(id, imagePath);
-            setImages((prev) => prev.filter((img) => img.id !== id));
-        } catch (e) {
-            setError(e instanceof Error ? e.message : 'Failed to delete image');
-            throw e;
+            await api.deleteLandingImage(id, path);
+            setImages((prev: LandingImage[]) => prev.filter((img: LandingImage) => img.id !== id));
+        } catch (e: any) {
+            throw new Error(e.message || "Erro ao deletar a imagem.");
         }
-    }, []);
+    }, [userRole]);
 
-    return { images, isLoading, error, isUploading, uploadImage, deleteImage }; // FIX: Return isUploading
+    return {
+        images,
+        isLoading,
+        error,
+        fetchImages,
+        uploadImage,
+        deleteImage
+    };
 };

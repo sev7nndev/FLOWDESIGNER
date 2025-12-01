@@ -24,14 +24,12 @@ interface OwnerMetrics {
         cancelled: number;
     };
     clients: ClientData[];
-    estimatedRevenue: number; // Added revenue
 }
 
 const INITIAL_METRICS: OwnerMetrics = {
     planCounts: { free: 0, starter: 0, pro: 0 },
     statusCounts: { on: 0, paused: 0, cancelled: 0 },
     clients: [],
-    estimatedRevenue: 0, // Initialize revenue
 };
 
 export const useOwnerMetrics = (user: User | null) => {
@@ -62,14 +60,7 @@ export const useOwnerMetrics = (user: User | null) => {
             });
 
             if (!response.ok) {
-                let errorBody = { error: `Erro do servidor: Status ${response.status}` };
-                try {
-                    // Tenta analisar o corpo da resposta como JSON
-                    errorBody = await response.json();
-                } catch (e) {
-                    // Se falhar (ex: Unexpected end of JSON input), usa a mensagem padrão
-                    console.warn("Falha ao analisar JSON de erro do backend:", e);
-                }
+                const errorBody = await response.json();
                 throw new Error(errorBody.error || `Erro do servidor: Status ${response.status}`);
             }
 

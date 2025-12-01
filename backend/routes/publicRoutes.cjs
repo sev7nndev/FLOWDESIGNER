@@ -1,19 +1,40 @@
-// backend/routes/publicRoutes.cjs
 const express = require('express');
 const router = express.Router();
-const { fetchLandingImages } = require('../services/adminService'); // Reutilizando a função de serviço
+const { supabaseAnon } = require('../config');
 
-// Rota pública para buscar todas as imagens ativas da Landing Page
-router.get('/landing-images', async (req, res) => {
-    try {
-        const images = await fetchLandingImages();
-        res.status(200).json(images);
-    } catch (error) {
-        console.error("Error fetching public landing images:", error);
-        res.status(500).json({ error: "Falha ao carregar imagens públicas." });
+// Helper para obter URL pública
+const getPublicUrl = (bucketName, path) => {
+    const { data: { publicUrl } } = supabaseAnon.storage
+        .from(bucketName)
+        .getPublicUrl(path);
+    return publicUrl;
+};
+
+// Public endpoint to get landing carousel images
+router.get('/landing-images', async (req, res, next) => {
+  try {
+    // Fetch images from the public table
+    const { data, error } = await supabaseAnon
+      .from('landing_carousel_images')
+      .select('id, image_url, sort_order')
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching landing images:", error);
+      throw new Error(error.message);
     }
-});
+    
+    // Map to the expected LandingImage format and add public URL
+    const imagesWithUrls = data.map((row) => ({
+        id: row.id,
+        url: getPublicUrl('landing-carousel', row.image_url),
+        sortOrder: row.sort_order,
+    }));
 
-// ... (outras rotas públicas)
+    res.json(imagesWithUrls);
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = router;
