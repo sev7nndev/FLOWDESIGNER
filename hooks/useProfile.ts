@@ -64,6 +64,7 @@ export const useProfile = (userId: string | undefined) => {
         setError(null);
 
         try {
+            // A RLS (Row Level Security) garante que apenas o usuário autenticado possa atualizar seu próprio perfil.
             const { error } = await supabase
                 .from('profiles')
                 .update({ 
@@ -77,10 +78,12 @@ export const useProfile = (userId: string | undefined) => {
                 throw new Error(error.message);
             }
 
+            // Atualiza o estado local após o sucesso
             setProfile((prev: ProfileData | null) => ({
                 ...prev!,
                 firstName: newFirstName,
-                lastName: newLastName
+                lastName: newLastName,
+                role: prev?.role || 'free' // Mantém o role
             }));
             
             return true;
