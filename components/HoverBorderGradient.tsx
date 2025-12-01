@@ -71,8 +71,8 @@ export function HoverBorderGradient({
     >
       <div
         className={cn(
-          // MUDANÇA AQUI: Fundo para indigo-600 (cor vibrante) e mantendo px-3
-          "w-auto text-white z-10 bg-indigo-600 px-3 py-2 rounded-[inherit] flex items-center justify-center",
+          // MUDANÇA: Fundo para violet-600 e padding reduzido (px-2 py-1.5)
+          "w-auto text-white z-10 bg-violet-600 px-2 py-1.5 rounded-[inherit] flex items-center justify-center",
           className
         )}
       >
@@ -96,8 +96,8 @@ export function HoverBorderGradient({
         }}
         transition={{ ease: "linear", duration: duration ?? 1 }}
       />
-      {/* MUDANÇA AQUI: Máscara interna para indigo-600 */}
-      <div className="bg-indigo-600 absolute z-1 flex-none inset-[2px] rounded-[inherit]" />
+      {/* MUDANÇA: Máscara interna para violet-600 */}
+      <div className="bg-violet-600 absolute z-1 flex-none inset-[2px] rounded-[inherit]" />
     </Tag>
   );
 }
