@@ -46,7 +46,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
     theme: (['mechanic', 'food', 'law', 'tech'] as const)[Math.floor(Math.random() * 4)], badge: "NOVO", price: undefined
   })) : FALLBACK_FLYERS;
   
-  // Duplicamos o conteúdo para garantir a transição suave
+  // Duplicamos o conteúdo 2x
   const marqueeContent = [...carouselItems, ...carouselItems];
 
   const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string, color: 'primary' | 'secondary' | 'accent' }> = ({ icon, title, description, color }) => {
@@ -237,11 +237,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             </div>
           </motion.section>
 
-          <footer className="border-t border-white/5 py-12 bg-zinc-950 text-center">
-            <div className="flex items-center justify-center gap-2 mb-4">
-               <div className="bg-white/10 p-1.5 rounded-lg"><Sparkles size={16} className="text-white" /></div>
-              <span className="text-white font-bold">FlowDesigner</span>
-            </div>
+          {/* FOOTER SIMPLIFICADO */}
+          <footer className="border-t border-white/5 py-8 bg-zinc-950 text-center">
             <p className="text-gray-500 text-sm">© 2024 Flow Designer. Todos os direitos reservados.</p>
           </footer>
         </main>
