@@ -15,6 +15,41 @@ const generationLimiter = rateLimit({
   keyGenerator: (req, res) => req.user.id,
 });
 
+// Endpoint to get the ID of the support recipient (Owner/Admin/Dev)
+router.get('/support-recipient', authenticateToken, async (req, res) => {
+    try {
+        // Use supabaseService (which has full access) to find the owner ID
+        const { data, error } = await supabaseService
+            .from('profiles')
+            .select('id')
+            .eq('role', 'owner')
+            .limit(1)
+            .single();
+
+        if (error || !data) {
+            // Fallback: If no owner, try 'admin' or 'dev'
+            const { data: fallbackData } = await supabaseService
+                .from('profiles')
+                .select('id')
+                .in('role', ['admin', 'dev'])
+                .limit(1)
+                .single();
+                
+            if (fallbackData) {
+                return res.json({ recipientId: fallbackData.id });
+            }
+            
+            return res.status(404).json({ error: 'Nenhum contato de suporte encontrado.' });
+        }
+
+        res.json({ recipientId: data.id });
+    } catch (error) {
+        console.error('Error fetching support recipient ID:', error);
+        res.status(500).json({ error: 'Falha ao buscar contato de suporte.' });
+    }
+});
+
+
 // Generate Image Endpoint (Inicia o trabalho)
 router.post('/generate', authenticateToken, generationLimiter, async (req, res, next) => {
   const { promptInfo } = req.body;

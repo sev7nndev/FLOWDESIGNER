@@ -14,7 +14,8 @@ import { AppHeader } from './components/AppHeader';
 import { useLandingImages } from './hooks/useLandingImages';
 import { DevPanelPage } from './pages/DevPanelPage';
 import { OwnerPanelPage } from './pages/OwnerPanelPage';
-import { Toaster } from 'sonner'; // Importando o Toaster
+import { ClientChatPanel } from './components/ClientChatPanel'; // Importando o novo componente
+import { Toaster } from 'sonner';
 
 interface AuthUser {
   id: string;
@@ -24,7 +25,7 @@ interface AuthUser {
 
 export const App: React.FC = () => {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'OWNER_PANEL'>('LANDING');
+  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'OWNER_PANEL' | 'CHAT'>('LANDING'); // Adicionado 'CHAT'
   const [showSettings, setShowSettings] = useState(false);
   
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
@@ -109,6 +110,7 @@ export const App: React.FC = () => {
         onLogout={handleLogout} 
         onShowSettings={() => setShowSettings(true)} 
         onShowDevPanel={() => setView('DEV_PANEL')}
+        onShowChat={() => setView('CHAT')} // Passando a função para mudar para a view CHAT
       />
 
       <div className="relative z-10 -mt-8 md:-mt-10">
@@ -152,6 +154,9 @@ export const App: React.FC = () => {
       return <OwnerPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
     case 'DEV_PANEL':
       return <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
+    case 'CHAT':
+      if (!user) return <MainApp />; // Fallback if user somehow lands here unauthenticated
+      return <ClientChatPanel user={user} onBack={() => setView('APP')} />;
     case 'APP':
     default:
       return <MainApp />;

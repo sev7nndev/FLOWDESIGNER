@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Settings, Sparkles, User as UserIcon, Code } from 'lucide-react';
+import { LogOut, Settings, Sparkles, User as UserIcon, Code, MessageSquare } from 'lucide-react';
 import { User, UserRole } from '../types';
 
 interface AppHeaderProps {
@@ -7,10 +7,11 @@ interface AppHeaderProps {
   profileRole: UserRole;
   onLogout: () => void;
   onShowSettings: () => void;
-  onShowDevPanel: () => void; // New prop
+  onShowDevPanel: () => void;
+  onShowChat: () => void; // New prop for client chat
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel, onShowChat }) => {
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Admin', color: 'bg-red-600' },
     dev: { name: 'Dev', color: 'bg-cyan-600' },
@@ -23,6 +24,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
   const currentRole = roleDisplay[profileRole] || roleDisplay.free;
   const displayName = user?.firstName || user?.email?.split('@')[0] || 'Usuário';
   const isAdminOrDev = profileRole === 'admin' || profileRole === 'dev';
+  const isOwner = profileRole === 'owner';
+  const isClient = !isAdminOrDev && !isOwner;
 
   return (
     <header className="border-b border-white/5 bg-background/80 backdrop-blur-xl sticky top-0 z-[100] shadow-lg shadow-black/20">
@@ -38,6 +41,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
         
         {/* User Actions */}
         <div className="flex items-center gap-4">
+          
+          {/* Support Chat Button (Visible to Clients) */}
+          {isClient && (
+            <button 
+              onClick={onShowChat} 
+              className="p-2 text-accent hover:text-accent/80 transition-colors rounded-lg hover:bg-white/5 border border-accent/30" 
+              title="Chat de Suporte"
+            >
+              <MessageSquare size={20} />
+            </button>
+          )}
           
           {/* Dev Panel Button (Visible only to Admin/Dev) */}
           {isAdminOrDev && (

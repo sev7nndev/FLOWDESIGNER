@@ -1,4 +1,4 @@
-import { GeneratedImage, BusinessInfo, LandingImage } from "../types";
+import { GeneratedImage, BusinessInfo, LandingImage, ChatMessage } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // URL do seu Backend Node.js local (ou deployado)
@@ -13,7 +13,7 @@ export const api = {
     if (!session) throw new Error("Faça login para gerar artes.");
 
     try {
-      const response = await fetch(`${BACKEND_URL}/generate`, {
+      const response = await fetch(`${BACKEND_URL}/generation/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -55,7 +55,7 @@ export const api = {
           await new Promise(resolve => setTimeout(resolve, 1000)); // Espera 1 segundo
           attempts++;
           
-          const statusResponse = await fetch(`${BACKEND_URL}/job-status/${jobId}`, {
+          const statusResponse = await fetch(`${BACKEND_URL}/generation/job-status/${jobId}`, {
               method: "GET",
               headers: {
                   "Authorization": `Bearer ${session.access_token}` 
@@ -77,19 +77,6 @@ export const api = {
       if (jobStatus !== 'COMPLETED' || !resultData.imageUrl) {
           throw new Error("Tempo limite excedido ou trabalho não concluído.");
       }
-      
-      // O backend agora retorna a URL pública (já assinada se necessário)
-      // const finalImageUrl = resultData.imageUrl; // REMOVIDO: Variável não utilizada
-      
-      // Como o backend já salvou o registro completo na tabela 'images', 
-      // precisamos buscar os metadados completos (prompt, businessInfo, createdAt)
-      // para retornar o objeto GeneratedImage completo.
-      
-      // Melhoria: O backend deve retornar o ID da imagem gerada para que possamos buscá-la.
-      // Como o backend não retorna o ID da imagem, vamos forçar o loadHistory no hook.
-      
-      // Por enquanto, retornamos um objeto mínimo que o hook pode usar para atualizar o estado
-      // antes de carregar o histórico completo.
       
       // O backend agora retorna a URL pública (já assinada se necessário)
       const supabaseAnonClient = getSupabase();
@@ -232,5 +219,31 @@ export const api = {
         console.error("Error deleting landing image via backend:", error);
         throw error;
     }
+  },
+  
+  getSupportRecipientId: async (): Promise<string> => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase not configured.");
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Faça login para acessar o suporte.");
+
+    const response = await fetch(`${BACKEND_URL}/generation/support-recipient`, {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${session.access_token}` 
+        }
+    });
+
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || `Falha ao buscar contato de suporte: Status ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (!data.recipientId) {
+        throw new Error("Nenhum contato de suporte encontrado.");
+    }
+    return data.recipientId;
   },
 };

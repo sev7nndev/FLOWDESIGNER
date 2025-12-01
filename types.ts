@@ -64,3 +64,13 @@ export interface LandingImage {
   url: string;
   sortOrder: number;
 }
+
+// NEW: Chat Message Type
+export interface ChatMessage {
+  id: string;
+  created_at: string;
+  sender_id: string;
+  recipient_id: string;
+  content: string;
+  is_admin_message: boolean;
+}
