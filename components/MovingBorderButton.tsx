@@ -137,6 +137,8 @@ export const MovingBorder = ({
       >
         <rect
           fill="none"
+          // Adicionando um stroke transparente para garantir que o navegador calcule o caminho
+          stroke="transparent" 
           width="100%"
           height="100%"
           rx={rx}
