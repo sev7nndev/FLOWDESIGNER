@@ -3,48 +3,35 @@ const { supabaseService } = require('../config');
 
 /**
  * Busca métricas agregadas de usuários (contagem por plano e status).
- * @returns {Promise<{planCounts: object, statusCounts: object}>}
+ * @returns {Promise<{planCounts: object, statusCounts: object, clients: array}>}
  */
 const fetchOwnerMetrics = async () => {
-    // 1. Contagem de usuários por plano (role)
-    const { data: planCounts, error: planError } = await supabaseService
+    // 1. Fetch all relevant profiles (clients) in one go
+    // Incluindo 'updated_at' para ordenação
+    const { data: allClients, error: clientsError } = await supabaseService
         .from('profiles')
-        .select('role, count')
-        .not('role', 'in', '("admin", "dev", "owner")') // Exclui roles de gestão
-        .rollup();
+        .select('id, first_name, last_name, role, status, updated_at') 
+        .not('role', 'in', '("admin", "dev", "owner")');
 
-    if (planError) throw new Error(planError.message || "Failed to fetch plan counts.");
-    
-    const countsByPlan = planCounts.reduce((acc, item) => {
-        acc[item.role] = item.count;
-        return acc;
-    }, { free: 0, starter: 0, pro: 0 }); // Inicializa para garantir que todos os planos apareçam
-
-    // 2. Contagem de usuários por status
-    const { data: statusCounts, error: statusError } = await supabaseService
-        .from('profiles')
-        .select('status, count')
-        .not('role', 'in', '("admin", "dev", "owner")')
-        .rollup();
-        
-    if (statusError) throw new Error(statusError.message || "Failed to fetch status counts.");
-    
-    const countsByStatus = statusCounts.reduce((acc, item) => {
-        acc[item.status] = item.count;
-        return acc;
-    }, { on: 0, paused: 0, cancelled: 0 });
-    
-    // 3. Lista de Clientes (Nome, Email, Plano, Status)
-    const { data: clients, error: clientsError } = await supabaseService
-        .from('profiles')
-        .select('first_name, last_name, role, status, id')
-        .not('role', 'in', '("admin", "dev", "owner")')
-        .order('updated_at', { ascending: false });
-        
     if (clientsError) throw new Error(clientsError.message || "Failed to fetch client profiles.");
+
+    // 2. Aggregate counts in JavaScript (Mais robusto que .rollup() em alguns ambientes)
+    const countsByPlan = { free: 0, starter: 0, pro: 0 };
+    const countsByStatus = { on: 0, paused: 0, cancelled: 0 };
     
-    // Buscando emails usando o Admin API (mais seguro)
-    const clientIds = clients.map(c => c.id);
+    allClients.forEach(client => {
+        // Aggregate Plan Counts
+        if (countsByPlan.hasOwnProperty(client.role)) {
+            countsByPlan[client.role]++;
+        }
+        // Aggregate Status Counts
+        if (countsByStatus.hasOwnProperty(client.status)) {
+            countsByStatus[client.status]++;
+        }
+    });
+
+    // 3. Buscando emails usando o Admin API (lógica anterior mantida)
+    const clientIds = allClients.map(c => c.id);
     
     const { data: authUsers, error: authError } = await supabaseService.auth.admin.listUsers({
         page: 1,
@@ -56,7 +43,6 @@ const fetchOwnerMetrics = async () => {
         throw new Error("Failed to fetch user list from Supabase Admin API.");
     }
     
-    // Garantindo que a lista de usuários existe para evitar crash
     const usersList = authUsers?.users || [];
 
     const emailMap = usersList.reduce((acc, user) => {
@@ -66,13 +52,21 @@ const fetchOwnerMetrics = async () => {
         return acc;
     }, {});
     
-    const clientList = clients.map(client => ({
-        id: client.id,
-        name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
-        email: emailMap[client.id] || 'N/A (Email não encontrado)',
-        plan: client.role,
-        status: client.status,
-    }));
+    // 4. Final Client List (sorting and mapping)
+    const clientList = allClients
+        .sort((a, b) => {
+            // Ordenação por data de atualização (mais recente primeiro)
+            const dateA = new Date(a.updated_at).getTime();
+            const dateB = new Date(b.updated_at).getTime();
+            return dateB - dateA;
+        })
+        .map(client => ({
+            id: client.id,
+            name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
+            email: emailMap[client.id] || 'N/A (Email não encontrado)',
+            plan: client.role,
+            status: client.status,
+        }));
 
     return {
         planCounts: countsByPlan,
