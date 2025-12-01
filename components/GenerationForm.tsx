@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { GenerationFormProps, UsageData, GenerationStatus } from '../types'; // FIX: Removed unused FormState and BusinessInfo imports (Errors 10, 11)
+import { GenerationFormProps, UsageData, GenerationStatus } from '../types'; // FIX: Removed unused FormState, BusinessInfo imports (Errors 10, 11)
 import { Button } from './Button';
 import { Image, Upload, Loader2, Info, Zap, Star, Sparkles } from 'lucide-react'; 
 

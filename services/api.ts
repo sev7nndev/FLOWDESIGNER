@@ -107,8 +107,6 @@ const getHistory = async (): Promise<GeneratedImage[]> => {
 
 const sendSupportMessage = async (userId: string, message: string): Promise<{ reply: string }> => { 
     // MOCK: Em um ambiente real, isso chamaria um Edge Function ou um serviço de chat.
-    // FIX: Use userId and message to avoid TS6133
-    console.log(`Sending message from user ${userId}: ${message}`); 
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     const mockReplies = [

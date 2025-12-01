@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'; // FIX: Removed unused useEffect and useRef imports (Errors 12, 13)
+import React, { useState, useCallback } from 'react'; // FIX: Removed unused useEffect, useRef imports (Errors 12, 13)
 import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage } from '../types';

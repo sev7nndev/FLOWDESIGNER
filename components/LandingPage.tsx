@@ -174,7 +174,7 @@ export const LandingPage: React.FC = () => {
                                     stepNumber={2}
                                     number="02"
                                     title="Configure a Lógica"
-                                    description="Clique em cada nó para configurar suas propriedades, como URLs de API, condições de IF/ELSE ou transformações de dados."
+                                    description="Defina as propriedades de cada nó. Por exemplo, configure o nó de IA com o prompt de texto e as informações de negócio."
                                     isRight={true}
                                     icon={<Bot size={24} />}
                                 />
