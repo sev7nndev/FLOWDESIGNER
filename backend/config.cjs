@@ -1,14 +1,13 @@
 // backend/config.cjs
 const { createClient } = require('@supabase/supabase-js');
-const path = require('path');
-// CORREÇÃO CRÍTICA: Garantir que o .env.local seja carregado corretamente usando path.resolve
-const dotenvResult = require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') }); 
+// const path = require('path'); // Não é mais necessário
+// const dotenvResult = require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') }); // Removido
 
-if (dotenvResult.error) {
-    console.error("DOTENV ERROR: Failed to load .env.local file.", dotenvResult.error);
-} else {
-    console.log("DOTENV SUCCESS: .env.local loaded successfully.");
-}
+// if (dotenvResult.error) {
+//     console.error("DOTENV ERROR: Failed to load .env.local file.", dotenvResult.error);
+// } else {
+//     console.log("DOTENV SUCCESS: .env.local loaded successfully.");
+// }
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
