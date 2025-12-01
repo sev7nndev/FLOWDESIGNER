@@ -3,8 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config'); // Import the anonymous client and limits
 const generationRoutes = require('./routes/generationRoutes'); // Import the new routes
-const ownerRoutes = require('./routes/ownerRoutes'); // NOVO: Importando rotas do proprietário
-const adminRoutes = require('./routes/adminRoutes'); // NOVO: Importando rotas do Admin
+const ownerRoutes = require('./routes/ownerRoutes'); // Importando rotas do proprietário
+const adminRoutes = require('./routes/adminRoutes'); // Importando rotas do Admin
+const publicRoutes = require('./routes/publicRoutes'); // NOVO: Importando rotas públicas
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -26,10 +27,12 @@ app.get('/', (req, res) => {
 // --- API Routes ---
 // Use the modularized generation routes
 app.use('/api/generation', generationRoutes);
-// NOVO: Rotas do Proprietário
+// Rotas do Proprietário
 app.use('/api/owner', ownerRoutes);
-// NOVO: Rotas do Administrador
+// Rotas do Administrador
 app.use('/api/admin', adminRoutes);
+// NOVO: Rotas Públicas (Montadas)
+app.use('/api', publicRoutes);
 
 
 // --- Quota/Usage Endpoint (Public, but requires user ID/token for data retrieval) ---
