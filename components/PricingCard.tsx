@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Loader2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Button } from './Button';
 
 interface PricingCardProps {
@@ -12,11 +12,10 @@ interface PricingCardProps {
   highlight?: boolean;
   badge?: string;
   onClick: () => void;
-  isLoading?: boolean; // Nova prop
 }
 
 export const PricingCard: React.FC<PricingCardProps> = ({ 
-  name, price, period, description, buttonText, features, highlight, badge, onClick, isLoading
+  name, price, period, description, buttonText, features, highlight, badge, onClick 
 }) => {
   return (
     <div className={`relative rounded-3xl p-8 flex flex-col h-full transition-all duration-300 ${
@@ -52,14 +51,12 @@ export const PricingCard: React.FC<PricingCardProps> = ({
 
       <Button 
         onClick={onClick}
-        isLoading={isLoading}
         className={`w-full h-14 rounded-xl text-base font-bold ${
           highlight 
             ? 'bg-gradient-to-r from-primary to-secondary hover:brightness-110 shadow-xl shadow-primary/30' 
             : 'bg-white text-black hover:bg-gray-200 border-0'
         }`}
       >
-        {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
         {buttonText}
       </Button>
     </div>

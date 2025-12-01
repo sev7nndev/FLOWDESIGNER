@@ -1,46 +1,17 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { PricingCard } from './PricingCard';
-import { X, Loader2 } from 'lucide-react';
-import { loadStripe } from '@stripe/stripe-js';
-import { api } from '../services/api';
+import { X } from 'lucide-react';
 
 interface PricingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPlanSelect: () => void; // Mantido para o plano Free
+  onPlanSelect: () => void;
 }
 
-// Carrega o Stripe fora do componente para evitar recarregamentos
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-
 export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, onPlanSelect }) => {
-  const [isLoading, setIsLoading] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
   if (!isOpen) return null;
-
-  const handleSubscription = async (priceId: string) => {
-    setIsLoading(priceId);
-    setError(null);
-    try {
-      const { sessionId } = await api.createCheckoutSession(priceId);
-      const stripe = await stripePromise;
-      if (stripe) {
-        await stripe.redirectToCheckout({ sessionId });
-      } else {
-        throw new Error("Stripe.js não foi carregado.");
-      }
-    } catch (err: any) {
-      setError(err.message || "Ocorreu um erro. Tente novamente.");
-      setIsLoading(null);
-    }
-  };
-
-  // IDs dos planos que você configurou no .env.local e no Stripe
-  const startPlanPriceId = "price_1PgQYwRvy5h55dM3lWzQ8dYq"; // Substitua pelo seu Price ID real
-  const proPlanPriceId = "price_1PgQZJRvy5h55dM3eGjT9x7c";   // Substitua pelo seu Price ID real
 
   return (
     <div 
@@ -74,25 +45,22 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, onP
             price="R$ 29,99"
             period="/mês"
             description="Ideal para autônomos."
-            buttonText={isLoading === startPlanPriceId ? "Processando..." : "Assinar Start"}
+            buttonText="Assinar Start"
             features={["20 Imagens Profissionais", "Qualidade 4K", "Sem marca d'água", "Uso Comercial Liberado", "Suporte por Email"]}
-            onClick={() => handleSubscription(startPlanPriceId)}
-            isLoading={isLoading === startPlanPriceId}
+            onClick={onPlanSelect}
           />
           <PricingCard 
             name="Pro"
             price="R$ 49,99"
             period="/mês"
             description="Para agências e power users."
-            buttonText={isLoading === proPlanPriceId ? "Processando..." : "Assinar Pro"}
+            buttonText="Assinar Pro"
             features={["50 Imagens Profissionais", "Qualidade Ultra 8K", "Geração Instantânea (Turbo)", "Sem marca d'água", "Prioridade no Suporte"]}
             highlight={true}
             badge="Melhor Custo-Benefício"
-            onClick={() => handleSubscription(proPlanPriceId)}
-            isLoading={isLoading === proPlanPriceId}
+            onClick={onPlanSelect}
           />
         </div>
-        {error && <p className="text-red-400 text-center mt-6 text-sm">{error}</p>}
       </div>
     </div>
   );

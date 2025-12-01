@@ -5,7 +5,6 @@ import { getSupabase } from "./supabaseClient";
 const BACKEND_URL = "/api"; 
 
 export const api = {
-  // ... (funções generate, getHistory, etc. existentes)
   generate: async (businessInfo: BusinessInfo): Promise<GeneratedImage> => {
     const supabase = getSupabase();
     if (!supabase) throw new Error("Erro de conexão com o App.");
@@ -29,6 +28,7 @@ export const api = {
         try {
           const err = await response.json();
           
+          // Verifica se o erro é de quota bloqueada
           if (err.quotaStatus === 'BLOCKED') {
               throw new Error(err.error || "Você atingiu o limite de gerações.");
           }
@@ -41,15 +41,18 @@ export const api = {
       }
 
       const data = await response.json();
+      
+      // O backend agora retorna jobId, não a imagem final. O frontend precisa fazer polling.
       const jobId = data.jobId;
       
+      // Inicia o polling para verificar o status do trabalho
       let jobStatus = 'PENDING';
       let resultData: any = null;
       let attempts = 0;
-      const MAX_ATTEMPTS = 60;
+      const MAX_ATTEMPTS = 60; // 60 seconds max polling time
       
       while (jobStatus === 'PENDING' && attempts < MAX_ATTEMPTS) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Espera 1 segundo
           attempts++;
           
           const statusResponse = await fetch(`${BACKEND_URL}/job-status/${jobId}`, {
@@ -75,8 +78,27 @@ export const api = {
           throw new Error("Tempo limite excedido ou trabalho não concluído.");
       }
       
+      // O backend agora retorna a URL pública (já assinada se necessário)
+      const finalImageUrl = resultData.imageUrl;
+      
+      // Como o backend já salvou o registro completo na tabela 'images', 
+      // precisamos buscar os metadados completos (prompt, businessInfo, createdAt)
+      // para retornar o objeto GeneratedImage completo.
+      
+      // Para evitar uma chamada extra de histórico aqui, vamos refatorar o backend para retornar o objeto 'image' completo
+      // ou, mais simplesmente, confiar que o próximo loadHistory() no hook useGeneration
+      // trará o resultado correto.
+      
+      // Melhoria: O backend deve retornar o ID da imagem gerada para que possamos buscá-la.
+      // Como o backend não retorna o ID da imagem, vamos forçar o loadHistory no hook.
+      
+      // Por enquanto, retornamos um objeto mínimo que o hook pode usar para atualizar o estado
+      // antes de carregar o histórico completo.
+      
+      // O backend agora retorna a URL pública (já assinada se necessário)
       const supabaseAnonClient = getSupabase();
       
+      // Buscamos o registro mais recente que corresponde à URL gerada
       const { data: imageRecord, error: fetchError } = await supabaseAnonClient!
         .from('images')
         .select('id, prompt, business_info, created_at, image_url')
@@ -89,6 +111,7 @@ export const api = {
           throw new Error("Arte gerada, mas falha ao carregar metadados.");
       }
       
+      // Re-obtemos a URL pública (o backend retorna a URL completa, mas para consistência)
       const { data: { publicUrl } } = supabaseAnonClient!.storage
           .from('generated-arts')
           .getPublicUrl(imageRecord.image_url);
@@ -114,6 +137,7 @@ export const api = {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return [];
 
+    // Chamada ao novo endpoint /api/history
     const response = await fetch(`${BACKEND_URL}/history`, {
         method: "GET",
         headers: {
@@ -131,6 +155,7 @@ export const api = {
   },
   
   getLandingImages: async (): Promise<LandingImage[]> => {
+    // Chamada ao novo endpoint /api/landing-images
     const response = await fetch(`${BACKEND_URL}/landing-images`, {
         method: "GET",
         headers: {
@@ -175,7 +200,7 @@ export const api = {
                     throw new Error(err.error || `Falha ao fazer upload da imagem da landing page: Status ${response.status}`);
                 }
                 const data = await response.json();
-                resolve(data.image);
+                resolve(data.image); // Backend should return the full LandingImage object
             } catch (error) {
                 console.error("Error uploading landing image via backend:", error);
                 reject(error);
@@ -200,7 +225,7 @@ export const api = {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${session.access_token}` 
             },
-            body: JSON.stringify({ imagePath })
+            body: JSON.stringify({ imagePath }) // Pass the imagePath to the backend
         });
 
         if (!response.ok) {
@@ -212,29 +237,4 @@ export const api = {
         throw error;
     }
   },
-
-  // NOVA FUNÇÃO PARA PAGAMENTO
-  createCheckoutSession: async (priceId: string): Promise<{ sessionId: string }> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Erro de conexão com o App.");
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Faça login para iniciar uma assinatura.");
-
-    const response = await fetch(`${BACKEND_URL}/payments/create-checkout-session`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ priceId })
-    });
-
-    if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Falha ao criar sessão de pagamento.");
-    }
-
-    return response.json();
-  }
 };
