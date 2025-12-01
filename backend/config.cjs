@@ -1,8 +1,15 @@
 // backend/config.cjs
 const { createClient } = require('@supabase/supabase-js');
-const path = require('path'); // Importando path
+const path = require('path');
 // CORREÇÃO CRÍTICA: Garantir que o .env.local seja carregado corretamente usando path.resolve
-require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') }); 
+const dotenvResult = require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') }); 
+
+if (dotenvResult.error) {
+    console.error("DOTENV ERROR: Failed to load .env.local file.", dotenvResult.error);
+} else {
+    console.log("DOTENV SUCCESS: .env.local loaded successfully.");
+}
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // --- Supabase Configuration ---
@@ -11,6 +18,11 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // Usando a chave correta
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+console.log(`DEBUG: SUPABASE_URL is set: ${!!SUPABASE_URL}`);
+console.log(`DEBUG: SUPABASE_SERVICE_KEY is set: ${!!SUPABASE_SERVICE_KEY}`);
+console.log(`DEBUG: GEMINI_API_KEY is set: ${!!GEMINI_API_KEY}`);
+
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_KEY || !GEMINI_API_KEY) {
     console.error("FATAL ERROR: Missing one or more environment variables. Check your .env.local file.");
