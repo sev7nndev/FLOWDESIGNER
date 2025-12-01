@@ -3,16 +3,13 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useAuth } from './hooks/useAuth';
 import { useGeneration } from './hooks/useGeneration';
 import { useToast } from './components/ui/use-toast';
-import Header from './components/Header'; // Este componente precisa ser criado
-import LandingPage from './components/LandingPage'; // Este componente precisa ser criado
+import Header from './components/Header';
+import LandingPage from './components/LandingPage';
 import AuthPage from './pages/AuthPage';
-import DashboardPage from './pages/DashboardPage'; // Este componente precisa ser criado
+import DashboardPage from './pages/DashboardPage';
 import DevPanelPage from './pages/DevPanelPage';
 import OwnerPanelPage from './pages/OwnerPanelPage';
-import GenerationForm from './components/GenerationForm'; // Este componente precisa ser criado
-import GeneratedImageCard from './components/GeneratedImageCard'; // Este componente precisa ser criado
 import { Loader2 } from 'lucide-react';
-import { User as SupabaseUser } from '@supabase/supabase-js';
 import { UserRole } from './types';
 
 // Componente de Rota Protegida
@@ -49,7 +46,7 @@ const ProtectedRoute: React.FC<{ element: React.ReactNode; allowedRoles?: UserRo
   if (role === 'owner' && window.location.pathname === '/dashboard') {
     return <Navigate to="/owner-panel" replace />;
   }
-  if (role === 'dev' && window.location.pathname === '/dashboard') {
+  if (role === 'dev' && role !== 'owner' && window.location.pathname === '/dashboard') {
     return <Navigate to="/dev-panel" replace />;
   }
 
@@ -71,31 +68,28 @@ const ProtectedRoute: React.FC<{ element: React.ReactNode; allowedRoles?: UserRo
 const App: React.FC = () => {
   const { user, signOut } = useAuth();
   const {
-    generatedImage,
-    isGenerating,
-    generationError,
-    generateImage,
-    clearGeneration,
+    form,
+    state,
+    handleInputChange,
+    handleLogoUpload,
+    handleGenerate,
+    loadExample,
+    downloadImage,
     usage,
     isLoadingUsage,
-  } = useGeneration();
+  } = useGeneration(user);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (generationError) {
+    if (state.error) {
       toast({
         title: 'Generation Failed',
-        description: generationError,
+        description: state.error,
         variant: 'destructive',
       });
     }
-  }, [generationError, toast]);
+  }, [state.error, toast]);
 
-  const handleGenerate = (businessInfo: string) => {
-    clearGeneration();
-    generateImage(businessInfo);
-  };
-  
   const handleLogout = async () => {
     await signOut();
     toast({
@@ -120,11 +114,18 @@ const App: React.FC = () => {
                 <ProtectedRoute
                   element={
                     <DashboardPage 
-                      onGenerate={handleGenerate}
-                      isGenerating={isGenerating}
+                      user={user!} // Guaranteed by ProtectedRoute
+                      form={form}
+                      status={state.status}
+                      error={state.error}
+                      handleInputChange={handleInputChange}
+                      handleLogoUpload={handleLogoUpload}
+                      handleGenerate={handleGenerate}
+                      loadExample={loadExample}
+                      isGenerating={state.status === 'GENERATING' || state.status === 'THINKING'}
                       usage={usage}
                       isLoadingUsage={isLoadingUsage}
-                      generatedImage={generatedImage}
+                      generatedImage={state.currentImage}
                     />
                   }
                 />
