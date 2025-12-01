@@ -1,48 +1,30 @@
 {
-  "name": "flow-designer",
-  "private": true,
-  "version": "2.0.0",
-  "type": "module",
+  "name": "saas-template",
+  "version": "1.0.0",
+  "description": "A comprehensive SaaS template with frontend and backend.",
+  "main": "index.js",
   "scripts": {
-    "dev": "concurrently \"vite\" \"npm run server\"",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "server": "node backend/server.cjs"
+    "install:frontend": "cd frontend && npm install",
+    "install:backend": "cd backend && npm install",
+    "install:all": "npm run install:frontend && npm run install:backend",
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && node server.js",
+    "dev": "dotenv -e backend/.env -- nodemon backend/server.js",
+    "start": "concurrently \"npm run frontend\" \"npm run dev\""
   },
+  "keywords": [
+    "saas",
+    "template",
+    "react",
+    "node",
+    "express"
+  ],
+  "author": "Your Name",
+  "license": "ISC",
   "dependencies": {
-    "@capacitor/android": "^7.4.4",
-    "@capacitor/cli": "^7.4.4",
-    "@capacitor/core": "^7.4.4",
-    "@capacitor/ios": "^7.4.4",
-    "@google/generative-ai": "^0.24.1",
-    "@supabase/supabase-js": "^2.86.0",
-    "axios": "^1.13.2",
-    "clsx": "^2.1.1",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.18.2",
-    "express-rate-limit": "^8.2.1",
-    "framer-motion": "^12.23.25",
-    "jsonwebtoken": "^9.0.2",
-    "lucide-react": "^0.344.0",
-    "multer": "^2.0.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "sanitize-html": "^2.17.0",
-    "sonner": "^2.0.7",
-    "tailwind-merge": "^3.4.0",
-    "uuid": "^9.0.1"
-  },
-  "devDependencies": {
-    "@dyad-sh/react-vite-component-tagger": "^0.8.0",
-    "@types/react": "^18.2.60",
-    "@types/react-dom": "^18.2.19",
-    "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.17",
     "concurrently": "^8.2.2",
-    "postcss": "^8.4.35",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5.2.2",
-    "vite": "^5.1.0"
-  }
+    "dotenv-cli": "^7.4.2",
+    "nodemon": "^3.1.0"
+  },
+  "devDependencies": {}
 }
