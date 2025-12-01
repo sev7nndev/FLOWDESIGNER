@@ -2,7 +2,6 @@
   "name": "saas-template",
   "version": "1.0.0",
   "description": "A comprehensive SaaS template with frontend and backend.",
-  "main": "index.js",
   "scripts": {
     "install:frontend": "cd frontend && npm install",
     "install:backend": "cd backend && npm install",
