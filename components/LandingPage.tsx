@@ -200,7 +200,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
           <motion.section 
             initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
-            className="py-24 px-6 bg-zinc-950/50 border-t border-white/5"
+            className="py-24 px-6 bg-zinc-950"
           >
               <div className="max-w-4xl mx-auto text-center p-10 rounded-3xl bg-gradient-to-br from-zinc-900 to-zinc-950 border border-primary/20 shadow-2xl shadow-primary/10 relative overflow-hidden">
                   <div className="absolute -inset-20 bg-primary/10 blur-3xl rounded-full animate-pulse-slow -z-10" />
@@ -211,7 +211,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                   <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
                       Comece a gerar artes de alta conversão em segundos com a inteligência artificial do Flow Designer.
                   </p>
-                  {/* CORREÇÃO: Usando o componente Button para replicar o estilo da imagem */}
                   <Button 
                     onClick={() => setModalOpen(true)} 
                     className="h-14 px-10 text-lg font-semibold rounded-full"
@@ -223,7 +222,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
           <motion.section 
             initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
-            className="py-20 px-6 bg-zinc-900/30"
+            className="py-24 px-6 bg-zinc-950 border-t border-white/5"
           >
             <div className="max-w-3xl mx-auto">
               <div className="text-center mb-12">
