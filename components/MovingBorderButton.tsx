@@ -48,8 +48,8 @@ export function MovingBorderButton({
         <MovingBorder duration={duration} rx={borderRadius} ry={borderRadius}> 
           <div
             className={cn(
-              // Mantendo o tamanho ajustado para um efeito mais fino
-              "h-6 w-6 opacity-[0.8] bg-[radial-gradient(theme(colors.primary)_40%,transparent_60%)]",
+              // CORREÇÃO: Reduzindo o tamanho do glow para h-4 w-4 para caber na curva
+              "h-4 w-4 opacity-[0.8] bg-[radial-gradient(theme(colors.primary)_40%,transparent_60%)]",
               borderClassName
             )}
           />
@@ -90,10 +90,8 @@ export const MovingBorder = ({
   useAnimationFrame((time) => {
     let length = 0;
     try {
-      // Tenta obter o comprimento do caminho. Se o elemento não estiver pronto, pode lançar um erro.
       length = pathRef.current?.getTotalLength() || 0;
     } catch (e) {
-      // Se getTotalLength falhar (caminho vazio), ignoramos este frame.
       return; 
     }
     
@@ -103,13 +101,11 @@ export const MovingBorder = ({
     }
   });
 
-  // Função auxiliar para obter o ponto com segurança
   const getPoint = (val: number, coord: 'x' | 'y') => {
     try {
       const point = pathRef.current?.getPointAtLength(val);
       return point ? point[coord] : 0;
     } catch (e) {
-      // Retorna 0 se houver erro (caminho vazio)
       return 0;
     }
   };
@@ -131,12 +127,11 @@ export const MovingBorder = ({
       >
         <rect
           fill="none"
-          // Mantendo o stroke transparente para garantir o cálculo do caminho
           stroke="transparent" 
           width="100%"
           height="100%"
-          rx={rx} // Aplicando o raio de borda
-          ry={ry} // Aplicando o raio de borda
+          rx={rx} // Garantindo que o raio de borda seja aplicado ao caminho
+          ry={ry} // Garantindo que o raio de borda seja aplicado ao caminho
           ref={pathRef}
         />
       </svg>
