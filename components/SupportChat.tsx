@@ -1,206 +1,134 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Send, MessageSquare, Loader2, X } from 'lucide-react';
-import { Button } from './Button';
-import { getSupabase } from '../services/supabaseClient';
+import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
-
-interface ChatMessage {
-    id: string;
-    created_at: string;
-    sender_id: string;
-    recipient_id: string;
-    content: string;
-    is_admin_message: boolean;
-}
+import { MessageSquare, Send, Loader2, User as UserIcon, Zap, Star, Shield } from 'lucide-react';
+import { Button } from './Button';
+import { api } from '../services/api';
 
 interface SupportChatProps {
     user: User;
-    onClose: () => void;
+    onClose: () => void; // Mantido para compatibilidade, mas não usado internamente
 }
 
-// ID do Proprietário/Admin para quem o cliente deve enviar a mensagem.
-// Para simplificar, vamos assumir que o proprietário (owner) é o principal ponto de contato.
-// Em um ambiente real, isso seria buscado dinamicamente.
-// Usaremos o ID do usuário 'owner' que está no contexto do Supabase (lucasformaggio@gmail.com)
-const SUPPORT_USER_ID = '00000000-0000-0000-0000-000000000000'; // Placeholder, deve ser o ID do owner/admin
+interface Message {
+    id: number;
+    sender: 'user' | 'support';
+    content: string;
+    timestamp: string;
+}
 
-export const SupportChat: React.FC<SupportChatProps> = ({ user, onClose }) => {
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [newMessage, setNewMessage] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSending, setIsSending] = useState(false);
-    const [supportId, setSupportId] = useState<string | null>(null);
+const getRoleIcon = (role: string) => {
+    switch (role) {
+        case 'pro': return <Star size={14} className="text-yellow-400" />;
+        case 'starter': return <Zap size={14} className="text-blue-400" />;
+        case 'free': return <Shield size={14} className="text-gray-400" />;
+        default: return <UserIcon size={14} className="text-gray-400" />;
+    }
+};
+
+export const SupportChat: React.FC<SupportChatProps> = ({ user }) => {
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const supabase = getSupabase();
 
-    const scrollToBottom = () => {
+    // Scroll to bottom on new message
+    useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
+    }, [messages]);
 
-    // 1. Encontra o ID do usuário de suporte (Owner/Admin)
-    const findSupportUser = useCallback(async () => {
-        if (!supabase) return;
-        
-        // Busca o primeiro usuário com a role 'owner' ou 'admin' para ser o destinatário padrão
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('id')
-            .in('role', ['owner', 'admin', 'dev'])
-            .limit(1)
-            .single();
-
-        if (error || !data) {
-            console.error("Nenhum usuário de suporte encontrado.");
-            return null;
-        }
-        setSupportId(data.id);
-        return data.id;
-    }, [supabase]);
-
-    // 2. Busca mensagens
-    const fetchMessages = useCallback(async (clientId: string, supportId: string) => {
-        if (!supabase || !supportId) return;
-        setIsLoading(true);
-        
-        // Busca mensagens entre o cliente e o suporte
-        const { data, error } = await supabase
-            .from('chat_messages')
-            .select('*')
-            .or(`and(sender_id.eq.${clientId},recipient_id.eq.${supportId}),and(sender_id.eq.${supportId},recipient_id.eq.${clientId})`)
-            .order('created_at', { ascending: true });
-
-        if (error) {
-            console.error("Error fetching messages:", error);
-        } else {
-            setMessages(data || []);
-        }
-        setIsLoading(false);
-        scrollToBottom();
-    }, [supabase]);
-
+    // Load initial messages (mocked)
     useEffect(() => {
-        findSupportUser().then(id => {
-            if (id) {
-                fetchMessages(user.id, id);
-            } else {
-                setIsLoading(false);
-            }
-        });
-    }, [user.id, findSupportUser, fetchMessages]);
-    
-    useEffect(scrollToBottom, [messages]);
+        // Simula o carregamento de histórico
+        setMessages([
+            { id: 1, sender: 'support', content: `Olá ${user.firstName}! Bem-vindo ao suporte Flow Designer. Como podemos ajudar você hoje?`, timestamp: new Date().toLocaleTimeString() },
+        ]);
+    }, [user.firstName]);
 
-    // 3. Realtime Listener
-    useEffect(() => {
-        if (!supabase || !supportId) return;
-
-        const channel = supabase
-            .channel(`client_chat_${user.id}`)
-            .on('postgres_changes', { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'chat_messages',
-                // Filtra mensagens destinadas ao cliente atual OU enviadas por ele
-                filter: `recipient_id=eq.${user.id}` 
-            }, (payload: any) => {
-                const newMessage = payload.new as ChatMessage;
-                // Adiciona a mensagem se ela for relevante para esta conversa (enviada pelo suporte)
-                if (newMessage.sender_id === supportId) {
-                    setMessages((prev) => [...prev, newMessage]);
-                }
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [supabase, user.id, supportId]);
-
-
-    const handleSendMessage = async (e: React.FormEvent) => {
+    const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || !supportId || !supabase) return;
+        const trimmedInput = input.trim();
+        if (!trimmedInput || isLoading) return;
 
-        setIsSending(true);
-        const messageContent = newMessage.trim();
+        const newMessage: Message = {
+            id: Date.now(),
+            sender: 'user',
+            content: trimmedInput,
+            timestamp: new Date().toLocaleTimeString(),
+        };
 
-        const { data, error } = await supabase
-            .from('chat_messages')
-            .insert({
-                sender_id: user.id,
-                recipient_id: supportId,
-                content: messageContent,
-                is_admin_message: false, // Cliente enviando
-            })
-            .select()
-            .single();
+        setMessages(prev => [...prev, newMessage]);
+        setInput('');
+        setIsLoading(true);
 
-        if (error) {
-            console.error("Error sending message:", error);
-        } else if (data) {
-            setMessages((prev) => [...prev, data]);
-            setNewMessage('');
+        try {
+            // Simula o envio da mensagem para o backend e a resposta do suporte
+            const response = await api.sendSupportMessage(user.id, trimmedInput);
+            
+            const supportResponse: Message = {
+                id: Date.now() + 1,
+                sender: 'support',
+                content: response.reply,
+                timestamp: new Date().toLocaleTimeString(),
+            };
+            
+            setMessages(prev => [...prev, supportResponse]);
+        } catch (error) {
+            console.error('Chat error:', error);
+            const errorResponse: Message = {
+                id: Date.now() + 1,
+                sender: 'support',
+                content: 'Desculpe, houve um erro ao processar sua mensagem. Tente novamente.',
+                timestamp: new Date().toLocaleTimeString(),
+            };
+            setMessages(prev => [...prev, errorResponse]);
+        } finally {
+            setIsLoading(false);
         }
-        setIsSending(false);
     };
 
     return (
-        <div className="fixed bottom-4 right-4 z-[150] w-full max-w-md h-[500px] bg-zinc-900 border border-primary/20 rounded-2xl shadow-2xl flex flex-col animate-fade-in">
+        <div className="h-full flex flex-col bg-zinc-950">
+            {/* Cabeçalho removido, agora gerenciado pelo App.tsx */}
             
-            {/* Header */}
-            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-zinc-800/50 rounded-t-2xl">
-                <h4 className="text-white font-bold flex items-center gap-2">
-                    <MessageSquare size={18} className="text-primary" /> Suporte ao Cliente
-                </h4>
-                <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full text-gray-400 hover:text-white">
-                    <X size={16} />
-                </button>
-            </div>
-
             {/* Área de Mensagens */}
-            <div className="flex-grow overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                {isLoading ? (
-                    <div className="flex justify-center items-center h-full">
-                        <Loader2 size={24} className="animate-spin text-primary" />
-                    </div>
-                ) : !supportId ? (
-                    <div className="text-center text-gray-500 pt-10">Nenhum agente de suporte disponível no momento.</div>
-                ) : messages.length === 0 ? (
-                    <div className="text-center text-gray-500 pt-10">Inicie uma conversa. Nossa equipe responderá em breve.</div>
-                ) : (
-                    messages.map((msg) => (
-                        <div 
-                            key={msg.id} 
-                            className={`flex ${msg.is_admin_message ? 'justify-start' : 'justify-end'}`}
-                        >
-                            <div className={`max-w-xs md:max-w-md p-3 rounded-xl text-sm ${
-                                !msg.is_admin_message 
-                                    ? 'bg-primary text-white rounded-br-none' 
-                                    : 'bg-zinc-700 text-white rounded-tl-none'
-                            }`}>
-                                {msg.content}
-                                <span className="block text-[10px] text-right mt-1 opacity-70">
-                                    {new Date(msg.created_at).toLocaleTimeString()}
-                                </span>
-                            </div>
+            <div className="flex-grow p-4 space-y-4 overflow-y-auto custom-scrollbar">
+                {messages.map((msg) => (
+                    <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[80%] p-3 rounded-xl shadow-md ${
+                            msg.sender === 'user' 
+                                ? 'bg-primary text-black rounded-br-none' 
+                                : 'bg-zinc-800 text-white rounded-tl-none'
+                        }`}>
+                            <p className="text-sm">{msg.content}</p>
+                            <span className={`text-xs mt-1 block ${msg.sender === 'user' ? 'text-black/70' : 'text-gray-400'}`}>
+                                {msg.timestamp}
+                            </span>
                         </div>
-                    ))
+                    </div>
+                ))}
+                {isLoading && (
+                    <div className="flex justify-start">
+                        <div className="max-w-[80%] p-3 rounded-xl bg-zinc-800 text-white rounded-tl-none flex items-center gap-2">
+                            <Loader2 size={16} className="animate-spin text-primary" />
+                            <span className="text-sm text-gray-400">Digitando...</span>
+                        </div>
+                    </div>
                 )}
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Formulário de Envio */}
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 bg-zinc-800/50 flex gap-3 rounded-b-2xl">
+            {/* Formulário de Entrada */}
+            <form onSubmit={handleSend} className="p-4 border-t border-white/10 bg-zinc-900 flex gap-3">
                 <input
                     type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
                     placeholder="Digite sua mensagem..."
                     className="flex-grow bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary outline-none text-sm"
-                    disabled={isSending || !supportId}
+                    disabled={isLoading}
                 />
-                <Button type="submit" isLoading={isSending} disabled={!newMessage.trim() || isSending || !supportId} className="h-10 px-4">
-                    <Send size={16} />
+                <Button type="submit" isLoading={isLoading} disabled={!input.trim()} className="h-10 w-10 p-0 flex-shrink-0">
+                    <Send size={18} />
                 </Button>
             </form>
         </div>
