@@ -1,4 +1,4 @@
-import { GeneratedImage, BusinessInfo, LandingImage } from "../types";
+import { GeneratedImage, BusinessInfo, LandingImage, PlanSetting, QuotaCheckResponse } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // URL do seu Backend Node.js local (ou deployado)
@@ -27,8 +27,21 @@ export const api = {
       if (!response.ok) {
         try {
           const err = await response.json();
+          
+          // Handle Quota Blocked error specifically
+          if (err.quotaStatus === 'BLOCKED') {
+              const quotaError = new Error(err.error || "Limite de geração atingido.");
+              (quotaError as any).quotaStatus = 'BLOCKED';
+              (quotaError as any).usage = err.usage;
+              (quotaError as any).plan = err.plan;
+              throw quotaError;
+          }
+          
           throw new Error(err.error || "Erro no servidor");
         } catch (e) {
+          // Re-throw quota error if caught here
+          if ((e as any).quotaStatus === 'BLOCKED') throw e;
+          
           console.error("Falha ao analisar a resposta de erro como JSON.", { status: response.status, statusText: response.statusText });
           throw new Error(`O servidor retornou um erro inesperado (Status: ${response.status}). Verifique se o backend está rodando corretamente.`);
         }
@@ -88,6 +101,107 @@ export const api = {
     return historyWithUrls.filter((item): item is GeneratedImage => item !== null);
   },
   
+  // NEW: Fetch all plan settings
+  getPlanSettings: async (): Promise<PlanSetting[]> => {
+    try {
+        const response = await fetch(`${BACKEND_URL}/plan-settings`);
+        if (!response.ok) throw new Error("Falha ao carregar configurações de planos.");
+        const data = await response.json();
+        return data.plans as PlanSetting[];
+    } catch (error) {
+        console.error("Error fetching plan settings:", error);
+        return [];
+    }
+  },
+  
+  // NEW: Check user quota status
+  checkQuota: async (): Promise<QuotaCheckResponse> => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase not configured.");
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Usuário não autenticado.");
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/check-quota`, {
+            headers: {
+                "Authorization": `Bearer ${session.access_token}` 
+            }
+        });
+        if (!response.ok) throw new Error("Falha ao verificar quota.");
+        
+        const data = await response.json();
+        return data as QuotaCheckResponse;
+    } catch (error) {
+        console.error("Error checking quota:", error);
+        throw error;
+    }
+  },
+  
+  // NEW: Admin update plan settings
+  updatePlanSettings: async (plans: PlanSetting[]): Promise<void> => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase not configured.");
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Acesso negado.");
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/plan-settings/update`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${session.access_token}` 
+            },
+            body: JSON.stringify({ plans })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || `Falha ao atualizar planos: Status ${response.status}`);
+        }
+    } catch (error) {
+        console.error("Error updating plan settings via backend:", error);
+        throw error;
+    }
+  },
+  
+  // NEW: Initiate Mercado Pago subscription
+  initiateSubscription: async (planId: string): Promise<{ paymentUrl: string }> => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase not configured.");
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Faça login para assinar.");
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/subscribe`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${session.access_token}` 
+            },
+            body: JSON.stringify({ planId })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || `Falha ao iniciar assinatura: Status ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Error initiating subscription:", error);
+        throw error;
+    }
+  },
+  
+  // NEW: Mercado Pago OAuth Connect URL (for Dev Panel)
+  getMercadoPagoConnectUrl: () => {
+    return `${BACKEND_URL}/admin/mp-connect`;
+  },
+
   getLandingImages: async (): Promise<LandingImage[]> => {
     const supabase = getSupabase();
     if (!supabase) return [];

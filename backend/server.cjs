@@ -7,6 +7,7 @@ const express = require('express');
     const rateLimit = require('express-rate-limit');
     const sanitizeHtml = require('sanitize-html');
     const { v4: uuidv4 } = require('uuid');
+    const mercadopago = require('mercadopago'); // NEW: Mercado Pago SDK
     require('dotenv').config();
 
     const app = express();
@@ -15,13 +16,19 @@ const express = require('express');
     // Environment Variables
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY; // Added for JWT verification
+    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY; 
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     const FREEPIK_API_KEY = process.env.FREEPIK_API_KEY;
+    
+    // NEW: Mercado Pago Environment Variables
+    const MP_CLIENT_ID = process.env.MP_CLIENT_ID;
+    const MP_CLIENT_SECRET = process.env.MP_CLIENT_SECRET;
+    const MP_REDIRECT_URI = process.env.MP_REDIRECT_URI;
+    const MP_OWNER_ID = process.env.MP_OWNER_ID; // ID do usuário dono do SaaS no Supabase
 
     // Validate environment variables
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SUPABASE_ANON_KEY || !GEMINI_API_KEY || !FREEPIK_API_KEY) {
-      console.error("Missing one or more environment variables. Please check your .env.local file.");
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SUPABASE_ANON_KEY || !GEMINI_API_KEY || !FREEPIK_API_KEY || !MP_CLIENT_ID || !MP_CLIENT_SECRET || !MP_REDIRECT_URI || !MP_OWNER_ID) {
+      console.error("Missing one or more environment variables (Supabase, Gemini, Freepik, or Mercado Pago). Please check your .env.local file.");
       process.exit(1);
     }
 
@@ -35,6 +42,9 @@ const express = require('express');
     const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+    
+    // Mercado Pago Configuration (using the owner's credentials for OAuth flow)
+    // Note: We initialize MP SDK later with the owner's access token for payments.
 
     // Gemini AI Client
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -42,11 +52,11 @@ const express = require('express');
 
     // Middleware
     app.use(cors({
-      origin: ['http://localhost:3000', 'https://ai.studio'], // Allow your frontend origin
+      origin: ['http://localhost:3000', 'https://ai.studio'], 
       methods: ['GET', 'POST', 'DELETE', 'PUT'],
       allowedHeaders: ['Content-Type', 'Authorization'],
     }));
-    app.use(express.json({ limit: '50mb' })); // Increased limit for potential base64 logos
+    app.use(express.json({ limit: '50mb' })); 
 
     // Trust proxy for correct IP identification in rate limiting
     app.set('trust proxy', 1);
@@ -56,9 +66,9 @@ const express = require('express');
       windowMs: 60 * 1000, // 1 minute
       max: 5, // Limit each user to 5 requests per windowMs
       message: "Muitas requisições de geração. Por favor, tente novamente após um minuto.",
-      standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-      legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-      keyGenerator: (req, res) => req.user.id, // Use authenticated user's ID for rate limiting
+      standardHeaders: true, 
+      legacyHeaders: false, 
+      keyGenerator: (req, res) => req.user.id, 
     });
 
     // Helper function to verify JWT token
@@ -78,7 +88,7 @@ const express = require('express');
           return res.status(403).json({ error: 'Token inválido ou expirado.' });
         }
 
-        req.user = { id: user.id, email: user.email, token: token }; // Attach user info to request
+        req.user = { id: user.id, email: user.email, token: token }; 
         next();
       } catch (e) {
         console.error("Error during token authentication:", e.message);
@@ -109,25 +119,112 @@ const express = require('express');
         return res.status(500).json({ error: 'Erro interno do servidor ao verificar permissões.' });
       }
     };
+    
+    // NEW: Helper function to check image quota and increment usage
+    const checkImageQuota = async (userId) => {
+        const now = new Date().toISOString();
+        
+        // 1. Fetch usage and plan data
+        const { data: usageData, error: usageError } = await supabaseService
+            .from('user_usage')
+            .select('*, plan_settings(max_images_per_month, price)')
+            .eq('user_id', userId)
+            .single();
 
-    // AI Prompt Generation
-    async function generateDetailedPrompt(userPrompt) {
-      const prompt = `Você é um especialista em marketing e design. Sua tarefa é transformar um pedido simples de um usuário em um briefing de imagem detalhado para uma IA de geração de imagens. O briefing deve ser extremamente descritivo, com foco em:
-      - Estilo artístico (ex: fotorrealista, 3D render, ilustração vetorial, cyberpunk, minimalista, vintage)
-      - Paleta de cores (ex: tons vibrantes, monocromático, pastel, neon)
-      - Iluminação (ex: dramática, suave, luz natural, estúdio)
-      - Composição (ex: close-up, grande angular, simétrico, dinâmico)
-      - Elementos específicos (objetos, pessoas, texturas, fundos)
-      - Atmosfera/Sentimento (ex: moderno, acolhedor, futurista, luxuoso)
-      - Qualidade da imagem (ex: 8K, ultra detalhado, fotorrealista)
+        if (usageError || !usageData) {
+            console.error(`Quota check failed for user ${userId}:`, usageError?.message || 'Usage data not found.');
+            // Default to BLOCKED if data is missing for safety
+            return { status: 'BLOCKED', usage: null, plan: null, message: 'Falha ao verificar plano. Tente novamente.' };
+        }
+        
+        const usage = usageData;
+        const plan = usageData.plan_settings;
+        const maxImages = plan.max_images_per_month;
+        const currentUsage = usage.current_usage;
+        const planId = usage.plan_id;
+        
+        // Check if cycle needs renewal (simple monthly check based on cycle_start_date)
+        const cycleStartDate = new Date(usage.cycle_start_date);
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        
+        let usageToUse = currentUsage;
+        
+        if (cycleStartDate < oneMonthAgo) {
+            // Reset usage for new cycle
+            const { error: resetError } = await supabaseService
+                .from('user_usage')
+                .update({ current_usage: 0, cycle_start_date: now })
+                .eq('user_id', userId);
+            
+            if (resetError) {
+                console.error(`Failed to reset usage for user ${userId}:`, resetError);
+                // Continue with current usage if reset fails, to prevent over-usage
+            } else {
+                usageToUse = 0;
+            }
+        }
+        
+        // 2. Determine Quota Status
+        const usagePercentage = (usageToUse / maxImages) * 100;
+        
+        if (usageToUse >= maxImages) {
+            return { status: 'BLOCKED', usage: { ...usage, current_usage: usageToUse }, plan, message: `Limite de ${maxImages} imagens atingido para o plano ${planId}.` };
+        }
+        
+        if (usagePercentage >= 80) {
+            return { status: 'NEAR_LIMIT', usage: { ...usage, current_usage: usageToUse }, plan, message: `Você está perto do limite (${usageToUse}/${maxImages}).` };
+        }
+        
+        return { status: 'ALLOWED', usage: { ...usage, current_usage: usageToUse }, plan };
+    };
+    
+    // NEW: Helper function to increment usage
+    const incrementUsage = async (userId) => {
+        const { error } = await supabaseService
+            .from('user_usage')
+            .update({ current_usage: new Date().getTime() }) // Use current timestamp to force update
+            .eq('user_id', userId)
+            .increment('current_usage', 1);
+            
+        if (error) {
+            console.error(`Failed to increment usage for user ${userId}:`, error);
+            throw new Error('Falha ao registrar o uso da imagem.');
+        }
+    };
 
-      O objetivo é que a IA crie uma imagem de alta qualidade que represente visualmente o negócio ou a promoção descrita.
+    // AI Prompt Generation (Refactored)
+    async function generateDetailedPrompt(promptInfo) {
+      const { companyName, phone, addressStreet, addressNumber, addressNeighborhood, addressCity, details } = promptInfo;
+      
+      // Format address and services list for the AI
+      const address = [addressStreet, addressNumber, addressNeighborhood, addressCity]
+        .filter(Boolean)
+        .join(', ');
+        
+      const servicesList = details.split('.').map(s => s.trim()).filter(s => s.length > 5).join('; ');
+      
+      const prompt = `Você é um designer profissional de social media. Gere uma arte de FLYER VERTICAL em alta qualidade, com aparência profissional, inspirada em flyers modernos de pet shop, oficina mecânica, barbearia, lanchonete, salão de beleza, imobiliária e clínica, com:
 
-      Exemplo de entrada do usuário: "Oficina mecânica completa. Faço lanternagem, pintura, rebaixamento, consertos de motor e troca de óleo. Faço tudo em carros nacionais e importados."
+- composição bem organizada;  
+- tipografia clara, com hierarquia entre título, subtítulo e lista de serviços;  
+- ilustrações ou imagens relacionadas ao nicho;  
+- fundo bem trabalhado, mas sem poluir o texto.
 
-      Exemplo de saída detalhada: "Fotorrealista, imagem de alta resolução 8K de uma oficina mecânica moderna e limpa. A paleta de cores é dominada por tons de cinza escuro, preto e detalhes em vermelho vibrante e azul neon. A iluminação é dramática, com focos de luz destacando ferramentas cromadas e a silhueta de um carro esportivo sendo trabalhado. Composição em grande angular mostrando diferentes estações de trabalho: uma área de pintura com um carro sendo preparado, uma área de lanternagem com ferramentas específicas, e um elevador com um carro importado. Detalhes como respingos de óleo limpos no chão, pneus empilhados e um logotipo sutil da oficina na parede. A atmosfera é de profissionalismo, tecnologia e eficiência. Foco em texturas metálicas e reflexos."
+Nicho do cliente: ${details}.  
 
-      Agora, transforme o seguinte pedido do usuário em um briefing detalhado para a IA: "${userPrompt}"`;
+Dados que DEVEM aparecer no flyer:
+- Nome da empresa: ${companyName}  
+- Serviços principais: ${servicesList}  
+- Benefícios / diferenciais: ${servicesList}  
+- Telefone/WhatsApp: ${phone}  
+- Endereço (se houver): ${address}  
+
+Diretrizes de design:
+- Usar cores coerentes com o nicho.  
+- Reservar espaço para o logotipo.  
+- Não inventar textos aleatórios; usar somente as informações fornecidas.
+`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
@@ -141,8 +238,8 @@ const express = require('express');
           'https://api.freepik.com/v1/ai/image-generator',
           {
             prompt: detailedPrompt,
-            art_style: 'photorealistic', // You can make this dynamic if needed
-            aspect_ratio: '3:4', // Common for flyers/social media posts
+            art_style: 'photorealistic', 
+            aspect_ratio: '3:4', 
             output_type: 'url',
             num_images: 1,
           },
@@ -170,20 +267,20 @@ const express = require('express');
       try {
         const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
         const imageBuffer = Buffer.from(imageResponse.data, 'binary');
-        const actualContentType = imageResponse.headers['content-type'] || 'image/png'; // Fallback to png
+        const actualContentType = imageResponse.headers['content-type'] || 'image/png'; 
 
-        const filePath = `${userId}/${uuidv4()}.png`; // Store images under user's ID
+        const filePath = `${userId}/${uuidv4()}.png`; 
         const { data, error } = await supabaseService.storage
           .from('generated-arts')
           .upload(filePath, imageBuffer, {
-            contentType: actualContentType, // Use dynamic content type
+            contentType: actualContentType, 
             upsert: false,
           });
 
         if (error) {
           throw new Error(`Erro ao fazer upload para Supabase Storage: ${error.message}`);
         }
-        return data.path; // Return the path in the bucket
+        return data.path; 
       } catch (error) {
         console.error('Erro ao fazer upload da imagem para o Supabase Storage:', error.message);
         throw new Error('Falha ao salvar a imagem gerada.');
@@ -191,8 +288,34 @@ const express = require('express');
     }
 
     // --- API Endpoints ---
+    
+    // NEW: Get Plan Settings
+    app.get('/api/plan-settings', async (req, res, next) => {
+        try {
+            const { data, error } = await supabaseService
+                .from('plan_settings')
+                .select('*')
+                .order('price', { ascending: true });
+                
+            if (error) throw new Error(error.message);
+            
+            res.json({ plans: data });
+        } catch (error) {
+            next(error);
+        }
+    });
+    
+    // NEW: Check Quota Endpoint
+    app.get('/api/check-quota', authenticateToken, async (req, res, next) => {
+        try {
+            const quotaResponse = await checkImageQuota(req.user.id);
+            res.json(quotaResponse);
+        } catch (error) {
+            next(error);
+        }
+    });
 
-    // Generate Image Endpoint
+    // Generate Image Endpoint (Adjusted for Quota)
     app.post('/api/generate', authenticateToken, generationLimiter, async (req, res, next) => {
       const { promptInfo } = req.body;
       const user = req.user;
@@ -210,41 +333,31 @@ const express = require('express');
         addressNeighborhood: sanitizeHtml(promptInfo.addressNeighborhood || '', { allowedTags: [], allowedAttributes: {} }),
         addressCity: sanitizeHtml(promptInfo.addressCity || '', { allowedTags: [], allowedAttributes: {} }),
         details: sanitizeHtml(promptInfo.details || '', { allowedTags: [], allowedAttributes: {} }),
-        logo: promptInfo.logo // Logo is base64, handled separately
+        logo: promptInfo.logo 
       };
 
       if (!sanitizedPromptInfo.companyName || !sanitizedPromptInfo.details) {
         return res.status(400).json({ error: "Nome da empresa e detalhes são obrigatórios." });
       }
       
-      // Server-side logo size validation (Issue 1 Fix)
-      const MAX_LOGO_BASE64_LENGTH_SERVER = 40000; // Approx 30KB original file size
+      const MAX_LOGO_BASE64_LENGTH_SERVER = 40000; 
       if (sanitizedPromptInfo.logo && sanitizedPromptInfo.logo.length > MAX_LOGO_BASE64_LENGTH_SERVER) {
         return res.status(400).json({ error: `O logo é muito grande. O tamanho máximo permitido é de ${Math.round(MAX_LOGO_BASE64_LENGTH_SERVER / 1.33 / 1024)}KB.` });
       }
 
       try {
-        // Check user role and generation count
-        const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            global: { headers: { Authorization: `Bearer ${user.token}` } }
-        });
-        const { data: profile, error: profileError } = await supabaseAuth.from('profiles').select('role, generations_count').eq('id', user.id).single();
-        if (profileError) throw new Error(`Acesso negado ou perfil não encontrado no Supabase: ${profileError.message}. Verifique a configuração do Supabase.`);
+        // --- NEW: Quota Check ---
+        const quotaResponse = await checkImageQuota(user.id);
         
-        const userRole = profile?.role || 'free';
-        const generationsCount = profile?.generations_count || 0;
-
-        if (userRole === 'free' && generationsCount >= 3) {
-          return res.status(403).json({ error: 'Você atingiu o limite de 3 gerações gratuitas. Faça upgrade para um plano pago para continuar gerando artes.' });
+        if (quotaResponse.status === 'BLOCKED') {
+            // Return 403 and the quota message
+            return res.status(403).json({ error: quotaResponse.message, quotaStatus: 'BLOCKED', usage: quotaResponse.usage, plan: quotaResponse.plan });
         }
-        
-        if (!['admin', 'pro', 'dev', 'free'].includes(userRole)) {
-          return res.status(403).json({ error: 'Acesso negado. A geração de arte requer um plano Pro.' });
-        }
+        // NEAR_LIMIT status is handled by the frontend via the check-quota endpoint/response
         
         // --- REAL AI GENERATION FLOW ---
         console.log(`[${user.id}] Step 1: Generating detailed prompt for user ${user.email}...`);
-        const detailedPrompt = await generateDetailedPrompt(sanitizedPromptInfo.details);
+        const detailedPrompt = await generateDetailedPrompt(sanitizedPromptInfo);
         console.log(`[${user.id}] Step 1 Complete. Detailed prompt (first 100 chars): ${detailedPrompt.substring(0, 100)}...`);
 
         console.log(`[${user.id}] Step 2: Generating image with Freepik...`);
@@ -255,13 +368,15 @@ const express = require('express');
         const imagePath = await uploadImageToSupabase(generatedImageUrl, user.id);
         console.log(`[${user.id}] Step 3 Complete. Supabase path: ${imagePath}`);
 
-        console.log(`[${user.id}] Step 4: Saving record to database for user ${user.id}...`);
+        console.log(`[${user.id}] Step 4: Saving record to database and incrementing usage for user ${user.id}...`);
+        
+        // 4a. Save record
         const { data: image, error: dbError } = await supabaseService
           .from('images')
           .insert({
             user_id: user.id,
             prompt: detailedPrompt,
-            image_url: imagePath, // Store the path, not the public URL
+            image_url: imagePath, 
             business_info: sanitizedPromptInfo,
           })
           .select()
@@ -272,19 +387,11 @@ const express = require('express');
           const errorMessage = dbError.message || 'Erro desconhecido ao inserir no banco de dados Supabase.';
           return res.status(500).json({ error: `Erro ao salvar a imagem no banco de dados Supabase: ${errorMessage}. Verifique a tabela 'images' e suas permissões.` });
         }
+        
+        // 4b. Increment usage
+        await incrementUsage(user.id);
+        
         console.log(`[${user.id}] Step 4 Complete. Image ID: ${image.id}`);
-
-        // Increment generations_count for free users
-        if (userRole === 'free') {
-            const { error: updateError } = await supabaseService
-                .from('profiles')
-                .update({ generations_count: generationsCount + 1 })
-                .eq('id', user.id);
-            if (updateError) {
-                console.error(`[${user.id}] Error incrementing generations_count:`, updateError);
-                // This is a non-critical error, but should be logged.
-            }
-        }
 
         res.json({ 
           message: 'Arte gerada com sucesso!',
@@ -292,7 +399,6 @@ const express = require('express');
         });
 
       } catch (error) {
-        // Pass the error to the global error handler
         next(error);
       }
     });
@@ -319,7 +425,7 @@ const express = require('express');
     // Admin endpoint to delete a generated image
     app.delete('/api/admin/images/:id', authenticateToken, checkAdminOrDev, async (req, res, next) => {
       const { id } = req.params;
-      const { imageUrl } = req.body; // This is the path in storage, e.g., "user-id/uuid.png"
+      const { imageUrl } = req.body; 
 
       if (!imageUrl) {
         return res.status(400).json({ error: "Caminho da imagem é obrigatório para exclusão do storage." });
@@ -333,7 +439,6 @@ const express = require('express');
 
         if (storageError) {
           console.error(`Error deleting image from storage (${imageUrl}):`, storageError);
-          // Continue to delete from DB even if storage fails, to keep DB consistent
         }
 
         // 2. Delete from Supabase Database
@@ -356,20 +461,17 @@ const express = require('express');
     // Admin endpoint to upload a landing carousel image (NEW)
     app.post('/api/admin/landing-images/upload', authenticateToken, checkAdminOrDev, async (req, res, next) => {
       const { fileBase64, fileName, userId } = req.body;
-      const user = req.user; // Authenticated user from token
+      const user = req.user; 
 
       if (!fileBase64 || !fileName || !userId) {
         return res.status(400).json({ error: "Dados de arquivo incompletos." });
       }
 
-      // Security check: Ensure the userId in the body matches the authenticated user's ID
-      // This prevents a dev/admin from uploading files under another user's ID if they tried to manipulate the request.
       if (user.id !== userId) {
         return res.status(403).json({ error: "Ação não autorizada para o usuário especificado." });
       }
 
       try {
-        // Extract file type and base64 data
         const matches = fileBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
         if (!matches || matches.length !== 3) {
           throw new Error('Formato de base64 inválido.');
@@ -377,15 +479,13 @@ const express = require('express');
         const contentType = matches[1];
         const buffer = Buffer.from(matches[2], 'base64');
 
-        // --- SERVER-SIDE FILE SIZE VALIDATION (Issue 1 Fix) ---
-        const MAX_LANDING_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+        const MAX_LANDING_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; 
         if (buffer.length > MAX_LANDING_IMAGE_SIZE_BYTES) {
             return res.status(400).json({ error: `O arquivo é muito grande. O tamanho máximo permitido é de ${MAX_LANDING_IMAGE_SIZE_BYTES / (1024 * 1024)}MB.` });
         }
-        // --- END SERVER-SIDE FILE SIZE VALIDATION ---
 
         const fileExtension = fileName.split('.').pop();
-        const filePath = `landing-carousel/${userId}/${uuidv4()}.${fileExtension}`; // Store under bucket/user's ID
+        const filePath = `landing-carousel/${userId}/${uuidv4()}.${fileExtension}`; 
 
         // 1. Upload to Supabase Storage using service role key
         const { data: uploadData, error: uploadError } = await supabaseService.storage
@@ -408,13 +508,11 @@ const express = require('express');
           .single();
 
         if (dbError || !dbData) {
-          // If DB insert fails, try to remove the uploaded file from storage
           await supabaseService.storage.from('landing-carousel').remove([filePath]);
           console.error(`Error inserting into DB:`, dbError);
           throw new Error(`Falha ao registrar imagem no banco de dados: ${dbError?.message || 'Erro desconhecido'}`);
         }
         
-        // Get public URL for the newly uploaded image
         const { data: { publicUrl } } = supabaseService.storage
             .from('landing-carousel')
             .getPublicUrl(dbData.image_url);
@@ -436,7 +534,7 @@ const express = require('express');
     // Admin endpoint to delete a landing carousel image
     app.delete('/api/admin/landing-images/:id', authenticateToken, checkAdminOrDev, async (req, res, next) => {
       const { id } = req.params;
-      const { imagePath } = req.body; // This is the path in storage, e.g., "user-id/uuid.png"
+      const { imagePath } = req.body; 
 
       if (!imagePath) {
         return res.status(400).json({ error: "Caminho da imagem é obrigatório para exclusão do storage." });
@@ -450,7 +548,6 @@ const express = require('express');
 
         if (storageError) {
           console.error(`Error deleting landing image from storage (${imagePath}):`, storageError);
-          // Continue to delete from DB even if storage fails, to keep DB consistent
         }
 
         // 2. Delete from Supabase Database
@@ -469,6 +566,166 @@ const express = require('express');
         next(error);
       }
     });
+    
+    // NEW: Admin endpoint to update plan settings
+    app.put('/api/admin/plan-settings/update', authenticateToken, checkAdminOrDev, async (req, res, next) => {
+        const { plans } = req.body;
+        const userId = req.user.id;
+        
+        if (!Array.isArray(plans) || plans.length === 0) {
+            return res.status(400).json({ error: "Lista de planos inválida." });
+        }
+        
+        try {
+            const updates = plans.map(plan => ({
+                id: plan.id,
+                price: plan.price,
+                max_images_per_month: plan.max_images_per_month,
+                updated_by: userId,
+                updated_at: new Date().toISOString()
+            }));
+            
+            // Use upsert to update existing or insert new plans
+            const { error } = await supabaseService
+                .from('plan_settings')
+                .upsert(updates, { onConflict: 'id' });
+                
+            if (error) {
+                console.error("Error updating plan settings:", error);
+                throw new Error(error.message);
+            }
+            
+            res.json({ message: 'Configurações de planos atualizadas com sucesso.' });
+        } catch (error) {
+            next(error);
+        }
+    });
+    
+    // NEW: Mercado Pago OAuth Endpoints
+    
+    // 1. Redirect to Mercado Pago authorization
+    app.get('/api/admin/mp-connect', authenticateToken, checkAdminOrDev, (req, res) => {
+        const authUrl = `https://auth.mercadopago.com/authorization?client_id=${MP_CLIENT_ID}&response_type=code&platform_id=mp&redirect_uri=${MP_REDIRECT_URI}`;
+        res.redirect(authUrl);
+    });
+    
+    // 2. Handle Callback and save tokens
+    app.get('/api/admin/mp-callback', authenticateToken, checkAdminOrDev, async (req, res, next) => {
+        const { code, state } = req.query;
+        const userId = req.user.id;
+        
+        if (!code) {
+            return res.status(400).send('Autorização negada ou código ausente.');
+        }
+        
+        try {
+            // Exchange code for tokens
+            const tokenResponse = await axios.post('https://api.mercadopago.com/oauth/token', {
+                client_id: MP_CLIENT_ID,
+                client_secret: MP_CLIENT_SECRET,
+                code: code,
+                redirect_uri: MP_REDIRECT_URI,
+                grant_type: 'authorization_code'
+            });
+            
+            const { access_token, refresh_token, expires_in, token_type, scope } = tokenResponse.data;
+            
+            // Save tokens to owners_payment_accounts table
+            const { error } = await supabaseService
+                .from('owners_payment_accounts')
+                .upsert({
+                    owner_id: MP_OWNER_ID, // Use o ID do dono do SaaS
+                    access_token,
+                    refresh_token,
+                    expires_in,
+                    token_type,
+                    scope,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'owner_id' });
+                
+            if (error) {
+                console.error("Error saving MP tokens:", error);
+                throw new Error('Falha ao salvar tokens do Mercado Pago no banco de dados.');
+            }
+            
+            // Redirect back to the Dev Panel with success message
+            res.redirect(`http://localhost:3000/app/dev-panel?mp_status=success`);
+            
+        } catch (error) {
+            console.error("Mercado Pago OAuth Error:", error.response ? error.response.data : error.message);
+            res.redirect(`http://localhost:3000/app/dev-panel?mp_status=error&message=Falha na conexão com Mercado Pago.`);
+        }
+    });
+    
+    // NEW: Endpoint to initiate subscription (Placeholder for real payment logic)
+    app.post('/api/subscribe', authenticateToken, async (req, res, next) => {
+        const { planId } = req.body;
+        const userId = req.user.id;
+        
+        if (!['starter', 'pro'].includes(planId)) {
+            return res.status(400).json({ error: "Plano inválido." });
+        }
+        
+        try {
+            // 1. Get Owner's Mercado Pago Access Token
+            const { data: ownerAccount, error: mpError } = await supabaseService
+                .from('owners_payment_accounts')
+                .select('access_token, refresh_token, expires_in, updated_at')
+                .eq('owner_id', MP_OWNER_ID)
+                .single();
+                
+            if (mpError || !ownerAccount) {
+                throw new Error('Configuração de pagamento do SaaS ausente. Contate o administrador.');
+            }
+            
+            let mpAccessToken = ownerAccount.access_token;
+            
+            // TODO: Implement token refresh logic here if needed (using refresh_token)
+            // For simplicity in this step, we assume the token is valid or handle refresh externally.
+            
+            // 2. Initialize Mercado Pago SDK with Owner's Token
+            mercadopago.configure({ access_token: mpAccessToken });
+            
+            // 3. Create Subscription/Payment (Placeholder Logic)
+            // This is where you would integrate the actual Mercado Pago API call 
+            // (e.g., creating a preference, subscription, or payment intent).
+            
+            // Example: Create a simple preference (not a subscription, just a one-time payment example)
+            const preference = {
+                items: [
+                    {
+                        title: `Assinatura Flow Designer - Plano ${planId.toUpperCase()}`,
+                        quantity: 1,
+                        currency_id: 'BRL',
+                        unit_price: planId === 'starter' ? 29.99 : 49.99, // Hardcoded price for example, should use plan_settings
+                    }
+                ],
+                payer: {
+                    email: req.user.email,
+                },
+                back_urls: {
+                    success: `${MP_REDIRECT_URI}?payment_status=success&plan=${planId}`,
+                    failure: `${MP_REDIRECT_URI}?payment_status=failure&plan=${planId}`,
+                    pending: `${MP_REDIRECT_URI}?payment_status=pending&plan=${planId}`,
+                },
+                auto_return: 'approved',
+                external_reference: userId, // Link payment to user
+            };
+            
+            const mpResponse = await mercadopago.preferences.create(preference);
+            
+            // 4. Return the payment URL to the frontend
+            res.json({ 
+                message: 'Iniciando pagamento...',
+                paymentUrl: mpResponse.body.init_point, // URL to redirect the user
+                preferenceId: mpResponse.body.id
+            });
+            
+        } catch (error) {
+            console.error("Mercado Pago Subscription Error:", error.response ? error.response.data : error.message);
+            next(new Error('Falha ao iniciar o processo de pagamento.'));
+        }
+    });
 
 
     // Global Error Handler
@@ -476,6 +733,17 @@ const express = require('express');
       console.error("Global Error Handler:", err.stack);
       const statusCode = err.statusCode || 500;
       const message = err.message || 'Ocorreu um erro inesperado no servidor.';
+      
+      // Check if the error contains quota information (from /api/generate)
+      if (err.quotaStatus) {
+          return res.status(403).json({ 
+              error: err.message, 
+              quotaStatus: err.quotaStatus, 
+              usage: err.usage, 
+              plan: err.plan 
+          });
+      }
+      
       res.status(statusCode).json({ error: message });
     });
 

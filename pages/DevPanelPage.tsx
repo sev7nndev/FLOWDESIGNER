@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff } from 'lucide-react';
+import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink } from 'lucide-react';
 import { Button } from '../components/Button';
-import { LandingImage, User, GeneratedImage } from '../types';
+import { LandingImage, User, GeneratedImage, PlanSetting, UserRole } from '../types';
 import { useLandingImages } from '../hooks/useLandingImages';
 import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
 import { api } from '../services/api';
+import { toast } from 'sonner';
 
 interface DevPanelPageProps {
   user: User | null; // User can be null if profile is still loading or not authenticated
@@ -121,7 +122,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
                     prompt: img.prompt,
                     businessInfo: img.business_info,
                     createdAt: new Date(img.created_at).getTime(),
-                    userId: img.user_id // Adicionando userId para referência
+                    userId: img.user_id 
                 } as GeneratedImage & { userId: string };
             } catch (e) {
                 console.warn(`Falha ao gerar URL assinada para ${img.id}`);
@@ -292,6 +293,195 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
     );
 };
 
+// --- Componente de Gerenciamento de Planos (Apenas Dev) ---
+const PlanSettingsManager: React.FC = () => {
+    const [plans, setPlans] = useState<PlanSetting[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchPlans = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const fetchedPlans = await api.getPlanSettings();
+            setPlans(fetchedPlans.sort((a, b) => a.price - b.price));
+        } catch (e: any) {
+            setError(e.message || "Falha ao carregar planos.");
+            toast.error("Falha ao carregar planos.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchPlans();
+    }, [fetchPlans]);
+
+    const handleInputChange = (id: UserRole, field: keyof PlanSetting, value: string) => {
+        setPlans(prev => prev.map(p => 
+            p.id === id ? { ...p, [field]: field === 'price' ? parseFloat(value) : parseInt(value) } : p
+        ));
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        setError(null);
+        try {
+            // Validate data before sending
+            const validPlans = plans.map(p => ({
+                ...p,
+                price: parseFloat(p.price.toFixed(2)),
+                max_images_per_month: Math.max(0, p.max_images_per_month)
+            }));
+            
+            await api.updatePlanSettings(validPlans);
+            toast.success("Configurações de planos salvas com sucesso!");
+            fetchPlans(); // Refresh data
+        } catch (e: any) {
+            setError(e.message || "Falha ao salvar configurações.");
+            toast.error(e.message || "Falha ao salvar configurações.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div className="space-y-4 bg-zinc-900/50 p-6 rounded-xl border border-white/10">
+            <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2 flex items-center gap-2">
+                <Settings size={20} className="text-primary" /> Configuração de Planos (Dev)
+            </h3>
+            
+            {isLoading && <div className="text-center py-10"><Loader2 size={20} className="animate-spin text-primary" /></div>}
+            {error && <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{error}</div>}
+
+            <div className="space-y-6">
+                {plans.map((plan: PlanSetting) => (
+                    <div key={plan.id} className="p-4 bg-zinc-800/50 rounded-lg border border-white/5">
+                        <h4 className="text-lg font-semibold text-white uppercase mb-3">{plan.id}</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Preço (R$)</label>
+                                <input 
+                                    type="number" 
+                                    step="0.01"
+                                    value={plan.price}
+                                    onChange={(e) => handleInputChange(plan.id as UserRole, 'price', e.target.value)}
+                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-primary outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Limite Mensal (Imagens)</label>
+                                <input 
+                                    type="number" 
+                                    value={plan.max_images_per_month}
+                                    onChange={(e) => handleInputChange(plan.id as UserRole, 'max_images_per_month', e.target.value)}
+                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-primary outline-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            
+            <Button onClick={handleSave} isLoading={isSaving} className="w-full h-10 text-sm mt-4" icon={<Save size={16} />}>
+                Salvar Configurações de Planos
+            </Button>
+        </div>
+    );
+};
+
+// --- Componente de Conexão Mercado Pago (Apenas Dev) ---
+const MercadoPagoManager: React.FC = () => {
+    const [isConnected, setIsConnected] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+    // Check connection status (simplified: just check if tokens exist)
+    const checkConnectionStatus = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            // This endpoint is only accessible by admin/dev via service key in the backend
+            const { data, error } = await api.getSupabase()!
+                .from('owners_payment_accounts')
+                .select('owner_id')
+                .limit(1)
+                .maybeSingle();
+                
+            setIsConnected(!!data);
+        } catch (e) {
+            console.error("Failed to check MP connection status:", e);
+            setIsConnected(false);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+    
+    useEffect(() => {
+        checkConnectionStatus();
+        
+        // Check URL for OAuth callback status
+        const params = new URLSearchParams(window.location.search);
+        const mpStatus = params.get('mp_status');
+        const message = params.get('message');
+        
+        if (mpStatus === 'success') {
+            setStatusMessage({ type: 'success', message: 'Conexão com Mercado Pago realizada com sucesso!' });
+            // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (mpStatus === 'error') {
+            setStatusMessage({ type: 'error', message: message || 'Falha na conexão com Mercado Pago.' });
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }, [checkConnectionStatus]);
+    
+    const handleConnect = () => {
+        window.location.href = api.getMercadoPagoConnectUrl();
+    };
+    
+    const handleDisconnect = () => {
+        // NOTE: Disconnecting requires a backend endpoint to delete the tokens, 
+        // which is not explicitly requested but necessary for a full flow.
+        // For now, we simulate the action and rely on the dev to manually delete the row if needed.
+        toast.info("Para desconectar, remova manualmente o registro na tabela 'owners_payment_accounts' no Supabase.");
+    };
+
+    return (
+        <div className="space-y-4 bg-zinc-900/50 p-6 rounded-xl border border-white/10">
+            <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2 flex items-center gap-2">
+                <DollarSign size={20} className="text-green-500" /> Integração Mercado Pago (Dono do SaaS)
+            </h3>
+            
+            {isLoading ? (
+                <div className="text-center py-4"><Loader2 size={20} className="animate-spin text-primary" /></div>
+            ) : isConnected ? (
+                <div className="p-3 bg-green-500/10 border border-green-500/20 text-green-400 text-sm rounded-lg flex items-center justify-between">
+                    <span className="flex items-center gap-2"><Link size={16} /> Conectado e pronto para receber pagamentos.</span>
+                    <Button variant="ghost" onClick={handleDisconnect} className="h-8 text-xs text-red-400 hover:bg-red-500/10" icon={<Unlink size={14} />}>
+                        Desconectar
+                    </Button>
+                </div>
+            ) : (
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm rounded-lg flex items-center justify-between">
+                    <span className="flex items-center gap-2"><AlertTriangle size={16} /> Desconectado. Conecte para receber pagamentos Starter/Pro.</span>
+                    <Button onClick={handleConnect} className="h-8 text-xs" icon={<Link size={14} />}>
+                        Conectar Mercado Pago
+                    </Button>
+                </div>
+            )}
+            
+            {statusMessage && (
+                <div className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
+                    statusMessage.type === 'success' ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                }`}>
+                    {statusMessage.type === 'success' ? <CheckCircle2 size={16} /> : <Info size={16} />}
+                    <p>{statusMessage.message}</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 // --- Main Dev Panel Page ---
 export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, onLogout }) => {
@@ -331,10 +521,16 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
                 </div>
 
                 <div className="space-y-12">
-                    {/* Seção 1: Gerenciamento de Artes Geradas por Usuários */}
+                    {/* Seção 0: Gerenciamento de Pagamentos */}
+                    <MercadoPagoManager />
+                    
+                    {/* Seção 1: Gerenciamento de Planos */}
+                    <PlanSettingsManager />
+
+                    {/* Seção 2: Gerenciamento de Artes Geradas por Usuários */}
                     <GeneratedImagesManager userRole={user.role} />
 
-                    {/* Seção 2: Gerenciamento de Imagens da Landing Page */}
+                    {/* Seção 3: Gerenciamento de Imagens da Landing Page */}
                     <LandingImagesManager user={user} />
                 </div>
             </div>

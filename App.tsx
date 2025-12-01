@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User, UserRole } from './types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { User, UserRole, QuotaCheckResponse } from './types';
 import { getSupabase } from './services/supabaseClient';
 import { AppTitleHeader } from './components/AppTitleHeader';
 import { LandingPage } from './components/LandingPage';
@@ -7,12 +7,15 @@ import { AuthScreens } from './components/AuthScreens';
 import { Sparkles } from 'lucide-react';
 import { useGeneration } from './hooks/useGeneration';
 import { ResultDisplay } from './components/ResultDisplay';
-import { SettingsModal } from './components/Modals';
-import { useProfile } from './hooks/useProfile'; // Import useProfile
+import { SettingsModal, UpgradeModal } from './components/Modals'; // Import UpgradeModal
+import { useProfile } from './hooks/useProfile'; 
 import { GenerationForm } from './components/GenerationForm';
-import { AppHeader } from './components/AppHeader'; // Import new header
-import { useLandingImages } from './hooks/useLandingImages'; // Import useLandingImages
-import { DevPanelPage } from './pages/DevPanelPage'; // Import new DevPanelPage
+import { AppHeader } from './components/AppHeader'; 
+import { useLandingImages } from './hooks/useLandingImages'; 
+import { DevPanelPage } from './pages/DevPanelPage'; 
+import { PlansPage } from './pages/PlansPage'; // Import PlansPage
+import { useUsage } from './hooks/useUsage'; // Import useUsage
+import { Toaster } from 'sonner'; // Import Toaster
 
 // Define a minimal structure for the authenticated user before profile is loaded
 interface AuthUser {
@@ -24,12 +27,25 @@ interface AuthUser {
 export const App: React.FC = () => {
   // Auth State
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL'>('LANDING');
+  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'PLANS'>('LANDING'); // Added 'PLANS' view
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState<QuotaCheckResponse | null>(null); // State for Upgrade Modal
   
   // Profile Hook
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
+
+  // Usage Hook
+  const { 
+    plans, 
+    quota, 
+    isLoading: isUsageLoading, 
+    refreshUsage, 
+    quotaStatus, 
+    currentUsage, 
+    maxImages,
+    currentPlan
+  } = useUsage(authUser?.id);
 
   // Combined User State (passed to hooks/components)
   const profileRole = (profile?.role || 'free') as UserRole;
@@ -40,13 +56,18 @@ export const App: React.FC = () => {
     firstName: profile.firstName,
     lastName: profile.lastName,
     createdAt: authUser.createdAt,
-    role: profileRole, // Add role to user object
+    role: profileRole, 
   } : null;
+  
+  // Helper function to open upgrade modal
+  const openUpgradeModal = useCallback((quotaResponse: QuotaCheckResponse) => {
+      setShowUpgradeModal(quotaResponse);
+  }, []);
 
   // Generation Logic Hook
   const { 
     form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage
-  } = useGeneration(user);
+  } = useGeneration(user, refreshUsage, openUpgradeModal); // Pass refreshUsage and openUpgradeModal
   
   // Landing Images Hook (Used by LandingPage and DevPanel)
   const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
@@ -85,7 +106,6 @@ export const App: React.FC = () => {
         }
       });
 
-      // Corrigindo TS18048: subscription é garantido existir aqui.
       return () => subscription.unsubscribe();
     }
   }, []);
@@ -96,9 +116,6 @@ export const App: React.FC = () => {
     }
   }, [user, loadHistory]);
 
-  // Removed: Auto-open Dev Panel if user is Admin/Dev after profile loads
-  // The DevPanelPage will now handle its own access display.
-
   const handleLogout = async () => {
     const supabase = getSupabase();
     if (supabase) await supabase.auth.signOut();
@@ -106,8 +123,8 @@ export const App: React.FC = () => {
     setView('LANDING');
   };
 
-  // Show loading state while profile is being fetched after successful authentication
-  if (view === 'APP' && !user && authUser && isProfileLoading) {
+  // Show loading state while profile/usage is being fetched after successful authentication
+  if (view === 'APP' && !user && authUser && (isProfileLoading || isUsageLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950">
         <Sparkles size={32} className="animate-spin text-primary" />
@@ -119,27 +136,54 @@ export const App: React.FC = () => {
 
   if (view === 'LANDING') {
     return (
-      <LandingPage 
-        onGetStarted={() => setView('AUTH')} 
-        onLogin={() => setView('AUTH')} 
-        landingImages={landingImages}
-        isLandingImagesLoading={isLandingImagesLoading}
-      />
+      <>
+        <Toaster position="top-right" richColors />
+        <LandingPage 
+          onGetStarted={() => setView('AUTH')} 
+          onLogin={() => setView('AUTH')} 
+          landingImages={landingImages}
+          isLandingImagesLoading={isLandingImagesLoading}
+        />
+      </>
     );
   }
 
   if (view === 'AUTH') {
-    return <AuthScreens onSuccess={() => {}} onBack={() => setView('LANDING')} />;
+    return (
+      <>
+        <Toaster position="top-right" richColors />
+        <AuthScreens onSuccess={() => {}} onBack={() => setView('LANDING')} />
+      </>
+    );
   }
   
   if (view === 'DEV_PANEL') {
-    // Pass user directly, DevPanelPage will handle access check internally
-    return <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
+    return (
+      <>
+        <Toaster position="top-right" richColors />
+        <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />
+      </>
+    );
+  }
+  
+  if (view === 'PLANS' && user) {
+    return (
+      <>
+        <Toaster position="top-right" richColors />
+        <PlansPage user={user} onBackToApp={() => setView('APP')} />
+      </>
+    );
   }
   
   // MAIN APP UI (Protected)
+  if (!user) {
+      // Should not happen if auth flow is correct, but handles fallback
+      return <div className="min-h-screen bg-zinc-950" />;
+  }
+  
   return (
     <div className="min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
+      <Toaster position="top-right" richColors />
       <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
       
       <AppHeader 
@@ -147,14 +191,17 @@ export const App: React.FC = () => {
         profileRole={profileRole} 
         onLogout={handleLogout} 
         onShowSettings={() => setShowSettings(true)} 
-        onShowDevPanel={() => setView('DEV_PANEL')} // Change to setView
+        onShowDevPanel={() => setView('DEV_PANEL')}
+        onShowPlans={() => setView('PLANS')} // New handler
+        quotaStatus={quotaStatus} // Pass quota status
+        currentUsage={currentUsage}
+        maxImages={maxImages}
       />
 
       <div className="relative z-10 -mt-8 md:-mt-10">
         <AppTitleHeader />
       </div>
 
-      {/* Margem negativa ajustada para o novo LampHeader mais simples */}
       <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 relative z-20 mt-[-2rem] md:mt-[-4rem] p-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
@@ -168,6 +215,11 @@ export const App: React.FC = () => {
                 handleLogoUpload={handleLogoUpload}
                 handleGenerate={handleGenerate}
                 loadExample={loadExample}
+                quotaStatus={quotaStatus} // Pass quota status
+                currentUsage={currentUsage}
+                maxImages={maxImages}
+                currentPlan={currentPlan}
+                openUpgradeModal={() => quota && openUpgradeModal(quota)}
             />
           </div>
 
@@ -184,6 +236,7 @@ export const App: React.FC = () => {
       </main>
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profileRole} />}
+      {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(null)} quotaResponse={showUpgradeModal} refreshUsage={refreshUsage} />}
     </div>
   );
 };
