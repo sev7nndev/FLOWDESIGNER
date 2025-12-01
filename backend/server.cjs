@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config'); // Import the anonymous client and limits
 const generationRoutes = require('./routes/generationRoutes'); // Import the new routes
+const ownerRoutes = require('./routes/ownerRoutes'); // NOVO: Importando rotas do proprietário
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -24,6 +25,8 @@ app.get('/', (req, res) => {
 // --- API Routes ---
 // Use the modularized generation routes
 app.use('/api/generation', generationRoutes);
+// NOVO: Rotas do Proprietário
+app.use('/api/owner', ownerRoutes);
 
 // --- Quota/Usage Endpoint (Public, but requires user ID/token for data retrieval) ---
 app.get('/api/usage/:userId', async (req, res) => {

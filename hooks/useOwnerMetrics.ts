@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { getSupabase } from '../services/supabaseClient';
 import { User } from '../types';
 
+const BACKEND_URL = "/api"; 
+
 interface ClientData {
     id: string;
     name: string;
@@ -30,9 +32,6 @@ const INITIAL_METRICS: OwnerMetrics = {
     clients: [],
 };
 
-// URL da Edge Function (ajuste o ID do projeto)
-const EDGE_FUNCTION_URL = `https://akynbiixxcftxgvjpjxu.supabase.co/functions/v1/get-owner-metrics`;
-
 export const useOwnerMetrics = (user: User | null) => {
     const [metrics, setMetrics] = useState<OwnerMetrics>(INITIAL_METRICS);
     const [isLoading, setIsLoading] = useState(true);
@@ -52,7 +51,7 @@ export const useOwnerMetrics = (user: User | null) => {
             const { data: { session } } = await supabase!.auth.getSession();
             if (!session) throw new Error("Sessão não encontrada.");
 
-            const response = await fetch(EDGE_FUNCTION_URL, {
+            const response = await fetch(`${BACKEND_URL}/owner/metrics`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",

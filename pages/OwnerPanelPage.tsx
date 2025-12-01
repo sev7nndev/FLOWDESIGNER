@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star, LogOut, ShieldOff } from 'lucide-react';
 import { Button } from '../components/Button';
 import { useOwnerMetrics } from '../hooks/useOwnerMetrics';
 import { MetricCard } from '../components/MetricCard';
@@ -96,6 +96,8 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
     }
     
     const totalClients = metrics.clients.length;
+    const totalActive = metrics.statusCounts.on;
+    const totalInactive = metrics.statusCounts.paused + metrics.statusCounts.cancelled;
 
     return (
         <div className="min-h-screen bg-zinc-950 text-gray-100 pt-20 pb-16 relative">
@@ -185,13 +187,13 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
                             <MetricCard 
                                 title="Planos Ativos (ON)" 
-                                value={metrics.statusCounts.on} 
+                                value={totalActive} 
                                 icon={<CheckCircle size={24} />} 
                                 color="primary"
                             />
                             <MetricCard 
                                 title="Planos Pausados/Cancelados" 
-                                value={metrics.statusCounts.paused + metrics.statusCounts.cancelled} 
+                                value={totalInactive} 
                                 icon={<PauseCircle size={24} />} 
                                 color="red"
                             />
@@ -217,6 +219,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
                         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                             <MessageSquare size={24} className="text-primary" /> Chat com Clientes
                         </h2>
+                        {/* O componente OwnerChatPanel precisa ser implementado para funcionar */}
                         <OwnerChatPanel owner={user} clients={metrics.clients} />
                     </div>
                 )}
