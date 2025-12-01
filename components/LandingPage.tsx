@@ -11,7 +11,7 @@ import { HeroSection } from './Hero';
 import { PricingModal } from './PricingModal';
 import { PricingCard } from './PricingCard';
 import { useScrollDirection } from '../hooks/useScrollDirection';
-import { BeamsBackground } from './BeamsBackground'; // Importando BeamsBackground
+import { BeamsBackground } from './BeamsBackground';
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -84,10 +84,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
     </div>
   );
 
+  // Componente Divisor Suave
+  const SoftDivider: React.FC<{ className?: string }> = ({ className }) => (
+    <div className={cn("relative w-full h-px", className)}>
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent h-full" />
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent h-full blur-sm" />
+    </div>
+  );
+
   return (
     <BeamsBackground>
       <div className="min-h-screen flex flex-col relative overflow-x-hidden scroll-smooth">
-        {/* REMOVIDO: Animated Aurora Background */}
         
         <motion.nav 
           variants={{
@@ -119,9 +126,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
         <main>
           <HeroSection onGetStarted={() => setModalOpen(true)} />
 
+          {/* Divisor Suave Abaixo do Hero */}
+          <SoftDivider />
+
           <motion.section 
             initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={sectionVariants}
-            className="py-10 border-y border-white/5 bg-black/30 overflow-hidden relative"
+            className="py-10 bg-black/30 overflow-hidden relative" // REMOVIDO: border-y
           >
             <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
             <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
@@ -135,6 +145,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               </div>
             )}
           </motion.section>
+
+          {/* Divisor Suave Abaixo do Marquee */}
+          <SoftDivider />
 
           <motion.section 
             initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
@@ -155,9 +168,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             </div>
           </motion.section>
 
+          {/* Divisor Suave Abaixo de '3 Passos' */}
+          <SoftDivider />
+
           <motion.section 
             initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
-            className="py-24 px-6 bg-zinc-950/50 border-y border-white/5"
+            className="py-24 px-6 bg-zinc-950/50" // REMOVIDO: border-y
           >
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-16">
@@ -172,6 +188,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               </div>
             </div>
           </motion.section>
+
+          {/* Divisor Suave Abaixo de 'Recursos' */}
+          <SoftDivider />
 
           <motion.section 
             initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
@@ -190,9 +209,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             </div>
           </motion.section>
 
+          {/* Divisor Suave Abaixo de 'Planos' */}
+          <SoftDivider />
+
           <motion.section 
             initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={sectionVariants}
-            className="py-20 px-0 overflow-hidden bg-zinc-950 border-t border-white/5"
+            className="py-20 px-0 overflow-hidden bg-zinc-950" // REMOVIDO: border-t
           >
             <div className="max-w-5xl mx-auto px-6 mb-12 text-center">
                <h3 className="text-3xl font-bold text-white">Quem usa, aprova</h3>
@@ -212,9 +234,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             </div>
           </motion.section>
 
+          {/* Divisor Suave Abaixo de 'Testemunhos' */}
+          <SoftDivider />
+
           <motion.section 
             initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
-            className="py-24 px-6 bg-zinc-950/50 border-t border-white/5"
+            className="py-24 px-6 bg-zinc-950/50" // REMOVIDO: border-t
           >
               <div className="max-w-4xl mx-auto text-center p-10 rounded-3xl bg-gradient-to-br from-zinc-900 to-zinc-950 border border-primary/20 shadow-2xl shadow-primary/10 relative overflow-hidden">
                   <div className="absolute -inset-20 bg-primary/10 blur-3xl rounded-full animate-pulse-slow -z-10" />
@@ -236,6 +261,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               </div>
           </motion.section>
 
+          {/* Divisor Suave Abaixo do CTA */}
+          <SoftDivider />
+
           <motion.section 
             initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
             className="py-20 px-6 bg-zinc-900/30"
@@ -252,7 +280,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             </div>
           </motion.section>
 
-          <footer className="border-t border-white/5 py-12 bg-zinc-950 text-center">
+          <footer className="py-12 bg-zinc-950 text-center"> {/* REMOVIDO: border-t */}
+            <SoftDivider className="mb-8" /> {/* Adicionando divisor suave no topo do footer */}
             <div className="flex items-center justify-center gap-2 mb-4">
                <div className="bg-white/10 p-1.5 rounded-lg"><Sparkles size={16} className="text-white" /></div>
               <span className="text-white font-bold">FlowDesigner</span>
