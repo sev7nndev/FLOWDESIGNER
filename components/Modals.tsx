@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { GeneratedImage, User, UserRole, PlanSetting, QuotaCheckResponse, QuotaStatus } from '../types';
-import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download, Zap, Loader2, ArrowLeft } from 'lucide-react';
+import { GeneratedImage, User, UserRole } from '../types';
+import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download } from 'lucide-react';
 import { Button } from './Button';
-import { api } from '../services/api';
-import { toast } from 'sonner';
 
 // --- Generic Modal Wrapper ---
 interface ModalWrapperProps {
   title: string;
   onClose: () => void;
   children?: React.ReactNode;
-  maxWidth?: string;
 }
 
-const ModalWrapper: React.FC<ModalWrapperProps> = ({ title, onClose, children, maxWidth = 'max-w-4xl' }) => (
+const ModalWrapper: React.FC<ModalWrapperProps> = ({ title, onClose, children }) => (
   <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-    <div className={`bg-zinc-900 border border-white/10 rounded-2xl w-full ${maxWidth} max-h-[90vh] flex flex-col shadow-2xl overflow-hidden`}>
+    <div className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
       <div className="p-4 border-b border-white/10 flex justify-between items-center bg-zinc-900 z-10 sticky top-0">
         <h3 className="text-lg font-bold text-white">{title}</h3>
         <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white">
@@ -117,7 +114,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
     dev: { name: 'Desenvolvedor', color: 'bg-cyan-600' },
     client: { name: 'Cliente', color: 'bg-blue-600' },
     free: { name: 'Grátis', color: 'bg-gray-500' },
-    starter: { name: 'Starter', color: 'bg-yellow-600' }, // Added Starter
     pro: { name: 'Pro', color: 'bg-primary' },
   };
 
@@ -193,114 +189,4 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
       </div>
     </ModalWrapper>
   );
-};
-
-// --- Upgrade Modal ---
-interface UpgradeModalProps {
-    onClose: () => void;
-    quotaResponse: QuotaCheckResponse;
-    refreshUsage: () => void;
-}
-
-export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaResponse, refreshUsage }) => {
-    const { usage, plan, plans } = quotaResponse;
-    const [isSubscribing, setIsSubscribing] = useState(false);
-    
-    const currentPlan = plans.find(p => p.id === usage.plan_id);
-    const upgradePlans = plans.filter(p => p.id !== 'free' && p.id !== usage.plan_id);
-    
-    const usagePercentage = (usage.current_usage / plan.max_images_per_month) * 100;
-    const isBlocked = quotaResponse.status === QuotaStatus.BLOCKED;
-    
-    const handleSubscribe = async (planId: string) => {
-        setIsSubscribing(true);
-        try {
-            const { paymentUrl } = await api.initiateSubscription(planId);
-            
-            // Redirect user to Mercado Pago
-            window.location.href = paymentUrl;
-            
-            // Note: The actual plan update (user_usage table) happens via Mercado Pago Webhook 
-            // or a success redirect handler, which is outside the scope of this component.
-            
-        } catch (e: any) {
-            toast.error(e.message || "Falha ao iniciar pagamento. Verifique a conexão do Mercado Pago no Painel Dev.");
-        } finally {
-            setIsSubscribing(false);
-        }
-    };
-
-    return (
-        <ModalWrapper title={isBlocked ? "Limite Atingido" : "Quase no Limite"} onClose={onClose} maxWidth="max-w-3xl">
-            <div className="space-y-6">
-                
-                {isBlocked && (
-                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
-                        <Zap size={20} className="text-red-400 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <h4 className="text-lg font-bold text-white">Geração Bloqueada</h4>
-                            <p className="text-sm text-red-300 mt-1">Você atingiu o limite de {plan.max_images_per_month} imagens do seu plano {currentPlan?.id.toUpperCase()}. Faça upgrade para continuar criando.</p>
-                        </div>
-                    </div>
-                )}
-                
-                {/* Usage Status */}
-                <div className="p-6 bg-zinc-800/50 border border-white/10 rounded-xl space-y-4">
-                    <h4 className="text-lg font-semibold text-white">Seu Uso Atual</h4>
-                    
-                    <div className="flex justify-between items-center text-sm text-gray-400">
-                        <span>Plano Atual:</span>
-                        <span className={`text-white font-bold uppercase px-2 py-0.5 rounded-full ${currentPlan?.id === 'free' ? 'bg-gray-500' : 'bg-primary'}`}>
-                            {currentPlan?.id}
-                        </span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center text-sm text-gray-400">
-                        <span>Imagens Usadas:</span>
-                        <span className="text-white font-bold">{usage.current_usage} / {plan.max_images_per_month}</span>
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div className="w-full bg-white/10 rounded-full h-2.5">
-                        <div 
-                            className={`h-2.5 rounded-full transition-all duration-500 ${usagePercentage >= 80 ? 'bg-red-500' : 'bg-primary'}`} 
-                            style={{ width: `${Math.min(usagePercentage, 100)}%` }}
-                        />
-                    </div>
-                    
-                    <p className="text-xs text-gray-500 pt-2">Seu ciclo de uso começou em: {new Date(usage.cycle_start_date).toLocaleDateString()}</p>
-                </div>
-                
-                {/* Upgrade Options */}
-                <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-white border-b border-white/10 pb-2">Opções de Upgrade</h4>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                        {upgradePlans.map((p: PlanSetting) => (
-                            <div key={p.id} className={`p-5 rounded-xl border transition-all ${p.id === 'pro' ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20' : 'border-white/10 bg-zinc-900/50'}`}>
-                                <h5 className="text-xl font-bold text-white uppercase">{p.id}</h5>
-                                <p className="text-3xl font-extrabold text-white mt-1 mb-2">R$ {p.price.toFixed(2)} <span className="text-sm text-gray-500 font-normal">/mês</span></p>
-                                <p className="text-sm text-gray-400 mb-4">{p.max_images_per_month} imagens por mês.</p>
-                                
-                                <Button 
-                                    onClick={() => handleSubscribe(p.id)}
-                                    isLoading={isSubscribing}
-                                    className="w-full h-10 text-sm"
-                                    variant={p.id === 'pro' ? 'primary' : 'secondary'}
-                                >
-                                    {isSubscribing ? 'Redirecionando...' : `Assinar ${p.id.toUpperCase()}`}
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                
-                <div className="pt-4 border-t border-white/10 flex justify-end">
-                    <Button variant="ghost" onClick={onClose} icon={<ArrowLeft size={16} />}>
-                        Voltar
-                    </Button>
-                </div>
-            </div>
-        </ModalWrapper>
-    );
 };

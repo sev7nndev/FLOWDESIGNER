@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
-import { BusinessInfo, GenerationStatus, QuotaStatus, PlanSetting } from '../types';
+import { BusinessInfo, GenerationStatus } from '../types';
 import { Button } from './Button';
-import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2 } from 'lucide-react';
 
 interface InputFieldProps {
   label: string;
@@ -10,7 +10,7 @@ interface InputFieldProps {
   placeholder: string;
   icon?: React.ReactNode;
   onChange: (field: keyof BusinessInfo, value: string) => void;
-  maxLength?: number; 
+  maxLength?: number; // Adicionado maxLength
 }
 
 const InputField: React.FC<InputFieldProps> = ({ label, value, field, placeholder, icon, onChange, maxLength }) => (
@@ -23,7 +23,8 @@ const InputField: React.FC<InputFieldProps> = ({ label, value, field, placeholde
       value={value}
       onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field, e.target.value)}
       placeholder={placeholder}
-      maxLength={maxLength} 
+      maxLength={maxLength} // Aplicado maxLength
+      // Refined input styling: darker background, subtle focus ring
       className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-primary focus:ring-2 focus:ring-primary/30 transition-all outline-none"
     />
   </div>
@@ -37,35 +38,17 @@ interface GenerationFormProps {
     handleLogoUpload: (file: File) => void;
     handleGenerate: () => void;
     loadExample: () => void;
-    
-    // NEW Quota Props
-    quotaStatus: QuotaStatus;
-    currentUsage: number;
-    maxImages: number;
-    currentPlan: PlanSetting | undefined;
-    openUpgradeModal: () => void;
 }
 
 const GenerationFormComponent: React.FC<GenerationFormProps> = ({
-    form, status, error, handleInputChange, handleLogoUpload, handleGenerate, loadExample,
-    quotaStatus, currentUsage, maxImages, currentPlan, openUpgradeModal
+    form, status, error, handleInputChange, handleLogoUpload, handleGenerate, loadExample
 }) => {
     const isGenerating = status === GenerationStatus.THINKING || status === GenerationStatus.GENERATING;
     const canGenerate = form.companyName && form.details;
-    const isBlocked = quotaStatus === QuotaStatus.BLOCKED;
-    const isNearLimit = quotaStatus === QuotaStatus.NEAR_LIMIT;
 
     const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) handleLogoUpload(file);
-    };
-    
-    const handleGenerateClick = () => {
-        if (isBlocked) {
-            openUpgradeModal();
-        } else {
-            handleGenerate();
-        }
     };
 
     return (
@@ -97,7 +80,7 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                             field="companyName" 
                             placeholder="Ex: Calors Automóveis" 
                             onChange={handleInputChange} 
-                            maxLength={100} 
+                            maxLength={100} // Limite de 100 caracteres
                         />
                         <div className="space-y-1.5 group">
                             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
@@ -162,8 +145,9 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                     value={form.details}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('details', e.target.value)}
                     placeholder="Ex: Oficina especializada em importados. Promoção de troca de óleo. Cores escuras e neon."
+                    // Refined textarea styling
                     className="w-full flex-grow min-h-[150px] bg-transparent border-0 text-white placeholder-gray-600 focus:ring-0 transition-all outline-none resize-none text-sm leading-relaxed"
-                    maxLength={1000} 
+                    maxLength={1000} // Limite de 1000 caracteres
                 />
                 <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest">A I.A. vai ler isso</p>
@@ -171,42 +155,17 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                 </div>
             </div>
 
-            {/* Quota Status Display */}
-            {currentPlan && (
-                <div className={`p-3 rounded-xl text-xs flex items-center gap-2 animate-fade-in ${
-                    isBlocked ? 'bg-red-500/10 border border-red-500/20 text-red-400' :
-                    isNearLimit ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400' :
-                    'bg-green-500/10 border border-green-500/20 text-green-400'
-                }`}>
-                    <AlertTriangle size={16} className={isBlocked ? 'text-red-500' : 'text-yellow-500'} />
-                    <p>
-                        {isBlocked 
-                            ? `Limite atingido! Você usou ${currentUsage}/${maxImages} do seu plano ${currentPlan.id.toUpperCase()}.`
-                            : isNearLimit
-                            ? `Atenção: Você usou ${currentUsage}/${maxImages} do seu plano ${currentPlan.id.toUpperCase()}.`
-                            : `Plano ${currentPlan.id.toUpperCase()} ativo. Você usou ${currentUsage}/${maxImages} imagens este mês.`
-                        }
-                    </p>
-                    {(isBlocked || isNearLimit) && (
-                        <button onClick={openUpgradeModal} className="text-primary font-bold ml-auto hover:underline">
-                            Upgrade
-                        </button>
-                    )}
-                </div>
-            )}
-
             {/* Generation Button & Error */}
             <div className="space-y-4 pt-4">
                 <Button 
-                    onClick={handleGenerateClick} 
+                    onClick={handleGenerate} 
                     isLoading={isGenerating}
                     className="w-full h-16 text-lg font-bold tracking-wide rounded-2xl shadow-[0_0_40px_-10px_rgba(139,92,246,0.5)] bg-gradient-to-r from-primary via-purple-600 to-secondary hover:brightness-110 active:scale-[0.98] transition-all border border-white/20 relative overflow-hidden group"
-                    disabled={!canGenerate && !isBlocked} // Disable if no input AND not blocked (if blocked, the button handles the modal)
+                    disabled={!canGenerate}
                 >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out" />
                     <span className="relative flex items-center justify-center gap-3">
                         {isGenerating ? 'Criando Design (Secure)...' : 
-                        isBlocked ? 'VER PLANOS (LIMITE ATINGIDO)' :
                         <> <Sparkles className="fill-white" /> GERAR ARTE FLOW </>}
                     </span>
                 </Button>
