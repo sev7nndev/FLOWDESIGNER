@@ -44,7 +44,8 @@ export function MovingBorderButton({
         className="absolute inset-0"
         style={{ borderRadius: `calc(${borderRadius} * 0.96)` }}
       >
-        <MovingBorder duration={duration} rx="30%" ry="30%">
+        {/* Removendo rx/ry daqui para que o MovingBorder use 100% do caminho retangular */}
+        <MovingBorder duration={duration}> 
           <div
             className={cn(
               // Mantendo o tamanho ajustado para um efeito mais fino
@@ -73,8 +74,7 @@ export function MovingBorderButton({
 export const MovingBorder = ({
   children,
   duration = 4000,
-  rx,
-  ry,
+  // Removendo rx e ry das props, pois não são usados no rect abaixo
   ...otherProps
 }: {
   children: React.ReactNode;
@@ -102,26 +102,19 @@ export const MovingBorder = ({
     }
   });
 
-  const x = useTransform(
-    progress,
-    (val) => {
-      try {
-        return pathRef.current?.getPointAtLength(val).x;
-      } catch (e) {
-        return 0;
-      }
+  // Função auxiliar para obter o ponto com segurança
+  const getPoint = (val: number, coord: 'x' | 'y') => {
+    try {
+      const point = pathRef.current?.getPointAtLength(val);
+      return point ? point[coord] : 0;
+    } catch (e) {
+      // Retorna 0 se houver erro (caminho vazio)
+      return 0;
     }
-  );
-  const y = useTransform(
-    progress,
-    (val) => {
-      try {
-        return pathRef.current?.getPointAtLength(val).y;
-      } catch (e) {
-        return 0;
-      }
-    }
-  );
+  };
+
+  const x = useTransform(progress, (val) => getPoint(val, 'x'));
+  const y = useTransform(progress, (val) => getPoint(val, 'y'));
 
   const transform = useMotionTemplate`translateX(${x}px) translateY(${y}px) translateX(-50%) translateY(-50%)`;
 
@@ -137,12 +130,11 @@ export const MovingBorder = ({
       >
         <rect
           fill="none"
-          // Adicionando um stroke transparente para garantir que o navegador calcule o caminho
+          // Mantendo o stroke transparente para garantir o cálculo do caminho
           stroke="transparent" 
           width="100%"
           height="100%"
-          rx={rx}
-          ry={ry}
+          // Removendo rx e ry para usar o caminho retangular completo
           ref={pathRef}
         />
       </svg>
