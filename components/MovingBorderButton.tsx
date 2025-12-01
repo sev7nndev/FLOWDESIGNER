@@ -47,8 +47,8 @@ export function MovingBorderButton({
         <MovingBorder duration={duration} rx={borderRadius} ry={borderRadius}> 
           <div
             className={cn(
-              // CORREÇÃO FINAL: Reduzindo o tamanho do glow para h-3 w-3 (12px)
-              "h-3 w-3 opacity-[0.8] bg-[radial-gradient(theme(colors.primary)_40%,transparent_60%)]",
+              // Ajustando o tamanho do glow para h-5 w-5 para dar a sensação de contorno
+              "h-5 w-5 opacity-[0.8] bg-[radial-gradient(theme(colors.primary)_40%,transparent_60%)]",
               borderClassName
             )}
           />
