@@ -31,7 +31,7 @@ export const useUsage = (userId: string | undefined) => {
                 .single();
 
             if (usageError || !usageData) {
-                // Se não encontrar, pode ser um usuário recém-criado antes do trigger rodar
+                // Default for new users
                 setUsage({ current_usage: 0, max_usage: 3, planId: 'free', isBlocked: false });
                 setIsLoading(false);
                 return;
@@ -44,8 +44,8 @@ export const useUsage = (userId: string | undefined) => {
                 .eq('id', usageData.plan_id)
                 .single();
                 
-            const max_usage = planData?.max_images_per_month || 0; // Using max_usage
-            const current_usage = usageData.current_usage || 0;     // Using current_usage
+            const max_usage = planData?.max_images_per_month || 0;
+            const current_usage = usageData.current_usage || 0;
             const planId = usageData.plan_id;
             
             const isBlocked = current_usage >= max_usage && planId !== 'admin' && planId !== 'dev';

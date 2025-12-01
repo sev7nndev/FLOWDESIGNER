@@ -135,6 +135,6 @@ export const useGeneration = (user: User | null) => {
         handleGenerate,
         loadHistory,
         loadExample,
-        downloadImage,
+        downloadImage, // Exporting download function
     };
 };

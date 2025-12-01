@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { User, UserRole, UsageData } from '../types';
-// FIX: Removed unused UserIcon import (Error 2)
+// FIX: Removed unused User as UserIcon import (Error 2)
 import { Settings, LogOut, Zap, MessageSquare, X, DollarSign } from 'lucide-react'; 
 import { Button } from './Button';
 import { SupportChat } from './SupportChat';

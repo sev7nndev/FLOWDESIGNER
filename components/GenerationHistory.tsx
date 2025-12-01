@@ -8,7 +8,7 @@ interface GenerationHistoryProps {
     history: GeneratedImage[];
     status: GenerationStatus;
     error: string | undefined;
-    downloadImage: (url: string, filename: string) => void; // FIX: Added missing prop (Error 3)
+    downloadImage: (url: string, filename: string) => void; // Added prop
 }
 
 export const GenerationHistory: React.FC<GenerationHistoryProps> = ({ currentImage, history, status, error, downloadImage }) => {

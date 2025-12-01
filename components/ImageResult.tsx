@@ -5,7 +5,7 @@ import { Button } from './Button';
 
 interface ImageResultProps {
     image: GeneratedImage;
-    onDownload: (url: string, filename: string) => void; // FIX: Added missing prop (Error 3)
+    onDownload: (url: string, filename: string) => void; // Required prop for Error 3
 }
 
 export const ImageResult: React.FC<ImageResultProps> = ({ image, onDownload }) => {

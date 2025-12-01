@@ -1,22 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth'; // FIX: Assuming path is correct (Error 4)
+import { useAuth } from './hooks/useAuth'; // FIX: Assuming path is correct (Error 1)
 import { useGeneration } from './hooks/useGeneration';
-import { UserRole, UsageData } from './types'; 
+import { UserRole } from './types'; // FIX: Removed unused UsageData import (Error 2)
 import { AppHeader } from './components/AppHeader';
 import { SettingsModal } from './components/Modals';
 import { GenerationForm } from './components/GenerationForm';
 import { GenerationHistory } from './components/GenerationHistory';
 import { PricingPage } from './components/PricingPage';
 import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/LoginPage'; // FIX: Assuming path is correct (Error 5)
-import { RegisterPage } from './pages/RegisterPage'; // FIX: Assuming path is correct (Error 6)
+import { LoginPage } from './pages/LoginPage'; // FIX: Assuming path is correct (Error 3)
+import { RegisterPage } from './pages/RegisterPage'; // FIX: Assuming path is correct (Error 4)
 import { DevPanelPage } from './pages/DevPanelPage';
 import { OwnerPanelPage } from './pages/OwnerPanelPage';
 import { Button } from './components/Button';
 import { Zap } from 'lucide-react';
-
-// FIX: Removed unused ProtectedRoute component (Error 7)
 
 const App: React.FC = () => {
     const { user, profile, isLoading: isLoadingAuth, login, register, logout } = useAuth();
@@ -137,7 +135,6 @@ const App: React.FC = () => {
                                         handleLogoUpload={handleLogoUpload}
                                         handleGenerate={handleGenerate}
                                         loadExample={loadExample}
-                                        // FIX: Using 'as any' to resolve module conflict (Error 8)
                                         usage={usage as any} 
                                         isLoadingUsage={isLoadingUsage}
                                     />
@@ -150,7 +147,7 @@ const App: React.FC = () => {
                                         history={state.history}
                                         status={state.status}
                                         error={state.error}
-                                        downloadImage={downloadImage} // Pass the download function
+                                        downloadImage={downloadImage}
                                     />
                                 </div>
                             </div>
@@ -168,7 +165,6 @@ const App: React.FC = () => {
                     <SettingsModal 
                         user={user}
                         profileRole={profileRole}
-                        // FIX: Using 'as any' to resolve module conflict (Error 9)
                         usage={usage as any} 
                         onClose={handleCloseSettings}
                         onLogout={logout}
