@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { User, UserRole, UsageData } from '../types';
-// FIX: Removed unused Star and Shield imports (Errors 4, 5)
+// FIX: Removed unused UserIcon import (Error 2)
 import { Settings, LogOut, Zap, MessageSquare, X, DollarSign } from 'lucide-react'; 
 import { Button } from './Button';
 import { SupportChat } from './SupportChat';
@@ -13,10 +13,8 @@ interface SettingsModalProps {
     onClose: () => void;
     onLogout: () => Promise<void>;
     onShowPricing: () => void;
-    // FIX: Removed onShowSupport (Error 6)
 }
 
-// FIX: Removed onShowSupport from destructuring (Error 6)
 export const SettingsModal: React.FC<SettingsModalProps> = ({ user, profileRole, usage, onClose, onLogout, onShowPricing }) => {
     const [activeTab, setActiveTab] = useState<'profile' | 'billing' | 'support'>('profile');
     const [isLoggingOut, setIsLoggingOut] = useState(false);

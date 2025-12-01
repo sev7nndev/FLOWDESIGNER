@@ -68,6 +68,17 @@ export const useGeneration = (user: User | null) => {
         }
     }, [user]);
 
+    const downloadImage = useCallback((url: string, filename: string) => {
+        // MOCK: In a real app, this would handle the download logic (e.g., using fetch and Blob)
+        console.log(`Downloading image from ${url} as ${filename}`);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }, []);
+
     const handleGenerate = useCallback(async () => {
         if (!form.companyName || !form.details || !form.prompt) return;
         
@@ -124,5 +135,6 @@ export const useGeneration = (user: User | null) => {
         handleGenerate,
         loadHistory,
         loadExample,
+        downloadImage,
     };
 };

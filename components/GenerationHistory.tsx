@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { GeneratedImage, GenerationStatus } from '../types';
 import { ImageResult } from './ImageResult';
-// FIX: Removed missing import (Error 18)
 import { History, Sparkles, Loader2 } from 'lucide-react';
 
 interface GenerationHistoryProps {
@@ -9,7 +8,7 @@ interface GenerationHistoryProps {
     history: GeneratedImage[];
     status: GenerationStatus;
     error: string | undefined;
-    downloadImage: (url: string, filename: string) => void; // FIX: Added missing prop
+    downloadImage: (url: string, filename: string) => void; // FIX: Added missing prop (Error 3)
 }
 
 export const GenerationHistory: React.FC<GenerationHistoryProps> = ({ currentImage, history, status, error, downloadImage }) => {
@@ -62,7 +61,7 @@ export const GenerationHistory: React.FC<GenerationHistoryProps> = ({ currentIma
                     <ImageResult 
                         key={image.id} 
                         image={image} 
-                        onDownload={downloadImage} // FIX: Passing download function
+                        onDownload={downloadImage} // FIX: Passing download function (Error 3)
                     />
                 ))}
             </div>

@@ -2,8 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { getSupabase } from '../services/supabaseClient';
 
 export interface UsageData {
-    current_usage: number; // Changed from currentUsage
-    max_usage: number;     // Changed from maxQuota
+    current_usage: number; // Standardized property name
+    max_usage: number;     // Standardized property name
     planId: string;
     isBlocked: boolean;
 }
