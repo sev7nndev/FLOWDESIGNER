@@ -89,15 +89,12 @@ router.delete('/images/:id', authenticateToken, checkAdminOrDev, async (req, res
 
 // Admin endpoint to upload a landing carousel image
 router.post('/landing-images/upload', authenticateToken, checkAdminOrDev, async (req, res, next) => {
-  const { fileBase64, fileName, userId } = req.body;
-  const user = req.user;
+  // CRITICAL FIX: We only trust the authenticated user ID (req.user.id)
+  const { fileBase64, fileName } = req.body;
+  const user = req.user; // Contains authenticated user info and ID
 
-  if (!fileBase64 || !fileName || !userId) {
+  if (!fileBase64 || !fileName) {
     return res.status(400).json({ error: "Dados de arquivo incompletos." });
-  }
-
-  if (user.id !== userId) {
-    return res.status(403).json({ error: "Ação não autorizada para o usuário especificado." });
   }
 
   try {
@@ -114,7 +111,8 @@ router.post('/landing-images/upload', authenticateToken, checkAdminOrDev, async 
     }
 
     const fileExtension = fileName.split('.').pop();
-    const filePath = `landing-carousel/${userId}/${uuidv4()}.${fileExtension}`;
+    // Use req.user.id for the path
+    const filePath = `landing-carousel/${user.id}/${uuidv4()}.${fileExtension}`;
 
     // 1. Upload to Supabase Storage using service role key
     const { data: uploadData, error: uploadError } = await supabaseService.storage
@@ -132,7 +130,8 @@ router.post('/landing-images/upload', authenticateToken, checkAdminOrDev, async 
     // 2. Insert record into Supabase Database
     const { data: dbData, error: dbError } = await supabaseService
       .from('landing_carousel_images')
-      .insert({ image_url: filePath, created_by: userId })
+      // CRITICAL FIX: Use req.user.id for created_by
+      .insert({ image_url: filePath, created_by: user.id })
       .select('id, image_url, sort_order')
       .single();
 

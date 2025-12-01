@@ -24,6 +24,11 @@ const generationLimiter = rateLimit({
   keyGenerator: (req, res) => req.user.id,
 });
 
+// Max length for most string fields
+const MAX_FIELD_LENGTH = 255;
+const MAX_DETAILS_LENGTH = 1000;
+const MAX_LOGO_BASE64_LENGTH_SERVER = 40000; // Approx 30KB
+
 // Generate Image Endpoint (Inicia o trabalho)
 router.post('/generate', authenticateToken, generationLimiter, async (req, res, next) => {
   const { promptInfo } = req.body;
@@ -33,18 +38,33 @@ router.post('/generate', authenticateToken, generationLimiter, async (req, res, 
     return res.status(400).json({ error: "Nome da empresa e detalhes são obrigatórios." });
   }
   
-  // --- SECURITY FIX: Sanitize user input before processing/storage ---
-  const sanitizedDetails = sanitizeHtml(promptInfo.details, {
-      allowedTags: [], // Remove all HTML tags
-      allowedAttributes: {},
-  });
-  promptInfo.details = sanitizedDetails;
-  // -------------------------------------------------------------------
+  // --- SECURITY FIX: Sanitize and Validate all Business Info fields ---
+  const fieldsToSanitize = ['companyName', 'phone', 'addressStreet', 'addressNumber', 'addressNeighborhood', 'addressCity'];
   
-  const MAX_LOGO_BASE64_LENGTH_SERVER = 40000;
+  for (const field of fieldsToSanitize) {
+      if (promptInfo[field]) {
+          // 1. Sanitização
+          promptInfo[field] = sanitizeHtml(promptInfo[field], { allowedTags: [], allowedAttributes: {} });
+          
+          // 2. Validação de Comprimento
+          if (promptInfo[field].length > MAX_FIELD_LENGTH) {
+              return res.status(400).json({ error: `O campo ${field} excede o limite de ${MAX_FIELD_LENGTH} caracteres.` });
+          }
+      }
+  }
+  
+  // Sanitização e validação do campo 'details' (que tem um limite maior)
+  promptInfo.details = sanitizeHtml(promptInfo.details, { allowedTags: [], allowedAttributes: {} });
+  if (promptInfo.details.length > MAX_DETAILS_LENGTH) {
+      return res.status(400).json({ error: `O campo detalhes excede o limite de ${MAX_DETAILS_LENGTH} caracteres.` });
+  }
+  
+  // Validação do Logo
   if (promptInfo.logo && promptInfo.logo.length > MAX_LOGO_BASE64_LENGTH_SERVER) {
     return res.status(400).json({ error: `O logo é muito grande. O tamanho máximo permitido é de ${Math.round(MAX_LOGO_BASE64_LENGTH_SERVER / 1.33 / 1024)}KB.` });
   }
+  // -------------------------------------------------------------------
+  
   
   // 1. Quota Check and Increment (Falha Rápida)
   try {
