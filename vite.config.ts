@@ -3,10 +3,10 @@ import path from 'path';
     import react from '@vitejs/plugin-react';
 
     export default defineConfig(({ mode }) => {
-        const env = loadEnv(mode, '.', '');
+        const env = loadEnv(mode, '../', ''); // Apontando para o diretório raiz para .env.local
         return {
           server: {
-            port: 3000,
+            port: 5173,
             host: '0.0.0.0',
             proxy: {
               '/api': {
@@ -18,10 +18,10 @@ import path from 'path';
           },
           plugins: [react()],
           define: {
-            // Injeta variáveis de ambiente
-            'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL), // Corrigido para usar VITE_SUPABASE_URL
-            'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY), // Corrigido para usar VITE_SUPABASE_ANON_KEY
-            'import.meta.env.VITE_SUPABASE_PROJECT_ID': JSON.stringify(env.VITE_SUPABASE_PROJECT_ID), // Usando VITE_ prefixo se existir
+            'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
+            'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY),
+            'import.meta.env.VITE_SUPABASE_PROJECT_ID': JSON.stringify(env.VITE_SUPABASE_PROJECT_ID),
+            'import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY': JSON.stringify(env.VITE_STRIPE_PUBLISHABLE_KEY), // Nova chave
           },
           resolve: {
             alias: {
