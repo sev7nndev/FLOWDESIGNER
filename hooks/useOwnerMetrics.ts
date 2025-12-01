@@ -41,7 +41,10 @@ export const useOwnerMetrics = (user: User | null) => {
     const supabase = getSupabase();
 
     const fetchMetrics = useCallback(async () => {
-        if (!user || user.role !== 'owner') {
+        const userId = user?.id;
+        const userRole = user?.role;
+        
+        if (!userId || userRole !== 'owner') {
             setIsLoading(false);
             return;
         }
@@ -75,7 +78,7 @@ export const useOwnerMetrics = (user: User | null) => {
         } finally {
             setIsLoading(false);
         }
-    }, [user, supabase]);
+    }, [user?.id, user?.role, supabase]); // Depende apenas do ID e da Role, não do objeto 'user' completo
 
     useEffect(() => {
         fetchMetrics();
