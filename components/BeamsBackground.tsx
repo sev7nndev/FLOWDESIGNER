@@ -42,7 +42,7 @@ function createBeam(width: number, height: number): Beam {
 export function BeamsBackground({
     className,
     intensity = "strong",
-    children,
+    children, // Adicionando children aqui
 }: AnimatedGradientBackgroundProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const beamsRef = useRef<Beam[]>([]);
@@ -195,7 +195,7 @@ export function BeamsBackground({
                 }}
             />
 
-            {/* RENDERIZANDO O CONTEÚDO FILHO (LANDING PAGE) */}
+            {/* RENDERIZANDO O CONTEÚDO FILHO */}
             <div className="relative z-10 w-full">
                 {children}
             </div>

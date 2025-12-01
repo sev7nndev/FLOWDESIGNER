@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from './Button';
-import { HoverBorderGradient } from './HoverBorderGradient'; // Importando o novo componente
+import { HoverBorderGradient } from './HoverBorderGradient';
 import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2, Edit3, Bot, Download } from 'lucide-react';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
@@ -11,6 +11,7 @@ import { HeroSection } from './Hero';
 import { PricingModal } from './PricingModal';
 import { PricingCard } from './PricingCard';
 import { useScrollDirection } from '../hooks/useScrollDirection';
+import { BeamsBackground } from './BeamsBackground'; // Importando BeamsBackground
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -84,13 +85,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   );
 
   return (
-    <>
-      <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden scroll-smooth">
-        {/* Animated Aurora Background */}
-        <div className="absolute top-0 left-0 h-screen w-full overflow-hidden -z-10">
-          <div className="absolute -top-1/4 -left-1/4 h-[800px] w-[800px] bg-gradient-to-tr from-primary/30 to-secondary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow" />
-          <div className="absolute -bottom-1/4 -right-1/4 h-[800px] w-[800px] bg-gradient-to-bl from-accent/30 to-primary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow animation-delay-4000" />
-        </div>
+    <BeamsBackground>
+      <div className="min-h-screen flex flex-col relative overflow-x-hidden scroll-smooth">
+        {/* REMOVIDO: Animated Aurora Background */}
         
         <motion.nav 
           variants={{
@@ -265,6 +262,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
         </main>
       </div>
       <PricingModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} onPlanSelect={onGetStarted} />
-    </>
+    </BeamsBackground>
   );
 };
