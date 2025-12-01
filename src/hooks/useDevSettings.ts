@@ -5,6 +5,8 @@ export interface DevSettings {
     mockLatencyMs: number;
     mockErrorRate: number; // 0.0 to 1.0
     mockErrorType: 'none' | 'server' | 'credits';
+    mockJobProcessingTimeMs: number; // Tempo que o job leva para completar
+    mockJobStatusOnCompletion: 'COMPLETE' | 'FAILED'; // Status final do job
 }
 
 const DEFAULT_SETTINGS: DevSettings = {
@@ -12,6 +14,8 @@ const DEFAULT_SETTINGS: DevSettings = {
     mockLatencyMs: 500,
     mockErrorRate: 0.0,
     mockErrorType: 'none',
+    mockJobProcessingTimeMs: 3000, // 3 segundos
+    mockJobStatusOnCompletion: 'COMPLETE',
 };
 
 const STORAGE_KEY = 'dev_settings';
