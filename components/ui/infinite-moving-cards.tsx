@@ -30,95 +30,92 @@ export const InfiniteMovingCards = ({
   const [start, setStart] = useState(false);
 
   function addAnimation() {
-    if (Peço desculpas, parece que eu estava tentando editar um arquivo que não existe no seu contexto (`components/ui/infinite-moving-cards.tsx`) e interrompi minha resposta.
+    if (containerRef.current && scrollerRef.current) {
+      const scrollerContent = Array.from(scrollerRef.current.children);
 
-Analisando o seu código, o carrossel de fotos está sendo renderizado no arquivo `components/LandingPage.tsx` usando uma lógica de duplicação manual e uma classe de animação chamada `animate-scroll`.
-
-O problema de "ficar tudo preto" ocorre porque a animação CSS `scroll` move o conteúdo para fora da tela, e o conteúdo duplicado não é suficiente para preencher o espaço antes que a animação se repita.
-
-Para corrigir isso, precisamos garantir que:
-
-1.  A lista de itens seja duplicada o suficiente para preencher o espaço.
-2.  A animação CSS `scroll` (definida em `tailwind.config.js`) seja ajustada para o tamanho correto do conteúdo duplicado.
-
-### 1. Ajuste no `tailwind.config.js`
-
-A animação `scroll` atual move o conteúdo em 100% (`'100%': { transform: 'translateX(-100%)' }`). Se duplicarmos o conteúdo, precisamos que a animação mova exatamente o tamanho de uma cópia completa do conteúdo original.
-
-No seu `components/LandingPage.tsx`, você duplica o conteúdo uma vez: `const marqueeContent = [...carouselItems, ...carouselItems];`. Isso significa que a lista tem o dobro do tamanho. A animação deve mover 50% do total (que é 100% do conteúdo original) para criar o loop.
-
-O `tailwind.config.js` já define:
-```javascript
-        'scroll': 'scroll 40s linear infinite',
-      },
-      keyframes: {
-        // ...
-        scroll: {
-          '0%': { transform: 'translateX(0)' },
-          '100%': { transform: 'translateX(-100%)' },
-        },
-        // ...
-```
-Se o conteúdo for duplicado, `translateX(-100%)` move o dobro do que deveria, resultando no espaço vazio.
-
-Vou criar uma nova animação chamada `marquee` que move o conteúdo em 50% (o tamanho da lista original) e aplicá-la.
-
-<dyad-write path="tailwind.config.js" description="Adicionando um novo keyframe 'marquee' que move o conteúdo em 50% para garantir o loop infinito do carrossel.">
-/** @type {import('tailwindcss').Config} */
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-    "./components/**/*.{js,ts,jsx,tsx}",
-    "./pages/**/*.{js,ts,jsx,tsx}",
-  ],
-  theme: {
-    extend: {
-      colors: {
-        background: '#09090b', // Zinc 950
-        surface: '#18181b',    // Zinc 900
-        primary: '#8b5cf6',    // Violet 500
-        secondary: '#d946ef',  // Fuchsia 500
-        accent: '#06b6d4',     // Cyan 500
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-      },
-      backgroundImage: {
-        'gradient-conic': 'conic-gradient(var(--tw-gradient-stops))',
-        'grid-pattern': "linear-gradient(to right, #27272a 1px, transparent 1px), linear-gradient(to bottom, #27272a 1px, transparent 1px)",
-      },
-      animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'fade-in': 'fadeIn 0.8s ease-out forwards',
-        'shimmer': 'shimmer 2s linear infinite',
-        'scroll': 'scroll 40s linear infinite',
-        'glow': 'glow 4s ease-in-out infinite', // Nova animação de brilho
-        'marquee': 'marquee 40s linear infinite', // NOVA ANIMAÇÃO
-      },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0', transform: 'translateY(20px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        shimmer: {
-          '0%': { backgroundPosition: '0% 0%' },
-          '100%': { backgroundPosition: '-200% 0%' },
-        },
-        scroll: {
-          '0%': { transform: 'translateX(0)' },
-          '100%': { transform: 'translateX(-100%)' },
-        },
-        marquee: { // NOVO KEYFRAME
-          '0%': { transform: 'translateX(0)' },
-          '100%': { transform: 'translateX(-50%)' }, // Move 50% do total (que é o tamanho da lista original)
-        },
-        glow: { // Novo keyframe para o brilho
-          '0%, 100%': { opacity: '0.3' },
-          '50%': { opacity: '0.7' },
+      scrollerContent.forEach((item) => {
+        const duplicatedItem = item.cloneNode(true);
+        if (scrollerRef.current) {
+          scrollerRef.current.appendChild(duplicatedItem);
         }
+      });
+
+      getDirectionAndSpeed();
+      setStart(true);
+    }
+  }
+
+  const getDirectionAndSpeed = () => {
+    if (containerRef.current) {
+      if (direction === "left") {
+        containerRef.current.style.setProperty(
+          "--animation-direction",
+          "forwards"
+        );
+      } else {
+        containerRef.current.style.setProperty(
+          "--animation-direction",
+          "reverse"
+        );
       }
-    },
-  },
-  plugins: [],
+
+      if (speed === "fast") {
+        containerRef.current.style.setProperty("--animation-duration", "20s");
+      } else if (speed === "normal") {
+        containerRef.current.style.setProperty("--animation-duration", "40s");
+      } else {
+        containerRef.current.style.setProperty("--animation-duration", "80s");
+      }
+    }
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className={cn(
+        "scroller relative z-20 max-w-7xl overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]",
+        className
+      )}
+    >
+      <ul
+        ref={scrollerRef}
+        className={cn(
+          "flex min-w-full shrink-0 gap-4 py-4 w-max flex-nowrap",
+          start && "animate-scroll",
+          pauseOnHover && "hover:[animation-play-state:paused]"
+        )}
+      >
+        {items.map((item, idx) => (
+          <li
+            className="w-[350px] max-w-full relative rounded-2xl border border-b-0 flex-shrink-0 border-slate-700 px-8 py-6 md:w-[450px]"
+            style={{
+              background:
+                "linear-gradient(180deg, var(--slate-800), var(--slate-900)",
+            }}
+            key={idx}
+          >
+            <blockquote>
+              <div
+                aria-hidden="true"
+                className="user-select-none -z-1 pointer-events-none absolute -left-0.5 -top-0.5 h-[calc(100%_+_4px)] w-[calc(100%_+_4px)]"
+              ></div>
+              <span className=" relative z-20 text-sm leading-[1.6] text-gray-100 font-normal">
+                {item.quote}
+              </span>
+              <div className="relative z-20 mt-6 flex flex-row items-center">
+                <span className="flex flex-col gap-1">
+                  <span className=" text-sm leading-[1.6] text-gray-400 font-normal">
+                    {item.name}
+                  </span>
+                  <span className=" text-sm leading-[1.6] text-gray-400 font-normal">
+                    {item.title}
+                  </span>
+                </span>
+              </div>
+            </blockquote>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 };

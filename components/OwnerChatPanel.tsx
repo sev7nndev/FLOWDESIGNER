@@ -2,12 +2,13 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Send, MessageSquare, Loader2, User as UserIcon } from 'lucide-react';
 import { Button } from './Button';
 import { getSupabase } from '../services/supabaseClient';
-import { User } from '../types';
+import { User, UserRole } from '../types'; // Importando UserRole
 
 interface Client {
     id: string;
     name: string;
     email: string;
+    plan: UserRole; // Adicionando a propriedade 'plan'
 }
 
 interface ChatMessage {
@@ -77,10 +78,9 @@ export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner, clients }
                 event: 'INSERT', 
                 schema: 'public', 
                 table: 'chat_messages',
-                filter: `recipient_id=eq.${owner.id}` // Filtra mensagens destinadas ao owner
-            }, (payload) => {
+                filter: `recipient_id=eq.${owner.id}`
+            }, (payload: { new: ChatMessage }) => { // Tipagem corrigida
                 const newMessage = payload.new as ChatMessage;
-                // Atualiza apenas se a mensagem for do cliente selecionado
                 if (selectedClient && (newMessage.sender_id === selectedClient.id || newMessage.recipient_id === selectedClient.id)) {
                     setMessages((prev) => [...prev, newMessage]);
                 }

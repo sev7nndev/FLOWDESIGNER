@@ -52,50 +52,40 @@ serve(async (req) => {
 
     // 5. Lógica de Negócio: Buscar Métricas
     
-    // A. Contagem de usuários por plano (role)
-    const { data: planCounts, error: planError } = await supabaseService
-        .from('profiles')
-        .select('role, count')
-        .not('role', 'in', '("admin", "dev", "owner")') // Exclui roles de gestão
-        .rollup();
-
-    if (planError) throw planError;
-    
-    const countsByPlan = planCounts.reduce((acc: Record<string, number>, item: any) => {
-        acc[item.role] = item.count;
-        return acc;
-    }, { free: 0, starter: 0, pro: 0 }); // Inicializa para garantir que todos os planos apareçam
-
-    // B. Contagem de usuários por status
-    const { data: statusCounts, error: statusError } = await supabaseService
-        .from('profiles')
-        .select('status, count')
-        .not('role', 'in', '("admin", "dev", "owner")')
-        .rollup();
-        
-    if (statusError) throw statusError;
-    
-    const countsByStatus = statusCounts.reduce((acc: Record<string, number>, item: any) => {
-        acc[item.status] = item.count;
-        return acc;
-    }, { on: 0, paused: 0, cancelled: 0 });
-
-    // C. Lista de Clientes (Nome, Email, Plano, Status)
+    // Busca todos os clientes (excluindo roles de gestão)
     const { data: clients, error: clientsError } = await supabaseService
         .from('profiles')
-        .select('first_name, last_name, role, status, id, auth_user:id(email)')
+        .select('id, first_name, last_name, role, status, auth_user:id(email)')
         .not('role', 'in', '("admin", "dev", "owner")')
         .order('created_at', { ascending: false });
         
     if (clientsError) throw clientsError;
     
-    const clientList = clients.map(client => ({
-        id: client.id,
-        name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
-        email: client.auth_user?.email || 'N/A',
-        plan: client.role,
-        status: client.status,
-    }));
+    const countsByPlan: Record<string, number> = { free: 0, starter: 0, pro: 0 };
+    const countsByStatus: Record<string, number> = { on: 0, paused: 0, cancelled: 0 };
+    
+    const clientList = clients.map(client => {
+        // Agregação de Planos
+        const plan = client.role as keyof typeof countsByPlan;
+        if (countsByPlan.hasOwnProperty(plan)) {
+            countsByPlan[plan]++;
+        }
+        
+        // Agregação de Status
+        const status = client.status as keyof typeof countsByStatus;
+        if (countsByStatus.hasOwnProperty(status)) {
+            countsByStatus[status]++;
+        }
+        
+        // Mapeamento final do cliente
+        return {
+            id: client.id,
+            name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
+            email: (client.auth_user as { email: string } | null)?.email || 'N/A', // Tipagem corrigida
+            plan: client.role,
+            status: client.status,
+        };
+    });
 
 
     return new Response(JSON.stringify({
@@ -108,8 +98,9 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    console.error("Edge Function Error:", error.message)
-    return new Response(JSON.stringify({ error: error.message }), {
+    // Tipagem corrigida
+    console.error("Edge Function Error:", (error as Error).message)
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })

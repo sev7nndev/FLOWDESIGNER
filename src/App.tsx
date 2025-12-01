@@ -1,20 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useGeneration } from './hooks/useGeneration';
 import { useToast } from './components/ui/use-toast';
-import Header from './components/Header';
-import LandingPage from './components/LandingPage';
+import Header from './components/Header'; // Este componente precisa ser criado
+import LandingPage from './components/LandingPage'; // Este componente precisa ser criado
 import AuthPage from './pages/AuthPage';
-import DashboardPage from './pages/DashboardPage';
+import DashboardPage from './pages/DashboardPage'; // Este componente precisa ser criado
 import DevPanelPage from './pages/DevPanelPage';
 import OwnerPanelPage from './pages/OwnerPanelPage';
-import GenerationForm from './components/GenerationForm';
-import GeneratedImageCard from './components/GeneratedImageCard';
+import GenerationForm from './components/GenerationForm'; // Este componente precisa ser criado
+import GeneratedImageCard from './components/GeneratedImageCard'; // Este componente precisa ser criado
 import { Loader2 } from 'lucide-react';
+import { User as SupabaseUser } from '@supabase/supabase-js';
+import { UserRole } from './types';
 
 // Componente de Rota Protegida
-const ProtectedRoute: React.FC<{ element: React.ReactNode; allowedRoles?: string[] }> = ({
+const ProtectedRoute: React.FC<{ element: React.ReactNode; allowedRoles?: UserRole[] }> = ({
   element,
   allowedRoles,
 }) => {
@@ -41,42 +43,33 @@ const ProtectedRoute: React.FC<{ element: React.ReactNode; allowedRoles?: string
     return <Navigate to="/auth" replace />;
   }
 
+  const role = userRole as UserRole;
+
   // Redirecionamento de Owner/Dev para seus painéis se tentarem acessar o dashboard
-  if (userRole === 'owner' && window.location.pathname === '/dashboard') {
+  if (role === 'owner' && window.location.pathname === '/dashboard') {
     return <Navigate to="/owner-panel" replace />;
   }
-  if (userRole === 'dev' && window.location.pathname === '/dashboard') {
+  if (role === 'dev' && window.location.pathname === '/dashboard') {
     return <Navigate to="/dev-panel" replace />;
   }
 
-  if (allowedRoles && userRole && !allowedRoles.includes(userRole)) {
+  if (allowedRoles && role && !allowedRoles.includes(role)) {
     // Redireciona para o dashboard se o usuário não tiver a permissão
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Se for o Owner Panel, passamos as props de navegação
-  if (window.location.pathname === '/owner-panel') {
-    return React.cloneElement(element as React.ReactElement, { 
-      user, 
-      onBackToApp: () => window.location.href = '/dashboard', // Redireciona para o dashboard
-      onLogout: handleLogout 
-    });
-  }
-  
-  // Se for o Dev Panel, passamos as props de navegação
-  if (window.location.pathname === '/dev-panel') {
-    return React.cloneElement(element as React.ReactElement, { 
-      user, 
-      onBackToApp: () => window.location.href = '/dashboard',
-      onLogout: handleLogout 
-    });
-  }
+  // Clona o elemento e injeta as props de navegação
+  const elementWithProps = React.cloneElement(element as React.ReactElement, { 
+    user, 
+    onBackToApp: () => window.location.href = '/dashboard',
+    onLogout: handleLogout 
+  });
 
-  return element;
+  return elementWithProps;
 };
 
 const App: React.FC = () => {
-  const { user, isLoading: isLoadingAuth, userRole, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const {
     generatedImage,
     isGenerating,
@@ -114,7 +107,7 @@ const App: React.FC = () => {
   return (
     <Router>
       <div className="min-h-screen flex flex-col">
-        <Header />
+        <Header onLogout={handleLogout} user={user} />
         <main className="flex-grow container mx-auto p-4">
           <Routes>
             <Route path="/" element={<LandingPage />} />
@@ -126,25 +119,13 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute
                   element={
-                    <div className="space-y-8 pt-8">
-                      <h1 className="text-4xl font-extrabold text-center">
-                        Welcome, {user?.email || 'User'}!
-                      </h1>
-                      <GenerationForm
-                        onGenerate={handleGenerate}
-                        isGenerating={isGenerating}
-                        usage={usage}
-                        isLoadingUsage={isLoadingUsage}
-                      />
-                      {generatedImage && (
-                        <div className="flex justify-center">
-                          <GeneratedImageCard
-                            imageUrl={generatedImage.url}
-                            prompt={generatedImage.prompt}
-                          />
-                        </div>
-                      )}
-                    </div>
+                    <DashboardPage 
+                      onGenerate={handleGenerate}
+                      isGenerating={isGenerating}
+                      usage={usage}
+                      isLoadingUsage={isLoadingUsage}
+                      generatedImage={generatedImage}
+                    />
                   }
                 />
               }
@@ -156,7 +137,7 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute
                   element={<DevPanelPage />}
-                  allowedRoles={['dev', 'owner']}
+                  allowedRoles={['dev', 'admin', 'owner']}
                 />
               }
             />

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '../services/supabase';
+import { getSupabase } from '../services/supabaseClient'; // Usando getSupabase
 import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -18,10 +18,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const supabase = getSupabase(); // Obtendo o cliente Supabase
 
   useEffect(() => {
+    if (!supabase) {
+        setIsLoading(false);
+        return;
+    }
+    
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: string, session: Session | null) => { // Tipagem corrigida
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
@@ -40,8 +46,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           } else if (data) {
             setUserRole(data.role);
           } else {
-            // If profile is not immediately found (e.g., race condition after signup), default to free.
-            // The backend trigger should handle the insertion eventually.
             setUserRole('free');
           }
         } else {
@@ -51,18 +55,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     // Initial check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => { // Tipagem corrigida
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
       setIsLoading(false);
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   const signInWithGoogle = async () => {
+    if (!supabase) return;
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -72,6 +77,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signOut = async () => {
+    if (!supabase) return;
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
@@ -79,7 +85,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, userRole, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user: user ? { ...user, role: userRole || 'free' } : null, session, isLoading, userRole, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

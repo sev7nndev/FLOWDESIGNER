@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User } from '../types';
+import { User, UserRole } from '../types'; // Importando UserRole
 import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star, LogOut, ShieldOff } from 'lucide-react';
 import { Button } from '../components/Button';
 import { useOwnerMetrics } from '../hooks/useOwnerMetrics';
@@ -82,7 +82,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
     const [activeTab, setActiveTab] = useState<'dashboard' | 'clients' | 'chat'>('dashboard');
 
     // Conditional rendering for access control
-    if (!user || user.role !== 'owner') {
+    if (!user || user.role !== 'owner') { // Corrigido o erro de comparação
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-gray-100 p-4 text-center">
                 <ShieldOff size={64} className="text-red-500 mb-6 opacity-50" />
@@ -219,7 +219,6 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
                         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                             <MessageSquare size={24} className="text-primary" /> Chat com Clientes
                         </h2>
-                        {/* O componente OwnerChatPanel precisa ser implementado para funcionar */}
                         <OwnerChatPanel owner={user} clients={metrics.clients} />
                     </div>
                 )}
@@ -227,3 +226,5 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
         </div>
     );
 };
+
+export default OwnerPanelPage;

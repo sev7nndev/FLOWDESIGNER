@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { BusinessInfo, GenerationStatus } from '../types';
 import { Button } from './Button';
 import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
-import { UsageData } from '../hooks/useUsage'; // Importando o tipo de dado de uso
+import { UsageData } from '../hooks/useGeneration'; // Importando o tipo de dado de uso
 
 interface InputFieldProps {
   label: string;
@@ -57,8 +57,8 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
         }
     };
     
-    const isQuotaExceeded = usage?.isBlocked ?? false;
-    const isUnlimited = usage?.maxQuota === 0 && usage?.planId !== 'free';
+    const isQuotaExceeded = usage?.current >= usage?.limit && !usage?.isUnlimited;
+    const isUnlimited = usage?.isUnlimited ?? false;
 
     return (
         <div className="space-y-6">
@@ -71,10 +71,10 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                     {isLoadingUsage ? (
                         <Loader2 size={16} className="animate-spin text-primary" />
                     ) : isUnlimited ? (
-                        <span className="text-sm font-bold text-primary">Ilimitado ({usage?.planId.toUpperCase()})</span>
-                    ) : usage && usage.maxQuota > 0 ? (
+                        <span className="text-sm font-bold text-primary">Ilimitado ({usage?.role.toUpperCase()})</span>
+                    ) : usage && usage.limit > 0 ? (
                         <span className={`text-sm font-bold ${isQuotaExceeded ? 'text-red-400' : 'text-primary'}`}>
-                            {usage.currentUsage} / {usage.maxQuota}
+                            {usage.current} / {usage.limit}
                         </span>
                     ) : (
                         <span className="text-sm font-bold text-gray-500">Carregando...</span>

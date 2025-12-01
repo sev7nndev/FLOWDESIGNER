@@ -1,28 +1,27 @@
 import React, { useState } from 'react';
-import { Button } from '../components/ui/button';
+import { Button } from '../components/Button'; // Usando o componente Button customizado
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { useAuth } from '../hooks/useAuth';
 import { Loader2, Chrome } from 'lucide-react';
-import { supabase } from '../services/supabase';
+import { getSupabase } from '../services/supabaseClient'; // Usando getSupabase
 import { useToast } from '../components/ui/use-toast';
-import { useNavigate } from 'react-router-dom'; // Importando useNavigate
+import { useNavigate } from 'react-router-dom';
 
 const AuthPage: React.FC = () => {
   const { signInWithGoogle } = useAuth();
-  const navigate = useNavigate(); // Inicializando useNavigate
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [isLoadingEmail, setIsLoadingEmail] = useState(false);
+  const supabase = getSupabase();
 
   const handleGoogleSignIn = async () => {
     setIsSigningIn(true);
     try {
-      // O redirecionamento do Google OAuth é configurado no useAuth para /dashboard.
-      // O App.tsx fará o redirecionamento final se o role for 'owner' ou 'dev'.
       await signInWithGoogle();
     } catch (error) {
       console.error('Google sign-in failed:', error);
@@ -38,6 +37,8 @@ const AuthPage: React.FC = () => {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supabase) return;
+    
     setIsLoadingEmail(true);
     try {
       if (isLogin) {
@@ -45,8 +46,8 @@ const AuthPage: React.FC = () => {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         
-        // Após o login, buscamos o role para redirecionamento imediato
         if (data.user) {
+            // Fetch user role for immediate redirection
             const { data: profileData } = await supabase
                 .from('profiles')
                 .select('role')
@@ -104,13 +105,13 @@ const AuthPage: React.FC = () => {
             onClick={handleGoogleSignIn}
             disabled={isSigningIn || isLoadingEmail}
             className="w-full flex items-center justify-center bg-red-500 hover:bg-red-600 text-white"
+            icon={<Chrome className="h-5 w-5" />}
           >
             {isSigningIn ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Chrome className="mr-2 h-5 w-5" />
+              'Continue with Google'
             )}
-            {isSigningIn ? 'Signing In...' : `Continue with Google`}
           </Button>
 
           <div className="relative">
@@ -158,16 +159,16 @@ const AuthPage: React.FC = () => {
             {isLogin ? (
               <>
                 Don't have an account?{' '}
-                <Button variant="link" onClick={() => setIsLogin(false)} className="p-0 h-auto">
+                <button onClick={() => setIsLogin(false)} className="text-primary hover:underline">
                   Sign Up
-                </Button>
+                </button>
               </>
             ) : (
               <>
                 Already have an account?{' '}
-                <Button variant="link" onClick={() => setIsLogin(true)} className="p-0 h-auto">
+                <button onClick={() => setIsLogin(true)} className="text-primary hover:underline">
                   Sign In
-                </Button>
+                </button>
               </>
             )}
           </div>
