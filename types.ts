@@ -33,7 +33,7 @@ export interface GenerationState {
   debugPrompt?: string;
 }
 
-export type UserRole = 'admin' | 'dev' | 'client' | 'free' | 'pro' | 'owner';
+export type UserRole = 'admin' | 'dev' | 'client' | 'free' | 'pro' | 'owner' | 'starter'; // Added 'starter' for consistency
 
 export interface User {
   id: string;
@@ -63,4 +63,35 @@ export interface LandingImage {
   id: string;
   url: string;
   sortOrder: number;
+  image_path: string; // Added missing property for DevPanelPage
 }
+
+// NEW: Types for GenerationForm and useGeneration hook
+export interface FormState {
+  prompt: string;
+  companyName: string;
+  logoFile: File | null; // Temporary file object for display
+  // All other BusinessInfo fields are handled by the hook internally
+}
+
+export interface UsageData {
+    current_usage: number;
+    max_usage: number;
+    plan_id: UserRole;
+    isBlocked: boolean;
+}
+
+export interface GenerationFormProps {
+    form: FormState & BusinessInfo; // Combines form state and business info
+    status: GenerationStatus;
+    error: string | undefined;
+    handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+    handleLogoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    handleGenerate: () => void;
+    loadExample: () => void;
+    usage: UsageData;
+    isLoadingUsage: boolean;
+}
+
+// Type for API history response
+export type HistoryItem = GeneratedImage;
