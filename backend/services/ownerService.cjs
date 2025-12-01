@@ -1,5 +1,6 @@
 // backend/services/ownerService.cjs
 const { supabaseService } = require('../config');
+const sanitizeHtml = require('sanitize-html'); // <-- ADDED
 
 /**
  * Masks an email address (e.g., user@example.com -> u***@e***.com)
@@ -66,14 +67,18 @@ const fetchOwnerMetrics = async () => {
         
     if (clientsError) throw clientsError;
     
-    const clientList = clients.map(client => ({
-        id: client.id,
-        name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
-        // Aplica a máscara ao e-mail
-        email: maskEmail(client.auth_user?.email || 'N/A'), 
-        plan: client.role,
-        status: client.status,
-    }));
+    const clientList = clients.map(client => {
+        const fullName = `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A';
+        return {
+            id: client.id,
+            // Aplica sanitização ao nome
+            name: sanitizeHtml(fullName, { allowedTags: [], allowedAttributes: {} }),
+            // Aplica a máscara ao e-mail
+            email: maskEmail(client.auth_user?.email || 'N/A'), 
+            plan: client.role,
+            status: client.status,
+        };
+    });
 
     return {
         planCounts: countsByPlan,
