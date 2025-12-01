@@ -111,25 +111,103 @@ const fetchOwnerMetrics = async () => {
  * @returns {Promise<string>} A URL de redirecionamento do portal de faturamento.
  */
 const createBillingPortalSession = async (userId) => {
-    // 1. Busca o stripe_customer_id do perfil (Mock: assume que existe)
+    // 1. Busca o stripe_customer_id e o role do perfil
     const { data: profileData, error: profileError } = await supabaseService
         .from('profiles')
-        .select('stripe_customer_id')
+        .select('stripe_customer_id, role')
         .eq('id', userId)
         .single();
 
-    if (profileError || !profileData || !profileData.stripe_customer_id) {
-        // Se não tiver ID do Stripe, assume que é um novo cliente ou plano FREE
+    if (profileError || !profileData) {
+        throw new Error('Perfil do usuário não encontrado.');
+    }
+    
+    let customerId = profileData.stripe_customer_id;
+    
+    // Se o usuário for 'free' e não tiver um customerId, simula a criação de um
+    if (profileData.role === 'free' && !customerId) {
+        // Gera um ID de cliente mockado
+        customerId = `cus_mock_${userId.substring(0, 8)}`;
+        
+        // Atualiza o perfil com o ID do cliente mockado
+        const { error: updateError } = await supabaseService
+            .from('profiles')
+            .update({ stripe_customer_id: customerId })
+            .eq('id', userId);
+            
+        if (updateError) {
+            console.error('Falha ao atribuir customer ID mockado:', updateError);
+            // Continua, mas o log é importante
+        }
+        
         // Redireciona para a página de preços para iniciar a assinatura
         return 'https://mock-billing-portal.com/pricing'; 
     }
     
-    // Mock: Retorna uma URL de portal de faturamento simulada
-    return `https://mock-billing-portal.com/session/${profileData.stripe_customer_id}`;
+    // Se o usuário já tiver um customerId (mesmo que seja mockado), redireciona para o portal
+    if (customerId) {
+        return `https://mock-billing-portal.com/session/${customerId}`;
+    }
+    
+    // Caso de fallback (deve ser raro)
+    return 'https://mock-billing-portal.com/pricing';
+};
+
+/**
+ * Atualiza o plano e status de um cliente no banco de dados.
+ * @param {string} clientId - O ID do cliente.
+ * @param {string} newPlan - O novo plano ('free', 'starter', 'pro').
+ * @param {string} newStatus - O novo status ('on', 'paused', 'cancelled').
+ */
+const updateClientPlan = async (clientId, newPlan, newStatus) => {
+    // 1. Atualiza o perfil (role e status)
+    const { error: profileError } = await supabaseService
+        .from('profiles')
+        .update({ 
+            role: newPlan, 
+            status: newStatus,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', clientId);
+
+    if (profileError) {
+        console.error(`Falha ao atualizar perfil do cliente ${clientId}:`, profileError);
+        throw new Error(`Falha ao atualizar perfil: ${profileError.message}`);
+    }
+    
+    // 2. Atualiza a tabela user_usage (apenas o plan_id)
+    const { error: usageError } = await supabaseService
+        .from('user_usage')
+        .update({ 
+            plan_id: newPlan,
+            updated_at: new Date().toISOString()
+        })
+        .eq('user_id', clientId);
+        
+    if (usageError) {
+        console.error(`Falha ao atualizar uso do cliente ${clientId}:`, usageError);
+        // Não lançamos erro fatal aqui, pois o perfil foi atualizado, mas logamos.
+    }
+    
+    // Se o plano for alterado para 'free', resetamos o uso para 0 para dar o limite gratuito
+    if (newPlan === 'free') {
+        const { error: resetError } = await supabaseService
+            .from('user_usage')
+            .update({ 
+                current_usage: 0,
+                cycle_start_date: new Date().toISOString()
+            })
+            .eq('user_id', clientId);
+            
+        if (resetError) {
+            console.error(`Falha ao resetar uso do cliente ${clientId}:`, resetError);
+        }
+    }
 };
 
 
 module.exports = {
     fetchOwnerMetrics,
-    createBillingPortalSession, // Exportando a nova função
+    createBillingPortalSession,
+    updateClientPlan, // Exportando a nova função
 };

@@ -97,6 +97,28 @@ const createBillingPortalSession = async (): Promise<string> => {
     return data.redirectUrl;
 };
 
+/**
+ * Atualiza o plano e status de um cliente (Apenas Owner).
+ * @param clientId O ID do cliente.
+ * @param newPlan O novo plano ('free', 'starter', 'pro').
+ * @param newStatus O novo status ('on', 'paused', 'cancelled').
+ */
+const updateClientPlan = async (clientId: string, newPlan: string, newStatus: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/owner/update-plan`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // O token de autenticação deve ser adicionado
+        },
+        body: JSON.stringify({ clientId, newPlan, newStatus }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido ao atualizar plano.' }));
+        throw new Error(errorData.error || `Falha ao atualizar plano: Status ${response.status}`);
+    }
+};
+
 
 // --- Exportação Principal ---
 
@@ -110,4 +132,7 @@ export const api = {
     
     // Funções de Faturamento
     createBillingPortalSession,
+    
+    // Funções de Gerenciamento de Clientes (Owner)
+    updateClientPlan,
 };

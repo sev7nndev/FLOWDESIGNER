@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { User } from '../types';
-import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star, LogOut, ShieldOff, TrendingUp } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { User, UserRole } from '../types';
+import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star, LogOut, ShieldOff, TrendingUp, Edit, X } from 'lucide-react';
 import { Button } from '../components/Button';
 import { useOwnerMetrics } from '../hooks/useOwnerMetrics';
 import { MetricCard } from '../components/MetricCard';
 import { OwnerChatPanel } from '../components/OwnerChatPanel';
+import { api } from '../services/api'; // Importando a API para atualização
 
 interface OwnerPanelPageProps {
   user: User | null;
@@ -12,13 +13,117 @@ interface OwnerPanelPageProps {
   onLogout: () => void;
 }
 
-// --- Componente de Tabela de Clientes ---
-interface ClientTableProps {
-    clients: any[];
-    isLoading: boolean;
+// --- Tipos de Dados ---
+interface ClientData {
+    id: string;
+    name: string;
+    email: string;
+    plan: 'free' | 'starter' | 'pro';
+    status: 'on' | 'paused' | 'cancelled';
 }
 
-const ClientTable: React.FC<ClientTableProps> = ({ clients, isLoading }) => {
+// --- Componente de Edição de Cliente (Modal) ---
+interface EditClientModalProps {
+    client: ClientData;
+    onClose: () => void;
+    onUpdate: (clientId: string, newPlan: string, newStatus: string) => Promise<void>;
+    isUpdating: boolean;
+}
+
+const EditClientModal: React.FC<EditClientModalProps> = ({ client, onClose, onUpdate, isUpdating }) => {
+    const [newPlan, setNewPlan] = useState(client.plan);
+    const [newStatus, setNewStatus] = useState(client.status);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        try {
+            await onUpdate(client.id, newPlan, newStatus);
+            onClose();
+        } catch (e: any) {
+            setError(e.message || 'Falha ao atualizar o cliente.');
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-zinc-900 border border-primary/20 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+                <button onClick={onClose} className="absolute top-4 right-4 p-1 hover:bg-white/10 rounded-full text-gray-400 hover:text-white">
+                    <X size={16} />
+                </button>
+                <h3 className="text-xl font-bold text-white mb-4 border-b border-white/10 pb-2">Editar Cliente: {client.name}</h3>
+                
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Plano</label>
+                        <select 
+                            value={newPlan} 
+                            onChange={(e) => setNewPlan(e.target.value as ClientData['plan'])}
+                            className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary outline-none"
+                            disabled={isUpdating}
+                        >
+                            <option value="free">Free</option>
+                            <option value="starter">Starter</option>
+                            <option value="pro">Pro</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Status</label>
+                        <select 
+                            value={newStatus} 
+                            onChange={(e) => setNewStatus(e.target.value as ClientData['status'])}
+                            className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary outline-none"
+                            disabled={isUpdating}
+                        >
+                            <option value="on">On (Ativo)</option>
+                            <option value="paused">Paused (Pausado)</option>
+                            <option value="cancelled">Cancelled (Cancelado)</option>
+                        </select>
+                    </div>
+                    
+                    {error && <p className="text-red-400 text-xs">{error}</p>}
+
+                    <Button type="submit" isLoading={isUpdating} className="w-full h-10 mt-4">
+                        {isUpdating ? 'Salvando...' : 'Salvar Alterações'}
+                    </Button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Componente de Tabela de Clientes ---
+interface ClientTableProps {
+    clients: ClientData[];
+    isLoading: boolean;
+    refreshMetrics: () => void;
+}
+
+const ClientTable: React.FC<ClientTableProps> = ({ clients, isLoading, refreshMetrics }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    const handleEdit = (client: ClientData) => {
+        setSelectedClient(client);
+        setIsModalOpen(true);
+    };
+    
+    const handleUpdate = useCallback(async (clientId: string, newPlan: string, newStatus: string) => {
+        setIsUpdating(true);
+        try {
+            await api.updateClientPlan(clientId, newPlan, newStatus);
+            refreshMetrics(); // Recarrega as métricas e a lista de clientes
+        } catch (e) {
+            throw e;
+        } finally {
+            setIsUpdating(false);
+        }
+    }, [refreshMetrics]);
+
     if (isLoading) {
         return (
             <div className="text-center py-10 text-gray-500 flex items-center justify-center gap-2">
@@ -37,41 +142,63 @@ const ClientTable: React.FC<ClientTableProps> = ({ clients, isLoading }) => {
     };
 
     return (
-        <div className="overflow-x-auto bg-zinc-900/50 border border-white/10 rounded-xl shadow-lg">
-            <table className="min-w-full divide-y divide-white/10">
-                <thead className="bg-zinc-800/50">
-                    <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Nome</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Plano</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                    {clients.map((client) => (
-                        <tr key={client.id} className="hover:bg-white/5 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{client.name}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{client.email}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                <span className="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary capitalize">
-                                    {getPlanIcon(client.plan)} {client.plan}
-                                </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                <span className={`px-3 py-1 text-xs font-semibold rounded-full capitalize ${
-                                    client.status === 'on' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
-                                }`}>
-                                    {client.status}
-                                </span>
-                            </td>
+        <>
+            <div className="overflow-x-auto bg-zinc-900/50 border border-white/10 rounded-xl shadow-lg">
+                <table className="min-w-full divide-y divide-white/10">
+                    <thead className="bg-zinc-800/50">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Nome</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Email</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Plano</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Ações</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
-            {clients.length === 0 && !isLoading && (
-                <p className="text-center text-gray-500 py-10">Nenhum cliente encontrado.</p>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                        {clients.map((client) => (
+                            <tr key={client.id} className="hover:bg-white/5 transition-colors">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{client.name}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{client.email}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                    <span className="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary capitalize">
+                                        {getPlanIcon(client.plan)} {client.plan}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                    <span className={`px-3 py-1 text-xs font-semibold rounded-full capitalize ${
+                                        client.status === 'on' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                                    }`}>
+                                        {client.status}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                    <Button 
+                                        variant="secondary" 
+                                        onClick={() => handleEdit(client)} 
+                                        className="h-8 px-3 text-xs"
+                                        icon={<Edit size={14} />}
+                                    >
+                                        Editar
+                                    </Button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                {clients.length === 0 && !isLoading && (
+                    <p className="text-center text-gray-500 py-10">Nenhum cliente encontrado.</p>
+                )}
+            </div>
+            
+            {isModalOpen && selectedClient && (
+                <EditClientModal 
+                    client={selectedClient} 
+                    onClose={() => setIsModalOpen(false)} 
+                    onUpdate={handleUpdate}
+                    isUpdating={isUpdating}
+                />
             )}
-        </div>
+        </>
     );
 };
 
@@ -227,7 +354,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
                 {!isLoadingMetrics && activeTab === 'clients' && (
                     <div className="space-y-6">
                         <h2 className="text-2xl font-bold text-white">Gerenciamento de Clientes</h2>
-                        <ClientTable clients={metrics.clients} isLoading={isLoadingMetrics} />
+                        <ClientTable clients={metrics.clients as ClientData[]} isLoading={isLoadingMetrics} refreshMetrics={refreshMetrics} />
                     </div>
                 )}
                 
