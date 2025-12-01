@@ -63,15 +63,16 @@ export function HoverBorderGradient({
       }}
       onMouseLeave={() => setHovered(false)}
       className={cn(
-        // Container: Totalmente transparente, define a espessura da borda com p-[2px]
-        "relative flex rounded-full content-center bg-transparent items-center flex-col flex-nowrap gap-10 h-min justify-center overflow-visible p-[2px] decoration-clone w-fit",
+        // CORREÇÃO 1: Removendo flex-col e gap-10.
+        "relative flex rounded-full content-center bg-transparent items-center h-min justify-center overflow-visible p-[2px] decoration-clone w-fit",
         containerClassName
       )}
       {...props}
     >
       <div
         className={cn(
-          "w-auto text-white z-10 bg-black px-4 py-2 rounded-[inherit]",
+          // CORREÇÃO 2: Adicionando flex items-center justify-center para alinhar o conteúdo (texto e ícone)
+          "w-auto text-white z-10 bg-black px-4 py-2 rounded-[inherit] flex items-center justify-center",
           className
         )}
       >
@@ -95,7 +96,6 @@ export function HoverBorderGradient({
         }}
         transition={{ ease: "linear", duration: duration ?? 1 }}
       />
-      {/* Máscara: Cobre o gradiente, deixando uma borda de 2px visível */}
       <div className="bg-black absolute z-1 flex-none inset-[2px] rounded-[inherit]" />
     </Tag>
   );
