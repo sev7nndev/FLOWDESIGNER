@@ -19,16 +19,24 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // Usando a chave correta
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-console.log(`DEBUG: SUPABASE_URL is set: ${!!SUPABASE_URL}`);
-console.log(`DEBUG: SUPABASE_ANON_KEY is set: ${!!SUPABASE_ANON_KEY}`); // Log adicionado
-console.log(`DEBUG: SUPABASE_SERVICE_KEY is set: ${!!SUPABASE_SERVICE_KEY}`);
-console.log(`DEBUG: GEMINI_API_KEY is set: ${!!GEMINI_API_KEY}`);
+// --- EXPLICIT DEBUGGING LOGS ---
+console.log(`DEBUG: SUPABASE_URL is set: ${!!SUPABASE_URL} (Length: ${SUPABASE_URL ? SUPABASE_URL.length : 0})`);
+console.log(`DEBUG: SUPABASE_ANON_KEY is set: ${!!SUPABASE_ANON_KEY} (Length: ${SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.length : 0})`);
+console.log(`DEBUG: SUPABASE_SERVICE_ROLE_KEY is set: ${!!SUPABASE_SERVICE_KEY} (Length: ${SUPABASE_SERVICE_KEY ? SUPABASE_SERVICE_KEY.length : 0})`);
+console.log(`DEBUG: GEMINI_API_KEY is set: ${!!GEMINI_API_KEY} (Length: ${GEMINI_API_KEY ? GEMINI_API_KEY.length : 0})`);
+// --- END DEBUGGING LOGS ---
+
+const missingVars = [];
+if (!SUPABASE_URL) missingVars.push('SUPABASE_URL');
+if (!SUPABASE_ANON_KEY) missingVars.push('SUPABASE_ANON_KEY');
+if (!SUPABASE_SERVICE_KEY) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
+if (!GEMINI_API_KEY) missingVars.push('GEMINI_API_KEY');
 
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_KEY || !GEMINI_API_KEY) {
-    console.error("FATAL ERROR: Missing one or more environment variables. Check your .env.local file.");
+if (missingVars.length > 0) {
+    console.error(`FATAL ERROR: Missing environment variables: ${missingVars.join(', ')}. Check your .env.local file.`);
     // Lançar um erro aqui é crucial para evitar que o servidor inicie com credenciais incompletas.
-    throw new Error('One or more required environment variables (SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY) are missing.');
+    throw new Error(`One or more required environment variables (${missingVars.join(', ')}) are missing.`);
 }
 
 // Client for public/client-side operations (e.g., checking job status without auth)
