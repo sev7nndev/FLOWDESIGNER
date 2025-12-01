@@ -1,106 +1,95 @@
+// backend/server.cjs
 const express = require('express');
 const cors = require('cors');
-const rateLimit = require('express-rate-limit');
-require('dotenv').config();
-
-// Importar módulos modularizados
-const { supabaseAnon } = require('./config');
-const { authenticateToken } = require('./middleware/auth');
-const generationRoutes = require('./routes/generationRoutes');
-const adminRoutes = require('./routes/adminRoutes');
+const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config'); // Import the anonymous client and limits
+const generationRoutes = require('./routes/generationRoutes'); // Import the new routes
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://ai.studio'],
-  methods: ['GET', 'POST', 'DELETE', 'PUT'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+    // CORREÇÃO CRÍTICA: Adicionando a porta 3000 (Vite default)
+    origin: ['http://localhost:5173', 'http://localhost:3000'], 
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use(express.json({ limit: '50mb' }));
-app.set('trust proxy', 1);
+app.use(express.json());
 
-// --- Rotas ---
+// --- Public Routes (e.g., Health Check) ---
+app.get('/', (req, res) => {
+    res.status(200).json({ message: 'AI Art Generator Backend is running.' });
+});
 
-// Rotas de Geração (Quota, Status, Geração)
-app.use('/api', generationRoutes);
+// --- API Routes ---
+// Use the modularized generation routes
+app.use('/api/generation', generationRoutes);
 
-// Rotas Administrativas (Protegidas por checkAdminOrDev dentro do módulo)
-app.use('/api/admin', adminRoutes);
+// --- Quota/Usage Endpoint (Public, but requires user ID/token for data retrieval) ---
+app.get('/api/usage/:userId', async (req, res) => {
+    const { userId } = req.params;
 
-// Endpoint para buscar histórico (mantido aqui, mas simplificado)
-app.get('/api/history', authenticateToken, async (req, res, next) => {
-    const user = req.user;
     try {
-        const { data, error } = await supabaseAnon
-            .from('images')
-            .select('id, prompt, business_info, created_at, image_url')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
+        // 1. Get Role from profiles
+        const { data: profileData, error: profileError } = await supabaseAnon
+            .from('profiles')
+            .select('role')
+            .eq('id', userId)
+            .single();
+            
+        const role = profileData?.role || 'free';
 
-        if (error) throw error;
+        // 2. Get Usage Count from user_usage
+        const { data: usageData, error: usageError } = await supabaseAnon
+            .from('user_usage')
+            .select('current_usage')
+            .eq('user_id', userId)
+            .single();
+            
+        const current_usage = usageData?.current_usage || 0;
 
-        // Mapeia para o formato GeneratedImage e adiciona a URL pública
-        const historyWithUrls = data.map((row) => {
-            const { data: { publicUrl } } = supabaseAnon.storage
-                .from('generated-arts')
-                .getPublicUrl(row.image_url);
-                
-            return {
-                id: row.id,
-                url: publicUrl,
-                prompt: row.prompt,
-                businessInfo: row.business_info,
-                createdAt: new Date(row.created_at).getTime()
-            };
+        // Define limits based on role (must match backend/services/generationService.cjs)
+        let limit = 0;
+        let isUnlimited = false;
+
+        switch (role) {
+            case 'owner':
+            case 'dev':
+            case 'admin':
+                isUnlimited = true;
+                break;
+            case 'pro':
+                limit = PRO_LIMIT; 
+                break;
+            case 'starter':
+                limit = STARTER_LIMIT;
+                break;
+            case 'free':
+            default:
+                limit = FREE_LIMIT;
+                break;
+        }
+
+        res.status(200).json({
+            role,
+            current: current_usage,
+            limit,
+            isUnlimited,
         });
 
-        res.json(historyWithUrls);
     } catch (error) {
-        next(error);
+        // If any error occurs (e.g., user not found in profiles/usage), return default free plan
+        console.error('Error fetching usage data:', error);
+        res.status(200).json({
+            role: 'free',
+            current: 0,
+            limit: FREE_LIMIT,
+            isUnlimited: false,
+        });
     }
 });
 
-// Endpoint para buscar imagens da landing page (mantido aqui, mas simplificado)
-app.get('/api/landing-images', async (req, res, next) => {
-    try {
-        const { data, error } = await supabaseAnon
-            .from('landing_carousel_images')
-            .select('id, image_url, sort_order')
-            .order('sort_order', { ascending: true })
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        const imagesWithUrls = data.map(row => {
-            const { data: { publicUrl } } = supabaseAnon.storage
-                .from('landing-carousel')
-                .getPublicUrl(row.image_url);
-                
-            return {
-                id: row.id,
-                url: publicUrl,
-                sortOrder: row.sort_order
-            };
-        });
-
-        res.json(imagesWithUrls);
-    } catch (error) {
-        next(error);
-    }
-});
-
-
-// Global Error Handler
-app.use((err, req, res, next) => {
-  console.error("Global Error Handler:", err.stack);
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'Ocorreu um erro inesperado no servidor.';
-  res.status(statusCode).json({ error: message });
-});
-
-// Start the server
+// --- Start Server ---
 app.listen(PORT, () => {
-  console.log(`Backend server running on port ${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
 });
