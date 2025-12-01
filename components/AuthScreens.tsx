@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from './ui/Button'; // Corrigido
+import { Button } from './Button';
 import { Sparkles, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { authService } from '../services/authService';
 import { GoogleIcon } from './GoogleIcon';

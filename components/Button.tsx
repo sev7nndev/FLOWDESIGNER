@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils'; // Importando cn
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -28,7 +27,7 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <motion.button 
       whileTap={{ scale: 0.95 }}
-      className={cn(baseStyles, variants[variant], className)} // Usando cn
+      className={`${baseStyles} ${variants[variant]} ${className}`}
       disabled={isLoading || props.disabled}
       {...props}
     >

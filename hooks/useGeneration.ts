@@ -106,38 +106,6 @@ export const useGeneration = (user: User | null) => {
         link.click();
         document.body.removeChild(link);
     }, []);
-    
-    // NOVO: Reseta o estado para IDLE
-    const handleNewGeneration = useCallback(() => {
-        setState(prev => ({ ...prev, status: GenerationStatus.IDLE, error: undefined }));
-    }, []);
-    
-    // NOVO: Copia o prompt para a área de transferência
-    const handleCopyPrompt = useCallback((prompt: string) => {
-        navigator.clipboard.writeText(prompt).then(() => {
-            alert("Prompt copiado para a área de transferência!");
-        }).catch(err => {
-            console.error("Falha ao copiar prompt:", err);
-            alert("Falha ao copiar prompt.");
-        });
-    }, []);
-    
-    // NOVO: Simula o compartilhamento
-    const handleShare = useCallback((image: GeneratedImage) => {
-        if (navigator.share) {
-            navigator.share({
-                title: 'Minha Arte Flow Designer',
-                text: `Confira a arte que gerei para ${image.businessInfo.companyName} usando Flow Designer!`,
-                url: image.url,
-            }).catch(err => {
-                console.error("Falha ao compartilhar:", err);
-                alert("Falha ao compartilhar. Tente baixar a imagem.");
-            });
-        } else {
-            alert("Seu navegador não suporta a API de compartilhamento. Baixe a imagem para compartilhar.");
-        }
-    }, []);
-
 
     return {
         form,
@@ -151,9 +119,6 @@ export const useGeneration = (user: User | null) => {
         setForm,
         setState,
         usage, // Expondo o uso
-        isLoadingUsage,
-        handleNewGeneration, // NOVO
-        handleCopyPrompt,    // NOVO
-        handleShare          // NOVO
+        isLoadingUsage
     };
 };

@@ -47,8 +47,7 @@ export const App: React.FC = () => {
   // Generation Logic Hook
   const { 
     form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage,
-    usage, isLoadingUsage, // NOVOS: Quota e Status de Uso
-    handleNewGeneration, handleCopyPrompt, handleShare // NOVOS: Funções de utilidade
+    usage, isLoadingUsage // NOVOS: Quota e Status de Uso
   } = useGeneration(user);
   
   // Landing Images Hook (Used by LandingPage and DevPanel)
@@ -199,9 +198,8 @@ export const App: React.FC = () => {
             <ResultDisplay 
                 state={state}
                 downloadImage={downloadImage}
-                handleNewGeneration={handleNewGeneration} // NOVO
-                handleCopyPrompt={handleCopyPrompt}       // NOVO
-                handleShare={handleShare}                 // NOVO
+                showGallery={showGallery}
+                setShowGallery={setShowGallery}
             />
           </div>
         </div>

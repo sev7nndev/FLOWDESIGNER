@@ -3,7 +3,6 @@
 import React from 'react';
 import { PricingCard } from './PricingCard';
 import { X } from 'lucide-react';
-import { Button } from './ui/Button'; // Corrigido
 
 interface PricingModalProps {
   isOpen: boolean;

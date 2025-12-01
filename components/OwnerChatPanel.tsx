@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Send, MessageSquare, Loader2, User as UserIcon } from 'lucide-react';
-import { Button } from './ui/Button'; // Corrigido
+import { Button } from './Button';
 import { getSupabase } from '../services/supabaseClient';
 import { User } from '../types';
 

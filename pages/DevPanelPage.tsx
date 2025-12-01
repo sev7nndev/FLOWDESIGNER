@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff } from 'lucide-react';
-import { Button } from '../components/ui/Button'; // Corrigido
+import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage } from '../types';
 import { useLandingImages } from '../hooks/useLandingImages';
 import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
@@ -114,25 +114,17 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
         
         const signedImages = await Promise.all(images.map(async (img: any) => {
             try {
-                // Nota: O backend não tem um endpoint getDownloadUrl, mas o frontend usa o supabase client
-                // para obter a URL pública. Vamos simular a obtenção da URL pública aqui.
-                const supabase = getSupabase();
-                if (!supabase) return null;
-                
-                const { data: { publicUrl } } = supabase.storage
-                    .from('generated-arts')
-                    .getPublicUrl(img.image_url);
-                    
+                const signedUrl = await api.getDownloadUrl(img.image_url);
                 return {
                     id: img.id,
-                    url: publicUrl,
+                    url: signedUrl,
                     prompt: img.prompt,
                     businessInfo: img.business_info,
                     createdAt: new Date(img.created_at).getTime(),
                     userId: img.user_id // Adicionando userId para referência
                 } as GeneratedImage & { userId: string };
             } catch (e) {
-                console.warn(`Falha ao gerar URL pública para ${img.id}`);
+                console.warn(`Falha ao gerar URL assinada para ${img.id}`);
                 return null;
             }
         }));
