@@ -26,8 +26,8 @@ export default {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'fade-in': 'fadeIn 0.8s ease-out forwards',
         'shimmer': 'shimmer 2s linear infinite',
-        'scroll': 'scroll 40s linear infinite',
-        'glow': 'glow 4s ease-in-out infinite', // Nova animação de brilho
+        'scroll': 'scroll 40s linear infinite', // Mantendo a animação 'scroll'
+        'glow': 'glow 4s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -38,11 +38,11 @@ export default {
           '0%': { backgroundPosition: '0% 0%' },
           '100%': { backgroundPosition: '-200% 0%' },
         },
-        scroll: {
+        scroll: { // AJUSTANDO O KEYFRAME 'scroll'
           '0%': { transform: 'translateX(0)' },
-          '100%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(-50%)' }, // CORRIGIDO para 50%
         },
-        glow: { // Novo keyframe para o brilho
+        glow: {
           '0%, 100%': { opacity: '0.3' },
           '50%': { opacity: '0.7' },
         }

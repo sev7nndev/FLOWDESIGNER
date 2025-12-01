@@ -88,10 +88,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
     <>
       <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden scroll-smooth">
         {/* Animated Aurora Background */}
-        <div className="absolute top-0 left-0 h-screen w-full overflow-hidden -z-10">
-          <div className="absolute -top-1/4 -left-1/4 h-[800px] w-[800px] bg-gradient-to-tr from-primary/30 to-secondary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow" />
-          <div className="absolute -bottom-1/4 -right-1/4 h-[800px] w-[800px] bg-gradient-to-bl from-accent/30 to-primary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow animation-delay-4000" />
-        </div>
+        <div className="absolute -top-1/4 -left-1/4 h-[800px] w-[800px] bg-gradient-to-tr from-primary/30 to-secondary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow" />
+        <div className="absolute -bottom-1/4 -right-1/4 h-[800px] w-[800px] bg-gradient-to-bl from-accent/30 to-primary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow animation-delay-4000" />
         
         <motion.nav 
           variants={{
@@ -134,7 +132,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                   <Loader2 size={24} className="animate-spin mr-2" /> Carregando galeria...
               </div>
             ) : (
-              <div className="flex w-max animate-marquee hover:[animation-play-state:paused] gap-4 p-4">
+              <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-4 p-4">
                 {marqueeContent.map((item: FlyerData, idx: number) => <FlyerMockup key={idx} {...item} />)}
               </div>
             )}
@@ -187,7 +185,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <div className="relative w-full">
               <div className="absolute inset-y-0 left-0 w-12 md:w-32 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
               <div className="absolute inset-y-0 right-0 w-12 md:w-32 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
-              <div className="flex w-max animate-marquee hover:[animation-play-state:paused] gap-6 px-6">
+              <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-6 px-6">
                  {[...Array(2)].map((_: undefined, i: number) => (
                    <React.Fragment key={i}>
                       <div className="w-[300px] md:w-[400px] flex-shrink-0"><TestimonialCard name="Carlos Mendes" role="Dono de Oficina" text="Eu gastava 300 reais por semana com designer. Agora faço os posts da oficina em 5 minutos tomando café. A qualidade impressiona." stars={5} image="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop" /></div>
