@@ -79,15 +79,11 @@ export const api = {
       }
       
       // O backend agora retorna a URL pública (já assinada se necessário)
-      const finalImageUrl = resultData.imageUrl;
+      // const finalImageUrl = resultData.imageUrl; // REMOVIDO: Variável não utilizada
       
       // Como o backend já salvou o registro completo na tabela 'images', 
       // precisamos buscar os metadados completos (prompt, businessInfo, createdAt)
       // para retornar o objeto GeneratedImage completo.
-      
-      // Para evitar uma chamada extra de histórico aqui, vamos refatorar o backend para retornar o objeto 'image' completo
-      // ou, mais simplesmente, confiar que o próximo loadHistory() no hook useGeneration
-      // trará o resultado correto.
       
       // Melhoria: O backend deve retornar o ID da imagem gerada para que possamos buscá-la.
       // Como o backend não retorna o ID da imagem, vamos forçar o loadHistory no hook.

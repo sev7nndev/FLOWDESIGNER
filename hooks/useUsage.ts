@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { getSupabase } from '../services/supabaseClient';
 
-interface UsageData {
+export interface UsageData {
     currentUsage: number;
     maxQuota: number;
     planId: string;
@@ -38,7 +38,7 @@ export const useUsage = (userId: string | undefined) => {
             }
             
             // 2. Busca o limite máximo do plano
-            const { data: planData, error: planError } = await supabase
+            const { data: planData } = await supabase
                 .from('plan_settings')
                 .select('max_images_per_month')
                 .eq('id', usageData.plan_id)

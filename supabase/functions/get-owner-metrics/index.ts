@@ -52,30 +52,28 @@ serve(async (req) => {
 
     // 5. Lógica de Negócio: Buscar Métricas
     
-    // A. Contagem de usuários por plano (role)
+    // A. Contagem de usuários por plano (role) - Usando count() no select
     const { data: planCounts, error: planError } = await supabaseService
         .from('profiles')
-        .select('role, count')
-        .not('role', 'in', '("admin", "dev", "owner")') // Exclui roles de gestão
-        .rollup();
+        .select('role, count', { count: 'exact', head: false })
+        .not('role', 'in', '("admin", "dev", "owner")');
 
     if (planError) throw planError;
     
-    const countsByPlan = planCounts.reduce((acc: Record<string, number>, item: any) => {
+    const countsByPlan = (planCounts as any[]).reduce((acc: Record<string, number>, item: any) => {
         acc[item.role] = item.count;
         return acc;
-    }, { free: 0, starter: 0, pro: 0 }); // Inicializa para garantir que todos os planos apareçam
+    }, { free: 0, starter: 0, pro: 0 });
 
     // B. Contagem de usuários por status
     const { data: statusCounts, error: statusError } = await supabaseService
         .from('profiles')
-        .select('status, count')
-        .not('role', 'in', '("admin", "dev", "owner")')
-        .rollup();
+        .select('status, count', { count: 'exact', head: false })
+        .not('role', 'in', '("admin", "dev", "owner")');
         
     if (statusError) throw statusError;
     
-    const countsByStatus = statusCounts.reduce((acc: Record<string, number>, item: any) => {
+    const countsByStatus = (statusCounts as any[]).reduce((acc: Record<string, number>, item: any) => {
         acc[item.status] = item.count;
         return acc;
     }, { on: 0, paused: 0, cancelled: 0 });
@@ -92,7 +90,8 @@ serve(async (req) => {
     const clientList = clients.map(client => ({
         id: client.id,
         name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
-        email: client.auth_user?.email || 'N/A',
+        // FIX: auth_user is an array due to the foreign key join syntax
+        email: (client.auth_user as any[])?.[0]?.email || 'N/A', 
         plan: client.role,
         status: client.status,
     }));
@@ -107,7 +106,7 @@ serve(async (req) => {
       status: 200,
     })
 
-  } catch (error) {
+  } catch (error: any) { // Cast error to any
     console.error("Edge Function Error:", error.message)
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

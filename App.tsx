@@ -14,6 +14,7 @@ import { AppHeader } from './components/AppHeader';
 import { useLandingImages } from './hooks/useLandingImages';
 import { DevPanelPage } from './pages/DevPanelPage';
 import { OwnerPanelPage } from './pages/OwnerPanelPage'; // Importando o novo painel
+import { Session } from '@supabase/supabase-js'; // Import Session type
 
 // Define a minimal structure for the authenticated user before profile is loaded
 interface AuthUser {
@@ -77,7 +78,7 @@ export const App: React.FC = () => {
     const supabase = getSupabase();
     if (supabase) {
       // Check Session
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
         if (session?.user) {
           fetchAuthUser(session.user);
         } else {
@@ -86,7 +87,7 @@ export const App: React.FC = () => {
       });
 
       // Listen for Auth Changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session: Session | null) => {
         if (session?.user) {
           fetchAuthUser(session.user);
         } else {

@@ -8,6 +8,7 @@ interface Client {
     id: string;
     name: string;
     email: string;
+    plan: string;
 }
 
 interface ChatMessage {
@@ -78,7 +79,7 @@ export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner, clients }
                 schema: 'public', 
                 table: 'chat_messages',
                 filter: `recipient_id=eq.${owner.id}` // Filtra mensagens destinadas ao owner
-            }, (payload) => {
+            }, (payload: any) => {
                 const newMessage = payload.new as ChatMessage;
                 // Atualiza apenas se a mensagem for do cliente selecionado
                 if (selectedClient && (newMessage.sender_id === selectedClient.id || newMessage.recipient_id === selectedClient.id)) {

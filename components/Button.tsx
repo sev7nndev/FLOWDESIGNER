@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, HTMLMotionProps } from 'framer-motion';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -7,7 +7,10 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: React.ReactNode;
 }
 
-export const Button: React.FC<ButtonProps> = ({ 
+// Extend HTMLMotionProps to include standard button attributes
+type MotionButtonProps = ButtonProps & HTMLMotionProps<'button'>;
+
+export const Button: React.FC<MotionButtonProps> = ({ 
   children, 
   variant = 'primary', 
   isLoading, 
