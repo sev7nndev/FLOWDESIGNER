@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './src/hooks/useAuth'; 
 import { useGeneration } from './src/hooks/useGeneration';
-import { UserRole, GenerationStatus } from './src/types'; // Import GenerationStatus
+import { UserRole } from './src/types'; 
 import { AppHeader } from './src/components/AppHeader';
 import { SettingsModal } from './src/components/Modals';
 import { GenerationForm } from './src/components/GenerationForm';
@@ -85,13 +85,11 @@ const App: React.FC = () => {
 
     // Render Dev Panel if open
     if (isDevPanelOpen && isAdminOrDev) {
-        // FIX: Assert user is not null (Error 26)
         return <DevPanelPage user={user!} onBackToApp={handleCloseDevPanel} onLogout={logout} />; 
     }
     
     // Render Owner Panel if open
     if (isOwnerPanelOpen && isOwner) {
-        // FIX: Assert user is not null (Error 27)
         return <OwnerPanelPage user={user!} onBackToApp={handleCloseOwnerPanel} onLogout={logout} />; 
     }
 
@@ -131,7 +129,7 @@ const App: React.FC = () => {
                                 <div className="lg:col-span-1">
                                     <GenerationForm 
                                         form={form}
-                                        status={state.status} // FIX: status is now GenerationStatus (Error 28)
+                                        status={state.status}
                                         error={state.error}
                                         handleInputChange={handleInputChange}
                                         handleLogoUpload={handleLogoUpload}
