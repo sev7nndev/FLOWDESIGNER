@@ -1,7 +1,6 @@
 // backend/server.cjs
 const express = require('express');
 const cors = require('cors');
-const rateLimit = require('express-rate-limit'); // Import rate-limiter
 const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config'); // Import the anonymous client and limits
 const generationRoutes = require('./routes/generationRoutes'); // Import the new routes
 const ownerRoutes = require('./routes/ownerRoutes'); // Importando rotas do proprietário
@@ -19,18 +18,6 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
-
-// --- Security: Rate Limiting ---
-// Apply a rate limit to all API requests to prevent abuse
-const apiLimiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutes
-	max: 100, // Limit each IP to 100 requests per windowMs
-	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    message: { error: 'Too many requests, please try again later.' },
-});
-app.use('/api', apiLimiter); // Apply the rate limiting middleware to all API routes
-
 
 // --- Public Routes (e.g., Health Check) ---
 app.get('/', (req, res) => {

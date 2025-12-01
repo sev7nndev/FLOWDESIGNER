@@ -18,22 +18,21 @@ const authenticateToken = async (req, res, next) => {
       return res.status(403).json({ error: 'Token inválido ou expirado.' });
     }
 
-    // 2. Fetch user role and credits from profiles table using the Service Key (supabaseService)
+    // 2. Fetch user role from profiles table using the Service Key (supabaseService)
     const { data: profile, error: profileError } = await supabaseService
       .from('profiles')
-      .select('role, credits')
+      .select('role')
       .eq('id', user.id)
       .single();
       
     const role = profile?.role || 'free'; // Default to 'free' if profile not found
-    const credits = profile?.credits || 0;
 
     if (profileError && profileError.code !== 'PGRST116') {
-        console.warn(`Error fetching profile role/credits for user ${user.id}:`, profileError.message);
+        console.warn(`Error fetching profile role for user ${user.id}:`, profileError.message);
     }
 
-    // 3. Attach user info, role, and credits to request object
-    req.user = { id: user.id, email: user.email, token: token, role: role, credits: credits };
+    // 3. Attach user info and role to request object
+    req.user = { id: user.id, email: user.email, token: token, role: role };
     next();
   } catch (e) {
     console.error("Error during token authentication:", e.message);
@@ -41,6 +40,21 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+// Helper function to check if user has admin or dev role
+const checkAdminOrDev = async (req, res, next) => {
+  const user = req.user;
+  if (!user) {
+    return res.status(401).json({ error: 'Não autenticado.' });
+  }
+
+  // CRITICAL FIX: Role is now available on req.user
+  if (!['admin', 'dev', 'owner'].includes(user.role)) {
+    return res.status(403).json({ error: 'Acesso negado. Apenas administradores e desenvolvedores podem realizar esta ação.' });
+  }
+  next();
+};
+
 module.exports = {
   authenticateToken,
+  checkAdminOrDev,
 };

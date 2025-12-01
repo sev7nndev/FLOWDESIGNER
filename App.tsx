@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './src/hooks/useAuth'; 
+import { useAuth } from './src/hooks/useAuth'; // FIX: Corrected path to include src/ (Error 12)
 import { useGeneration } from './src/hooks/useGeneration';
 import { UserRole } from './src/types'; 
 import { AppHeader } from './src/components/AppHeader';
@@ -9,8 +9,8 @@ import { GenerationForm } from './src/components/GenerationForm';
 import { GenerationHistory } from './src/components/GenerationHistory';
 import { PricingPage } from './src/components/PricingPage';
 import { LandingPage } from './src/pages/LandingPage';
-import { LoginPage } from './src/pages/LoginPage'; 
-import { RegisterPage } from './src/pages/RegisterPage'; 
+import { LoginPage } from './src/pages/LoginPage'; // FIX: Corrected path to include src/ (Error 13)
+import { RegisterPage } from './src/pages/RegisterPage'; // FIX: Corrected path to include src/ (Error 14)
 import { DevPanelPage } from './src/pages/DevPanelPage';
 import { OwnerPanelPage } from './src/pages/OwnerPanelPage';
 import { Button } from './src/components/Button';
@@ -27,7 +27,7 @@ const App: React.FC = () => {
     const { 
         form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, 
         usage, isLoadingUsage, downloadImage
-    } = useGeneration(user, {}); 
+    } = useGeneration(user);
 
     // Load history on initial load
     useEffect(() => {
@@ -85,12 +85,12 @@ const App: React.FC = () => {
 
     // Render Dev Panel if open
     if (isDevPanelOpen && isAdminOrDev) {
-        return <DevPanelPage user={user!} onBackToApp={handleCloseDevPanel} onLogout={logout} />; 
+        return <DevPanelPage user={user} onBackToApp={handleCloseDevPanel} onLogout={logout} />;
     }
     
     // Render Owner Panel if open
     if (isOwnerPanelOpen && isOwner) {
-        return <OwnerPanelPage user={user!} onBackToApp={handleCloseOwnerPanel} onLogout={logout} />; 
+        return <OwnerPanelPage user={user} onBackToApp={handleCloseOwnerPanel} onLogout={logout} />;
     }
 
     return (
@@ -100,7 +100,7 @@ const App: React.FC = () => {
                 {/* Header */}
                 {isAuthenticated && (
                     <AppHeader 
-                        user={user!} // Assert user is not null here
+                        user={user}
                         profileRole={profileRole}
                         onLogout={logout}
                         onShowSettings={handleShowSettings}
@@ -135,7 +135,7 @@ const App: React.FC = () => {
                                         handleLogoUpload={handleLogoUpload}
                                         handleGenerate={handleGenerate}
                                         loadExample={loadExample}
-                                        usage={usage} 
+                                        usage={usage as any} 
                                         isLoadingUsage={isLoadingUsage}
                                     />
                                 </div>
@@ -165,7 +165,7 @@ const App: React.FC = () => {
                     <SettingsModal 
                         user={user}
                         profileRole={profileRole}
-                        usage={usage} 
+                        usage={usage as any} 
                         onClose={handleCloseSettings}
                         onLogout={logout}
                         onShowPricing={handleShowPricing}

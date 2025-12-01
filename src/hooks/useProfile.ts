@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSupabase, Database } from '../services/supabaseClient'; 
+import { getSupabase } from '../services/supabaseClient';
 import { UserProfile, UserRole } from '../types';
 
 interface ProfileResult {
@@ -7,9 +7,6 @@ interface ProfileResult {
     isLoading: boolean;
     fetchProfile: () => Promise<void>;
 }
-
-// Define the expected structure of the selected data
-type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 export const useProfile = (userId: string | undefined): ProfileResult => {
     const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -35,16 +32,14 @@ export const useProfile = (userId: string | undefined): ProfileResult => {
                 throw new Error(error.message);
             }
 
-            const profileData = data as ProfileRow | null; // Explicitly cast data to resolve TS2339
-
-            if (profileData) { 
+            if (data) {
                 setProfile({
-                    id: profileData.id, // FIX: Use profileData (Error 6)
-                    firstName: profileData.first_name, // FIX: Use profileData (Error 7)
-                    lastName: profileData.last_name, // FIX: Use profileData (Error 8)
-                    role: profileData.role as UserRole, // FIX: Use profileData (Error 9)
-                    credits: profileData.credits, // FIX: Use profileData (Error 10)
-                    lastLogin: new Date(profileData.last_login).getTime(), // FIX: Use profileData (Error 11)
+                    id: data.id,
+                    firstName: data.first_name,
+                    lastName: data.last_name,
+                    role: data.role as UserRole,
+                    credits: data.credits,
+                    lastLogin: new Date(data.last_login).getTime(),
                 });
             } else {
                 // Handle case where profile doesn't exist yet (e.g., just registered)

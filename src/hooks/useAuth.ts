@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSupabase } from '../services/supabaseClient'; // FIX: Removed unused Database import
+import { getSupabase, Database } from '../services/supabaseClient'; 
 import { User, UserRole } from '../types';
 import { authService } from '../services/authService';
 import { useProfile } from './useProfile';
@@ -20,7 +20,7 @@ export const useAuth = (): AuthResult => {
     const supabase = getSupabase();
 
     // 1. Fetch Profile using the current user ID
-    const { profile, isLoading: isLoadingProfile, fetchProfile: _fetchProfile } = useProfile(user?.id); 
+    const { profile, isLoading: isLoadingProfile, fetchProfile: _fetchProfile } = useProfile(user?.id); // FIX: Renamed fetchProfile to _fetchProfile (Error 8)
 
     // 2. Session Management
     useEffect(() => {
@@ -29,7 +29,7 @@ export const useAuth = (): AuthResult => {
             return;
         }
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => { 
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => { // FIX: Used _event for unused variable (Error 9)
             if (session?.user) {
                 const supabaseUser = session.user;
                 

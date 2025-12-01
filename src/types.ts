@@ -1,6 +1,6 @@
 // --- AUTH & USER TYPES ---
 
-export type UserRole = 'free' | 'pro' | 'business' | 'admin' | 'dev' | 'owner' | 'starter'; 
+export type UserRole = 'free' | 'pro' | 'admin' | 'dev' | 'owner';
 
 export interface User {
     id: string;
@@ -24,7 +24,7 @@ export interface UserProfile {
 
 export enum GenerationStatus {
     IDLE = 'idle',
-    LOADING = 'loading',
+    GENERATING = 'generating',
     SUCCESS = 'success',
     ERROR = 'error',
 }
@@ -41,8 +41,12 @@ export interface GeneratedImage {
 }
 
 export interface GenerationFormState {
-    businessInfo: string; 
+    prompt: string;
+    negativePrompt: string;
+    style: string;
+    aspectRatio: string;
     logoFile: File | null;
+    logoUrl: string | null;
 }
 
 export interface GenerationState {
@@ -52,10 +56,9 @@ export interface GenerationState {
     history: GeneratedImage[];
 }
 
-export interface UsageData { 
+export interface UsageData {
     totalGenerations: number;
     monthlyGenerations: number;
     maxMonthlyGenerations: number;
     credits: number;
-    generationsThisMonth: number;
 }
