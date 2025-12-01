@@ -231,11 +231,12 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
                     </div>
                 )}
                 
-                {!isLoadingMetrics && activeTab === 'chat' && (
+                {!isLoadingMetrics && activeTab === 'chat' && user && (
                     <div className="space-y-6">
                         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                             <MessageSquare size={24} className="text-primary" /> Chat com Clientes
                         </h2>
+                        {/* Passa o usuário (owner) e a lista de clientes obtida das métricas */}
                         <OwnerChatPanel owner={user} clients={metrics.clients} />
                     </div>
                 )}
