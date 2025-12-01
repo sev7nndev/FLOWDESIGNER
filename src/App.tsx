@@ -115,7 +115,7 @@ const App: React.FC = () => {
     <Router>
       <div className="min-h-screen flex flex-col">
         <Header />
-        <main className="flex-grow container mx-auto p-4">
+        <main className="flex-grow"> {/* REMOVIDO: container mx-auto p-4 */}
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
@@ -126,7 +126,7 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute
                   element={
-                    <div className="space-y-8 pt-8">
+                    <div className="space-y-8 pt-8 container mx-auto p-4"> {/* ADICIONADO: container e padding de volta para o dashboard */}
                       <h1 className="text-4xl font-extrabold text-center">
                         Welcome, {user?.email || 'User'}!
                       </h1>
