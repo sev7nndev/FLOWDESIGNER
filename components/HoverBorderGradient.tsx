@@ -44,8 +44,9 @@ export function HoverBorderGradient({
       "radial-gradient(16.2% 41.199999999999996% at 100% 50%, hsl(0, 0%, 100%) 0%, rgba(255, 255, 255, 0) 100%)",
   };
 
+  // MUDANÇA 2: Cor do gradiente de destaque para roxo (#8B5CF6)
   const highlight =
-    "radial-gradient(75% 181.15942028985506% at 50% 50%, #3275F8 0%, rgba(255, 255, 255, 0) 100%)";
+    "radial-gradient(75% 181.15942028985506% at 50% 50%, #8B5CF6 0%, rgba(255, 255, 255, 0) 100%)";
 
   useEffect(() => {
     if (!hovered) {
@@ -70,8 +71,8 @@ export function HoverBorderGradient({
     >
       <div
         className={cn(
-          // MUDANÇA AQUI: Alterando bg-black para bg-slate-900 (tom escuro)
-          "w-auto text-white z-10 bg-slate-900 px-4 py-2 rounded-[inherit] flex items-center justify-center",
+          // MUDANÇA 1 & 3: Fundo para rosa escuro (bg-pink-900) e padding horizontal reduzido (px-3)
+          "w-auto text-white z-10 bg-pink-900 px-3 py-2 rounded-[inherit] flex items-center justify-center",
           className
         )}
       >
@@ -95,8 +96,8 @@ export function HoverBorderGradient({
         }}
         transition={{ ease: "linear", duration: duration ?? 1 }}
       />
-      {/* MUDANÇA AQUI: Alterando bg-black para bg-slate-900 (tom escuro) na máscara interna */}
-      <div className="bg-slate-900 absolute z-1 flex-none inset-[2px] rounded-[inherit]" />
+      {/* MUDANÇA 1: Máscara interna para rosa escuro (bg-pink-900) */}
+      <div className="bg-pink-900 absolute z-1 flex-none inset-[2px] rounded-[inherit]" />
     </Tag>
   );
 }
