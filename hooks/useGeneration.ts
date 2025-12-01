@@ -1,175 +1,124 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from './useAuth';
-import { getSupabase } from '../services/supabaseClient'; // Usando getSupabase
-import axios from 'axios';
-import { GeneratedImage as GeneratedImageType } from '../types'; // Importando o tipo correto
+import { useState, useCallback } from 'react';
+import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User } from '../types';
+import { api } from '../services/api';
+import { PLACEHOLDER_EXAMPLES } from '../constants';
+import { useUsage } from './useUsage'; // Importando o novo hook de uso
 
-const API_BASE_URL = '/api'; // Usando proxy
-const POLLING_INTERVAL = 3000; // 3 seconds
-const POLLING_TIMEOUT = 60000; // 60 seconds
-
-// Tipagem local para o resultado da geração
-interface GeneratedImage {
-  url: string;
-  prompt: string;
-}
-
-// Tipagem exportada para uso em outros componentes
-export interface UsageData {
-  role: string;
-  current: number;
-  limit: number;
-  isUnlimited: boolean;
-}
-
-const initialUsage: UsageData = {
-  role: 'free',
-  current: 0,
-  limit: 5,
-  isUnlimited: false,
+const INITIAL_FORM: BusinessInfo = {
+    companyName: '', phone: '', addressStreet: '', addressNumber: '',
+    addressNeighborhood: '', addressCity: '', details: '', logo: ''
 };
 
-export const useGeneration = () => {
-  const { user, session } = useAuth();
-  const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generationError, setGenerationError] = useState<string | null>(null);
-  const [usage, setUsage] = useState<UsageData>(initialUsage);
-  const [isLoadingUsage, setIsLoadingUsage] = useState(true);
+const INITIAL_STATE: GenerationState = {
+    status: GenerationStatus.IDLE,
+    currentImage: null,
+    history: [],
+};
 
-  const clearGeneration = () => {
-    setGeneratedImage(null);
-    setGenerationError(null);
-  };
+// Max Base64 length for logo (approx 30KB original file size)
+const MAX_LOGO_BASE64_LENGTH = 40000; 
+const MAX_LOGO_KB = Math.round(MAX_LOGO_BASE64_LENGTH / 1.33 / 1024); // Approx 30KB
 
-  // --- Usage Fetching ---
-  const fetchUsage = useCallback(async () => {
-    if (!user || !session) { // Check for session too
-      setUsage(initialUsage);
-      setIsLoadingUsage(false);
-      return;
-    }
+export const useGeneration = (user: User | null) => {
+    const [form, setForm] = useState<BusinessInfo>(INITIAL_FORM);
+    const [state, setState] = useState<GenerationState>(INITIAL_STATE);
+    const { usage, isLoadingUsage, refreshUsage } = useUsage(user?.id); // Usando o novo hook
 
-    setIsLoadingUsage(true);
-    try {
-      // Fetch usage data from the new backend endpoint
-      const response = await axios.get(`${API_BASE_URL}/usage/${user.id}`, {
-        headers: {
-          // CRITICAL FIX: Pass the Authorization token
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      setUsage(response.data);
-    } catch (error) {
-      console.error('Failed to fetch usage:', error);
-      setUsage(initialUsage); // Fallback to default
-    } finally {
-      setIsLoadingUsage(false);
-    }
-  }, [user, session]); // Dependency on session added
+    const handleInputChange = useCallback((field: keyof BusinessInfo, value: string) => {
+        setForm((prev: BusinessInfo) => ({ ...prev, [field]: value }));
+    }, []);
 
-  useEffect(() => {
-    fetchUsage();
-  }, [fetchUsage]);
-
-  // --- Polling Logic ---
-  const pollJobStatus = useCallback(
-    (jobId: string, prompt: string, startTime: number) => {
-      const intervalId = setInterval(async () => {
-        if (Date.now() - startTime > POLLING_TIMEOUT) {
-          clearInterval(intervalId);
-          setIsGenerating(false);
-          setGenerationError('Image generation timed out. Please try again later.');
-          return;
+    const handleLogoUpload = useCallback((file: File) => {
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                if (base64String.length > MAX_LOGO_BASE64_LENGTH) {
+                    alert(`O logo é muito grande. O tamanho máximo permitido é de ${MAX_LOGO_KB}KB.`);
+                    setForm((prev: BusinessInfo) => ({ ...prev, logo: '' })); // Clear logo if too large
+                } else {
+                    setForm((prev: BusinessInfo) => ({ ...prev, logo: base64String }));
+                }
+            };
+            reader.readAsDataURL(file);
         }
+    }, []);
+
+    const loadExample = useCallback(() => {
+        const example = PLACEHOLDER_EXAMPLES[Math.floor(Math.random() * PLACEHOLDER_EXAMPLES.length)];
+        setForm(example);
+    }, []);
+
+    const loadHistory = useCallback(async () => {
+        if (!user) return;
+        try {
+            const history = await api.getHistory();
+            setState((prev: GenerationState) => ({ ...prev, history }));
+        } catch (e) {
+            console.error("Failed to load history", e);
+        }
+    }, [user]);
+
+    const handleGenerate = useCallback(async () => {
+        if (!form.companyName || !form.details) return;
+        
+        // Verifica a quota localmente (embora o backend também verifique)
+        if (usage?.isBlocked) {
+            setState((prev: GenerationState) => ({ 
+                ...prev, 
+                status: GenerationStatus.ERROR, 
+                error: `Você atingiu o limite de ${usage.maxQuota} gerações. Faça upgrade para continuar.` 
+            }));
+            return;
+        }
+
+        setState((prev: GenerationState) => ({ ...prev, status: GenerationStatus.GENERATING, error: undefined }));
 
         try {
-          const token = session?.access_token;
-          if (!token) throw new Error('No session token available.');
+            const newImage = await api.generate(form);
+            
+            // Após o sucesso, atualiza o uso e o histórico
+            await refreshUsage();
+            await loadHistory(); // Recarrega o histórico para obter o registro completo
+            
+            // Encontra a imagem recém-gerada no histórico (a mais recente)
+            setState((prev: GenerationState) => ({
+                status: GenerationStatus.SUCCESS,
+                currentImage: newImage,
+                history: [newImage, ...prev.history.filter(img => img.id !== newImage.id)] // Garante que a nova imagem esteja no topo
+            }));
 
-          const response = await axios.get(`${API_BASE_URL}/generation/job-status/${jobId}`, { // Corrigindo a URL
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          const { status, imageUrl, error: jobError } = response.data;
-
-          if (status === 'COMPLETE' && imageUrl) {
-            clearInterval(intervalId);
-            setGeneratedImage({ url: imageUrl, prompt });
-            setIsGenerating(false);
-            fetchUsage(); // Refresh usage count after successful generation
-          } else if (status === 'FAILED') {
-            clearInterval(intervalId);
-            setIsGenerating(false);
-            setGenerationError(jobError || 'Image generation failed on the server side.');
-            fetchUsage(); // Refresh usage count
-          }
-          // If status is PENDING, continue polling
-        } catch (error: any) {
-          clearInterval(intervalId);
-          setIsGenerating(false);
-          setGenerationError(error.response?.data?.error || 'Failed to check job status.');
+        } catch (err: any) {
+            console.error(err);
+            setState((prev: GenerationState) => ({ 
+                ...prev, 
+                status: GenerationStatus.ERROR, 
+                error: err.message || "Erro ao gerar arte. Verifique se o Backend está rodando." 
+            }));
         }
-      }, POLLING_INTERVAL);
+    }, [form, usage, refreshUsage, loadHistory]);
 
-      return () => clearInterval(intervalId);
-    },
-    [session, fetchUsage]
-  );
+    const downloadImage = useCallback((image: GeneratedImage) => {
+        const link = document.createElement('a');
+        link.href = image.url;
+        link.download = `flow-${image.id.slice(0,4)}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }, []);
 
-  // --- Generation Initiation ---
-  const generateImage = useCallback(
-    async (businessInfo: string) => {
-      if (!user || !session) {
-        setGenerationError('You must be logged in to generate images.');
-        return;
-      }
-
-      setIsGenerating(true);
-      setGenerationError(null);
-
-      try {
-        const token = session.access_token;
-
-        // 1. Initiate generation job on the backend
-        const response = await axios.post(
-          `${API_BASE_URL}/generation/generate`,
-          { promptInfo: { details: businessInfo } }, // Adaptação para o formato esperado pelo backend
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-
-        const { jobId } = response.data;
-        const startTime = Date.now();
-
-        // 2. Start polling for the job status
-        pollJobStatus(jobId, businessInfo, startTime);
-      } catch (error: any) {
-        setIsGenerating(false);
-        if (error.response?.status === 403 && error.response?.data?.error.includes('Quota Reached')) {
-            setGenerationError(error.response.data.error);
-        } else {
-            setGenerationError(error.response?.data?.error || 'Failed to start generation job.');
-        }
-        fetchUsage();
-      }
-    },
-    [user, session, pollJobStatus, fetchUsage]
-  );
-
-  return {
-    generatedImage,
-    isGenerating,
-    generationError,
-    generateImage,
-    clearGeneration,
-    usage,
-    isLoadingUsage,
-  };
+    return {
+        form,
+        state,
+        handleInputChange,
+        handleLogoUpload,
+        handleGenerate,
+        loadExample,
+        loadHistory,
+        downloadImage,
+        setForm,
+        setState,
+        usage, // Expondo o uso
+        isLoadingUsage
+    };
 };

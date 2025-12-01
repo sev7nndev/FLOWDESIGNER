@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage } from '../types';
 import { useLandingImages } from '../hooks/useLandingImages';
-import useAdminGeneratedImages from '../hooks/useAdminGeneratedImages'; // Importação corrigida
-import { api } from '../services/api'; // Importando api para deleteLandingImage
+import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
+import { api } from '../services/api';
 
 interface DevPanelPageProps {
   user: User | null; // User can be null if profile is still loading or not authenticated
@@ -104,22 +104,61 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
     const { allImages, isLoadingAllImages, errorAllImages, deleteImage } = useAdminGeneratedImages(userRole);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
-    
-    // Não precisamos mais de imagesWithSignedUrls ou isSigning
-    const imagesToDisplay = allImages; 
+    const [imagesWithSignedUrls, setImagesWithSignedUrls] = useState<(GeneratedImage & { userId: string })[]>([]);
+    const [isSigning, setIsSigning] = useState(false);
+
+    // Função para gerar URLs assinadas para todas as imagens
+    const generateSignedUrls = useCallback(async (images: any[]) => {
+        if (images.length === 0) return [];
+        setIsSigning(true);
+        
+        const signedImages = await Promise.all(images.map(async (img: any) => {
+            try {
+                const signedUrl = await api.getDownloadUrl(img.image_url);
+                return {
+                    id: img.id,
+                    url: signedUrl,
+                    prompt: img.prompt,
+                    businessInfo: img.business_info,
+                    createdAt: new Date(img.created_at).getTime(),
+                    userId: img.user_id // Adicionando userId para referência
+                } as GeneratedImage & { userId: string };
+            } catch (e) {
+                console.warn(`Falha ao gerar URL assinada para ${img.id}`);
+                return null;
+            }
+        }));
+        
+        setIsSigning(false);
+        return signedImages.filter((img): img is GeneratedImage & { userId: string } => img !== null);
+    }, []);
+
+    useEffect(() => {
+        if (allImages.length > 0) {
+            generateSignedUrls(allImages).then(setImagesWithSignedUrls);
+        } else {
+            setImagesWithSignedUrls([]);
+        }
+    }, [allImages, generateSignedUrls]);
 
     const handleDelete = useCallback(async (image: GeneratedImage) => {
         setDeletingId(image.id);
         setDeleteError(null);
         try {
-            // FIX: Chamando deleteImage apenas com o ID, conforme a nova assinatura
-            await deleteImage(image.id); 
+            const path = (allImages.find((img: GeneratedImage) => img.id === image.id) as any)?.image_url;
+            
+            if (!path) {
+                throw new Error("Caminho do arquivo não encontrado no cache.");
+            }
+            
+            await deleteImage(image.id, path);
+            setImagesWithSignedUrls((prev: (GeneratedImage & { userId: string })[]) => prev.filter((img: GeneratedImage & { userId: string }) => img.id !== image.id));
         } catch (e: any) {
             setDeleteError(e.message || "Falha ao deletar arte.");
         } finally {
             setDeletingId(null);
         }
-    }, [deleteImage]);
+    }, [allImages, deleteImage]);
 
     return (
         <div className="space-y-4 bg-zinc-900/50 p-6 rounded-xl border border-white/10">
@@ -127,9 +166,9 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
                 <Users size={20} className="text-accent" /> Todas as Artes Geradas ({allImages.length})
             </h3>
             
-            {isLoadingAllImages && (
+            {(isLoadingAllImages || isSigning) && (
                 <div className="text-center py-10 text-gray-500 flex items-center justify-center gap-2">
-                    <Loader2 size={20} className="animate-spin mr-2" /> Carregando imagens...
+                    <Loader2 size={20} className="animate-spin mr-2" /> Carregando e assinando URLs...
                 </div>
             )}
             
@@ -142,9 +181,8 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
             )}
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {imagesToDisplay.map((img: GeneratedImage) => (
+                {imagesWithSignedUrls.map((img: GeneratedImage & { userId: string }) => (
                     <div key={img.id} className="relative aspect-[3/4] rounded-lg overflow-hidden border border-white/10 group bg-black">
-                        {/* A URL agora é uma Signed URL temporária */}
                         <img src={img.url} alt="Arte Gerada" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                         
                         {/* Overlay de Ação */}
@@ -167,7 +205,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
                 ))}
             </div>
             
-            {imagesToDisplay.length === 0 && !isLoadingAllImages && !errorAllImages && (
+            {allImages.length === 0 && !isLoadingAllImages && !errorAllImages && (
                 <p className="text-center text-gray-500 py-10">Nenhuma arte gerada ainda.</p>
             )}
         </div>
@@ -176,7 +214,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
 
 // --- Componente de Gerenciamento de Imagens da Landing Page ---
 const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
-    const { images, isLoading, error, uploadImage } = useLandingImages(user.role);
+    const { images, isLoading, error, uploadImage, deleteImage } = useLandingImages(user.role);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -184,14 +222,20 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
         setDeletingId(image.id);
         setDeleteError(null);
         try {
-            // FIX: Chamando a API diretamente com o ID, sem passar o path
-            await api.deleteLandingImage(image.id);
+            const urlParts = image.url.split('/landing-carousel/');
+            const path = urlParts.length > 1 ? urlParts[1] : '';
+            
+            if (!path) {
+                throw new Error("Caminho do arquivo inválido.");
+            }
+            
+            await deleteImage(image.id, path);
         } catch (e: any) {
             setDeleteError(e.message || "Falha ao deletar imagem.");
         } finally {
             setDeletingId(null);
         }
-    }, []); // Dependência de deleteImage removida, pois agora usamos api.deleteLandingImage
+    }, [deleteImage]);
 
     const handleUploadWrapper = useCallback(async (file: File) => {
         await uploadImage(file, user.id);
@@ -252,7 +296,7 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
 // --- Main Dev Panel Page ---
 export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, onLogout }) => {
     // Conditional rendering for access control
-    if (!user || (user.role !== 'admin' && user.role !== 'dev' && user.role !== 'owner')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'dev')) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-gray-100 p-4 text-center">
                 <ShieldOff size={64} className="text-red-500 mb-6 opacity-50" />

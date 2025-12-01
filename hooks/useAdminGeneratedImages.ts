@@ -12,7 +12,7 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
     const supabase = getSupabase();
 
     const fetchAllImages = useCallback(async () => {
-        if (userRole !== 'admin' && userRole !== 'dev' && userRole !== 'owner') {
+        if (userRole !== 'admin' && userRole !== 'dev') {
             setIsLoading(false);
             return;
         }
@@ -34,7 +34,7 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
         }
 
         try {
-            // Chamada ao endpoint seguro no backend
+            // Chamada ao novo endpoint seguro no backend
             const response = await fetch(`${BACKEND_URL}/admin/images`, {
                 method: "GET",
                 headers: {
@@ -56,8 +56,6 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
             }
 
             const data = await response.json();
-            
-            // O backend agora retorna Signed URLs temporárias
             setImages(data.images);
 
         } catch (e: any) {
@@ -73,7 +71,7 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
     }, [fetchAllImages]);
     
     // Função para deletar uma imagem (usando o endpoint seguro do backend)
-    const deleteImage = useCallback(async (imageId: string) => { // Removed imageUrl parameter
+    const deleteImage = useCallback(async (imageId: string, imageUrl: string) => {
         if (userRole !== 'admin' && userRole !== 'dev') {
             throw new Error("Acesso negado.");
         }
@@ -83,14 +81,13 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
         if (!session) throw new Error("Sessão não encontrada.");
 
         try {
-            // A exclusão agora é feita apenas pelo ID, o backend busca o path internamente.
             const response = await fetch(`${BACKEND_URL}/admin/images/${imageId}`, {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${session.access_token}` 
                 },
-                // Body is no longer needed
+                body: JSON.stringify({ imageUrl })
             });
 
             if (!response.ok) {
@@ -120,5 +117,3 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
         deleteImage
     };
 };
-
-export default useAdminGeneratedImages;

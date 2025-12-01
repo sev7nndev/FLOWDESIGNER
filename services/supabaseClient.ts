@@ -1,20 +1,26 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-    // As variáveis devem ser lidas do ambiente de build (Vite/React)
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Use variáveis de ambiente injetadas pelo Vite
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-    let supabase = null;
+let supabaseInstance: SupabaseClient | null = null;
 
-    export const getSupabase = () => {
-      if (!supabaseUrl || !supabaseAnonKey) {
-        // Esta é a condição que provavelmente está sendo atingida
-        console.error("Supabase environment variables are missing. Check your .env file and VITE_ prefix.");
-        return null; 
-      }
-      
-      if (!supabase) {
-        supabase = createClient(supabaseUrl, supabaseAnonKey);
-      }
-      return supabase;
-    };
+export const getSupabase = (): SupabaseClient | null => {
+  if (supabaseInstance) return supabaseInstance;
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error("Supabase environment variables are not configured.");
+    return null;
+  }
+
+  try {
+    supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return supabaseInstance;
+  } catch (e) {
+    console.error("Failed to init Supabase", e);
+    return null;
+  }
+};
+
+export const isSupabaseConfigured = () => !!getSupabase();

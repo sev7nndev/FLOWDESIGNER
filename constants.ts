@@ -1,4 +1,4 @@
-import { BusinessInfo, ArtStyle } from "./types";
+import { BusinessInfo } from "./types";
 
 export const PLACEHOLDER_EXAMPLES: BusinessInfo[] = [
   {
@@ -9,8 +9,7 @@ export const PLACEHOLDER_EXAMPLES: BusinessInfo[] = [
     addressNeighborhood: "São José",
     addressCity: "Rio de Janeiro",
     details: "Oficina mecânica completa. Faço lanternagem, pintura, rebaixamento, consertos de motor e troca de óleo. Faço tudo em carros nacionais e importados.",
-    logo: "",
-    styleId: 'cinematic'
+    logo: ""
   },
   {
     companyName: "Dra. Ana Estética",
@@ -20,8 +19,7 @@ export const PLACEHOLDER_EXAMPLES: BusinessInfo[] = [
     addressNeighborhood: "Bela Vista",
     addressCity: "São Paulo",
     details: "Harmonização facial, botox, preenchimento labial e limpeza de pele. Clínica de alto padrão com equipamentos modernos.",
-    logo: "",
-    styleId: 'minimalist'
+    logo: ""
   },
   {
     companyName: "Pizzaria do Chef",
@@ -31,8 +29,7 @@ export const PLACEHOLDER_EXAMPLES: BusinessInfo[] = [
     addressNeighborhood: "Serra",
     addressCity: "Belo Horizonte",
     details: "Pizza artesanal em forno a lenha. Promoção de terça-feira: compre uma gigante e ganhe um refrigerante. Entregamos em toda a região.",
-    logo: "",
-    styleId: 'vintage'
+    logo: ""
   },
   {
     companyName: "Escritório Silva Advocacia",
@@ -42,16 +39,6 @@ export const PLACEHOLDER_EXAMPLES: BusinessInfo[] = [
     addressNeighborhood: "Centro",
     addressCity: "Curitiba",
     details: "Especialista em causas trabalhistas e previdenciárias. Aposentadoria, auxílio doença e revisão de benefícios. Atendimento humanizado.",
-    logo: "",
-    styleId: '3d_render'
+    logo: ""
   }
-];
-
-export const ART_STYLES: ArtStyle[] = [
-  { id: 'cinematic', name: 'Cinemático', iconName: 'Camera', previewColor: 'from-blue-500 to-cyan-500' },
-  { id: 'minimalist', name: 'Minimalista', iconName: 'Feather', previewColor: 'from-gray-300 to-gray-500' },
-  { id: 'neon', name: 'Neon / Cyberpunk', iconName: 'Zap', previewColor: 'from-fuchsia-500 to-cyan-500' },
-  { id: 'vintage', name: 'Vintage / Retro', iconName: 'Radio', previewColor: 'from-amber-700 to-yellow-500' },
-  { id: 'watercolor', name: 'Aquarela', iconName: 'Palette', previewColor: 'from-pink-400 to-purple-400' },
-  { id: '3d_render', name: 'Render 3D', iconName: 'Cube', previewColor: 'from-green-500 to-teal-500' },
 ];

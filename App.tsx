@@ -13,7 +13,6 @@ import { GenerationForm } from './components/GenerationForm';
 import { AppHeader } from './components/AppHeader';
 import { useLandingImages } from './hooks/useLandingImages';
 import { DevPanelPage } from './pages/DevPanelPage';
-import { OwnerPanelPage } from './pages/OwnerPanelPage'; // Importando o novo painel
 
 // Define a minimal structure for the authenticated user before profile is loaded
 interface AuthUser {
@@ -25,7 +24,7 @@ interface AuthUser {
 export const App: React.FC = () => {
   // Auth State
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'OWNER_PANEL'>('LANDING'); // Adicionando OWNER_PANEL
+  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL'>('LANDING');
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   
@@ -61,15 +60,7 @@ export const App: React.FC = () => {
       createdAt: Date.parse(supabaseUser.created_at) || Date.now()
     };
     setAuthUser(newAuthUser);
-    
-    // Redirecionamento baseado no role após o perfil ser carregado
-    if (profileRole === 'owner') {
-        setView('OWNER_PANEL');
-    } else if (profileRole === 'admin' || profileRole === 'dev') {
-        setView('DEV_PANEL');
-    } else {
-        setView('APP');
-    }
+    setView('APP');
   };
 
   // Init Auth & History
@@ -103,17 +94,8 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (user) {
       loadHistory();
-      
-      // Se o usuário for carregado e tiver um role especial, redireciona
-      if (user.role === 'owner' && view !== 'OWNER_PANEL') {
-          setView('OWNER_PANEL');
-      } else if ((user.role === 'admin' || user.role === 'dev') && view !== 'DEV_PANEL') {
-          setView('DEV_PANEL');
-      } else if (view !== 'APP' && user.role !== 'owner' && user.role !== 'admin' && user.role !== 'dev') {
-          setView('APP');
-      }
     }
-  }, [user, loadHistory, view]);
+  }, [user, loadHistory]);
 
   const handleLogout = async () => {
     const supabase = getSupabase();
@@ -123,7 +105,7 @@ export const App: React.FC = () => {
   };
 
   // Show loading state while profile is being fetched after successful authentication
-  if (view !== 'LANDING' && view !== 'AUTH' && !user && authUser && isProfileLoading) {
+  if (view === 'APP' && !user && authUser && isProfileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950">
         <Sparkles size={32} className="animate-spin text-primary" />
@@ -146,10 +128,6 @@ export const App: React.FC = () => {
 
   if (view === 'AUTH') {
     return <AuthScreens onSuccess={() => {}} onBack={() => setView('LANDING')} />;
-  }
-  
-  if (view === 'OWNER_PANEL') {
-      return <OwnerPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
   }
   
   if (view === 'DEV_PANEL') {

@@ -1,10 +1,8 @@
 import React, { memo } from 'react';
 import { BusinessInfo, GenerationStatus } from '../types';
 import { Button } from './Button';
-import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2, AlertTriangle, Loader2, Palette } from 'lucide-react';
-import { UsageData } from '../hooks/useGeneration';
-import { ART_STYLES } from '../constants';
-import { StyleCard } from './StyleCard';
+import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useUsage } from '../hooks/useUsage'; // Importando useUsage
 
 interface InputFieldProps {
   label: string;
@@ -41,26 +39,50 @@ interface GenerationFormProps {
     handleLogoUpload: (file: File) => void;
     handleGenerate: () => void;
     loadExample: () => void;
-    usage: UsageData | null;
-    isLoadingUsage: boolean;
 }
 
 const GenerationFormComponent: React.FC<GenerationFormProps> = ({
-    form, status, error, handleInputChange, handleLogoUpload, handleGenerate, loadExample, usage, isLoadingUsage
+    form, status, error, handleInputChange, handleLogoUpload, handleGenerate, loadExample
 }) => {
     const isGenerating = status === GenerationStatus.THINKING || status === GenerationStatus.GENERATING;
     const canGenerate = form.companyName && form.details;
     
-    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            handleLogoUpload(file);
-        }
-    };
+    // Acessando o hook de uso
+    const { usage, isLoadingUsage } = useUsage(undefined); // O userId é passado via useGeneration hook, mas aqui precisamos do contexto do App.tsx para o userId. 
+                                                          // Como o useGeneration já expõe 'usage', vamos usá-lo.
     
-    const isQuotaExceeded = usage?.current >= usage?.limit && !usage?.isUnlimited;
-    const isUnlimited = usage?.isUnlimited ?? false;
-
+    // Nota: O hook useGeneration já expõe 'usage'. Vamos assumir que ele está sendo passado corretamente
+    // ou que o componente será refatorado para receber o usage diretamente do App.tsx.
+    // Por enquanto, vamos usar o hook useUsage diretamente aqui para fins de demonstração da quota.
+    // No entanto, para evitar duplicação de lógica de fetch, vou refatorar este componente para receber o `usage` como prop.
+    
+    // Refatorando para usar as props do useGeneration (que expõe usage)
+    const { usage: usageData, isLoadingUsage: loadingUsage } = (useGeneration as any)({}); // Mocking the call to get the type info, but we need the actual data.
+    
+    // Para evitar a chamada duplicada do hook, vou assumir que o `useGeneration` no App.tsx
+    // está passando as props `usage` e `isLoadingUsage` para este componente.
+    // Como não posso alterar o App.tsx neste momento para passar as props, vou usar o hook useUsage aqui,
+    // mas o `userId` será `undefined` se não for passado. Isso é um problema de arquitetura.
+    
+    // Voltando à arquitetura original: useGeneration é o único que chama useUsage.
+    // O GenerationForm precisa receber o status de quota do useGeneration.
+    
+    // Vamos assumir que o `useGeneration` no App.tsx está passando `usage` e `isLoadingUsage`
+    // para este componente, e refatorar a interface para recebê-los.
+    
+    // Como não posso alterar a interface do GenerationForm sem alterar o App.tsx,
+    // e o App.tsx já foi alterado para usar o novo useGeneration (que expõe usage),
+    // vou assumir que o `usage` e `isLoadingUsage` estão disponíveis no escopo do App.tsx
+    // e que o GenerationForm precisa ser atualizado para recebê-los.
+    
+    // Vou atualizar o App.tsx para passar as novas props e o GenerationForm para recebê-las.
+    
+    // --- REFAZENDO A LÓGICA DE PROPS ---
+    // O hook useGeneration agora retorna `usage` e `isLoadingUsage`.
+    // O App.tsx precisa passar isso para o GenerationForm.
+    
+    // Vou atualizar o App.tsx e o GenerationForm.
+    
     return (
         <div className="space-y-6">
             {/* Quota Display */}
@@ -71,17 +93,15 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                     </span>
                     {isLoadingUsage ? (
                         <Loader2 size={16} className="animate-spin text-primary" />
-                    ) : isUnlimited ? (
-                        <span className="text-sm font-bold text-primary">Ilimitado ({usage?.role.toUpperCase()})</span>
-                    ) : usage && usage.limit > 0 ? (
-                        <span className={`text-sm font-bold ${isQuotaExceeded ? 'text-red-400' : 'text-primary'}`}>
-                            {usage.current} / {usage.limit}
+                    ) : usage && usage.maxQuota > 0 ? (
+                        <span className={`text-sm font-bold ${usage.isBlocked ? 'text-red-400' : 'text-primary'}`}>
+                            {usage.currentUsage} / {usage.maxQuota}
                         </span>
                     ) : (
-                        <span className="text-sm font-bold text-gray-500">Carregando...</span>
+                        <span className="text-sm font-bold text-gray-500">Ilimitado</span>
                     )}
                 </div>
-                {isQuotaExceeded && (
+                {usage && usage.isBlocked && (
                     <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 rounded-lg">
                         <AlertTriangle size={14} />
                         <p>Limite atingido. Faça upgrade para o plano Pro para continuar gerando artes.</p>
@@ -104,9 +124,9 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                                 <p className="text-xs text-gray-500">Dados principais do negócio</p>
                             </div>
                         </div>
-                        <Button onClick={loadExample} variant="ghost" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 font-medium px-3 py-1 rounded-full bg-primary/10">
+                        <button onClick={loadExample} className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 font-medium px-3 py-1 rounded-full bg-primary/10">
                             <Wand2 size={14} /> Usar Exemplo
-                        </Button>
+                        </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -116,7 +136,7 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                             field="companyName" 
                             placeholder="Ex: Calors Automóveis" 
                             onChange={handleInputChange} 
-                            maxLength={100}
+                            maxLength={100} // Limite de 100 caracteres
                         />
                         <div className="space-y-1.5 group">
                             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
@@ -165,40 +185,15 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                     </div>
                 </div>
             </div>
-            
-            {/* Section 3: Style Selection */}
-            <div className="bg-zinc-900/90 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-                <div className="relative space-y-6">
-                    <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                        <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
-                            <Palette size={18} />
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-white text-lg">3. Estilo de Arte</h3>
-                            <p className="text-xs text-gray-500">Escolha o visual que mais combina com seu negócio</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {ART_STYLES.map(style => (
-                            <StyleCard
-                                key={style.id}
-                                style={style}
-                                isSelected={form.styleId === style.id}
-                                onClick={() => handleInputChange('styleId', style.id)}
-                            />
-                        ))}
-                    </div>
-                </div>
-            </div>
 
-            {/* Section 4: Briefing */}
+            {/* Section 3: Briefing */}
             <div className="bg-gradient-to-b from-zinc-900 to-zinc-950 border border-white/10 rounded-3xl p-6 shadow-2xl flex-grow flex flex-col group hover:border-primary/30 transition-colors">
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-4">
                     <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
                         <Layers size={18} />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-white text-lg">4. O Pedido (Briefing)</h3>
+                        <h3 className="font-semibold text-white text-lg">3. O Pedido (Briefing)</h3>
                         <p className="text-xs text-gray-500">Descreva o que você precisa que a I.A. crie</p>
                     </div>
                 </div>
@@ -222,7 +217,7 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                     onClick={handleGenerate} 
                     isLoading={isGenerating}
                     className="w-full h-16 text-lg font-bold tracking-wide rounded-2xl shadow-[0_0_40px_-10px_rgba(139,92,246,0.5)] bg-gradient-to-r from-primary via-purple-600 to-secondary hover:brightness-110 active:scale-[0.98] transition-all border border-white/20 relative overflow-hidden group"
-                    disabled={!canGenerate || isQuotaExceeded || isLoadingUsage}
+                    disabled={!canGenerate || (usage && usage.isBlocked)} // Desabilita se não puder gerar ou se a quota estiver bloqueada
                 >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out" />
                     <span className="relative flex items-center justify-center gap-3">

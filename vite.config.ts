@@ -20,9 +20,9 @@ import path from 'path';
           plugins: [dyadComponentTagger(), react()],
           define: {
             // Injeta variáveis de ambiente
-            'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL), // Corrigido para usar VITE_SUPABASE_URL
-            'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY), // Corrigido para usar VITE_SUPABASE_ANON_KEY
-            'import.meta.env.VITE_SUPABASE_PROJECT_ID': JSON.stringify(env.VITE_SUPABASE_PROJECT_ID), // Usando VITE_ prefixo se existir
+            'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.SUPABASE_URL), // Rely solely on env.SUPABASE_URL
+            'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.SUPABASE_ANON_KEY), // Rely solely on env.SUPABASE_ANON_KEY
+            'import.meta.env.VITE_SUPABASE_PROJECT_ID': JSON.stringify(env.SUPABASE_PROJECT_ID), // Added Supabase Project ID
           },
           resolve: {
             alias: {
