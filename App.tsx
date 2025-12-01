@@ -2,15 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth'; // FIX: Assuming path is correct (Error 1)
 import { useGeneration } from './hooks/useGeneration';
-import { UserRole } from './types'; // FIX: Removed unused UsageData import (Error 2)
+import { UserRole } from './types'; 
 import { AppHeader } from './components/AppHeader';
 import { SettingsModal } from './components/Modals';
 import { GenerationForm } from './components/GenerationForm';
 import { GenerationHistory } from './components/GenerationHistory';
 import { PricingPage } from './components/PricingPage';
 import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/LoginPage'; // FIX: Assuming path is correct (Error 3)
-import { RegisterPage } from './pages/RegisterPage'; // FIX: Assuming path is correct (Error 4)
+import { LoginPage } from './pages/LoginPage'; // FIX: Assuming path is correct (Error 2)
+import { RegisterPage } from './pages/RegisterPage'; // FIX: Assuming path is correct (Error 3)
 import { DevPanelPage } from './pages/DevPanelPage';
 import { OwnerPanelPage } from './pages/OwnerPanelPage';
 import { Button } from './components/Button';

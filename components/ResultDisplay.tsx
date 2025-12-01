@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { GeneratedImage, GenerationState, GenerationStatus } from '../types';
+import { GenerationState, GenerationStatus } from '../types'; // FIX: Removed unused GeneratedImage (Error 4)
 import { ImageResult } from './ImageResult';
 import { History, Sparkles, Loader2 } from 'lucide-react';
 
@@ -14,10 +14,9 @@ interface ResultDisplayProps {
 const ResultDisplayComponent: React.FC<ResultDisplayProps> = ({ 
     state, 
     downloadImage, 
-    // FIX: Removed unused 'showGallery' from destructuring (Error 5)
     setShowGallery 
 }) => { 
-    const resultRef = useRef<HTMLDivElement>(null);
+    // FIX: Removed unused resultRef (Error 5)
 
     // Placeholder logic based on context
     const isLoading = state.status === GenerationStatus.GENERATING;
