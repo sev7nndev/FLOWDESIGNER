@@ -27,6 +27,7 @@ export default {
         'fade-in': 'fadeIn 0.8s ease-out forwards',
         'shimmer': 'shimmer 2s linear infinite',
         'scroll': 'scroll 40s linear infinite',
+        'glow': 'glow 4s ease-in-out infinite', // Nova animação de brilho
       },
       keyframes: {
         fadeIn: {
@@ -40,6 +41,10 @@ export default {
         scroll: {
           '0%': { transform: 'translateX(0)' },
           '100%': { transform: 'translateX(-100%)' },
+        },
+        glow: { // Novo keyframe para o brilho
+          '0%, 100%': { opacity: '0.3' },
+          '50%': { opacity: '0.7' },
         }
       }
     },
