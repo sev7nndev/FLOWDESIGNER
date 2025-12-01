@@ -63,7 +63,6 @@ export function HoverBorderGradient({
       }}
       onMouseLeave={() => setHovered(false)}
       className={cn(
-        // CORREÇÃO 1: Removendo flex-col e gap-10.
         "relative flex rounded-full content-center bg-transparent items-center h-min justify-center overflow-visible p-[2px] decoration-clone w-fit",
         containerClassName
       )}
@@ -71,8 +70,8 @@ export function HoverBorderGradient({
     >
       <div
         className={cn(
-          // CORREÇÃO 2: Adicionando flex items-center justify-center para alinhar o conteúdo (texto e ícone)
-          "w-auto text-white z-10 bg-black px-4 py-2 rounded-[inherit] flex items-center justify-center",
+          // MUDANÇA AQUI: Alterando bg-black para bg-slate-900 (tom escuro)
+          "w-auto text-white z-10 bg-slate-900 px-4 py-2 rounded-[inherit] flex items-center justify-center",
           className
         )}
       >
@@ -96,7 +95,8 @@ export function HoverBorderGradient({
         }}
         transition={{ ease: "linear", duration: duration ?? 1 }}
       />
-      <div className="bg-black absolute z-1 flex-none inset-[2px] rounded-[inherit]" />
+      {/* MUDANÇA AQUI: Alterando bg-black para bg-slate-900 (tom escuro) na máscara interna */}
+      <div className="bg-slate-900 absolute z-1 flex-none inset-[2px] rounded-[inherit]" />
     </Tag>
   );
 }
