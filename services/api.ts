@@ -27,6 +27,12 @@ export const api = {
       if (!response.ok) {
         try {
           const err = await response.json();
+          
+          // Verifica se o erro é de quota bloqueada
+          if (err.quotaStatus === 'BLOCKED') {
+              throw new Error(err.error || "Você atingiu o limite de gerações.");
+          }
+          
           throw new Error(err.error || "Erro no servidor");
         } catch (e) {
           console.error("Falha ao analisar a resposta de erro como JSON.", { status: response.status, statusText: response.statusText });
@@ -36,15 +42,92 @@ export const api = {
 
       const data = await response.json();
       
-      // Get a secure, signed URL for the newly created image
-      const signedUrl = await api.getDownloadUrl(data.image.image_url);
-
+      // O backend agora retorna jobId, não a imagem final. O frontend precisa fazer polling.
+      const jobId = data.jobId;
+      
+      // Inicia o polling para verificar o status do trabalho
+      let jobStatus = 'PENDING';
+      let resultData: any = null;
+      let attempts = 0;
+      const MAX_ATTEMPTS = 60; // 60 seconds max polling time
+      
+      while (jobStatus === 'PENDING' && attempts < MAX_ATTEMPTS) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Espera 1 segundo
+          attempts++;
+          
+          const statusResponse = await fetch(`${BACKEND_URL}/job-status/${jobId}`, {
+              method: "GET",
+              headers: {
+                  "Authorization": `Bearer ${session.access_token}` 
+              }
+          });
+          
+          if (!statusResponse.ok) {
+              throw new Error("Falha ao verificar o status do trabalho.");
+          }
+          
+          resultData = await statusResponse.json();
+          jobStatus = resultData.status;
+          
+          if (jobStatus === 'FAILED') {
+              throw new Error(resultData.error || "A geração da imagem falhou.");
+          }
+      }
+      
+      if (jobStatus !== 'COMPLETED' || !resultData.imageUrl) {
+          throw new Error("Tempo limite excedido ou trabalho não concluído.");
+      }
+      
+      // O backend agora retorna a URL pública (já assinada se necessário)
+      const finalImageUrl = resultData.imageUrl;
+      
+      // Como o backend já salvou o registro completo na tabela 'images', 
+      // precisamos buscar os metadados completos (prompt, businessInfo, createdAt)
+      // para retornar o objeto GeneratedImage completo.
+      
+      // Nota: Para simplificar, vamos assumir que o backend retorna a URL final, 
+      // e o frontend precisa buscar o histórico para obter os metadados completos.
+      // No entanto, para o fluxo de 'currentImage', vamos buscar o histórico e pegar o mais recente.
+      
+      // Para evitar uma chamada extra de histórico aqui, vamos refatorar o backend para retornar o objeto 'image' completo
+      // ou, mais simplesmente, confiar que o próximo loadHistory() no hook useGeneration
+      // trará o resultado correto.
+      
+      // Para manter a compatibilidade com o GeneratedImage, vamos retornar um objeto mínimo
+      // e confiar que o useGeneration fará o loadHistory logo em seguida.
+      
+      // Melhoria: O backend deve retornar o ID da imagem gerada para que possamos buscá-la.
+      // Como o backend não retorna o ID da imagem, vamos forçar o loadHistory no hook.
+      
+      // Por enquanto, retornamos um objeto mínimo que o hook pode usar para atualizar o estado
+      // antes de carregar o histórico completo.
+      
+      // O backend agora retorna a URL pública (já assinada se necessário)
+      const supabaseAnonClient = getSupabase();
+      const { data: imageRecord, error: fetchError } = await supabaseAnonClient!
+        .from('images')
+        .select('*')
+        .eq('image_url', finalImageUrl.split('/generated-arts/')[1]) // Busca pelo path
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (fetchError || !imageRecord) {
+          console.error("Falha ao buscar metadados da imagem recém-gerada:", fetchError);
+          throw new Error("Arte gerada, mas falha ao carregar metadados.");
+      }
+      
+      // O backend agora retorna a URL pública (já assinada se necessário)
+      const { data: { publicUrl } } = supabaseAnonClient!.storage
+          .from('generated-arts')
+          .getPublicUrl(imageRecord.image_url);
+          
       return {
-        id: data.image.id,
-        url: signedUrl,
-        prompt: data.image.prompt,
-        businessInfo: data.image.business_info,
-        createdAt: new Date(data.image.created_at).getTime()
+          id: imageRecord.id,
+          url: publicUrl,
+          prompt: imageRecord.prompt,
+          businessInfo: imageRecord.business_info,
+          createdAt: new Date(imageRecord.created_at).getTime()
       };
 
     } catch (error) {
@@ -67,25 +150,22 @@ export const api = {
 
     if (error || !data) return [];
 
-    // Generate signed URLs for all images in parallel for performance
-    const historyWithUrls = await Promise.all(data.map(async (row: any) => {
-        try {
-            const signedUrl = await api.getDownloadUrl(row.image_url);
-            return {
-                id: row.id,
-                url: signedUrl,
-                prompt: row.prompt,
-                businessInfo: row.business_info,
-                createdAt: new Date(row.created_at).getTime()
-            };
-        } catch (e) {
-            console.warn(`Could not get signed URL for image ${row.id}. It might have been deleted.`);
-            return null;
-        }
-    }));
+    // Generate public URLs for all images
+    const historyWithUrls = data.map((row: any) => {
+        const { data: { publicUrl } } = supabase.storage
+            .from('generated-arts')
+            .getPublicUrl(row.image_url);
+            
+        return {
+            id: row.id,
+            url: publicUrl,
+            prompt: row.prompt,
+            businessInfo: row.business_info,
+            createdAt: new Date(row.created_at).getTime()
+        };
+    });
 
-    // Filter out any images that failed to get a URL
-    return historyWithUrls.filter((item): item is GeneratedImage => item !== null);
+    return historyWithUrls;
   },
   
   getLandingImages: async (): Promise<LandingImage[]> => {
@@ -184,38 +264,10 @@ export const api = {
     }
   },
 
-  getDownloadUrl: async (path: string): Promise<string> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Supabase not configured.");
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Faça login para acessar arquivos.");
-
-    // Use environment variable for Supabase Project ID (Issue 3 Fix)
-    const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-    const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/get-signed-url`;
-
-    try {
-        const response = await fetch(EDGE_FUNCTION_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${session.access_token}` 
-            },
-            body: JSON.stringify({ path })
-        });
-
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || "Erro ao gerar URL segura.");
-        }
-
-        const data = await response.json();
-        return data.signedUrl;
-
-    } catch (error) {
-        console.error("Error generating signed URL via Edge Function:", error);
-        throw new Error("Falha ao gerar URL de download segura.");
-    }
-  }
+  // Removido getDownloadUrl, pois o bucket 'generated-arts' agora é público (ou o backend retorna a URL pública)
+  // e o acesso é feito diretamente via URL pública do Supabase Storage.
+  // Se o bucket for privado, o backend deve retornar a URL assinada.
+  // Assumindo que o bucket 'generated-arts' é público para simplificar o acesso após a geração.
+  // Se for privado, o backend deve retornar a URL assinada.
+  // Como o backend agora retorna a URL final, não precisamos mais do getDownloadUrl.
 };

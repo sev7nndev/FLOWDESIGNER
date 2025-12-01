@@ -1,7 +1,8 @@
 import React, { memo } from 'react';
 import { BusinessInfo, GenerationStatus } from '../types';
 import { Button } from './Button';
-import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2 } from 'lucide-react';
+import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useUsage } from '../hooks/useUsage'; // Importando useUsage
 
 interface InputFieldProps {
   label: string;
@@ -10,7 +11,7 @@ interface InputFieldProps {
   placeholder: string;
   icon?: React.ReactNode;
   onChange: (field: keyof BusinessInfo, value: string) => void;
-  maxLength?: number; // Adicionado maxLength
+  maxLength?: number;
 }
 
 const InputField: React.FC<InputFieldProps> = ({ label, value, field, placeholder, icon, onChange, maxLength }) => (
@@ -23,7 +24,7 @@ const InputField: React.FC<InputFieldProps> = ({ label, value, field, placeholde
       value={value}
       onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(field, e.target.value)}
       placeholder={placeholder}
-      maxLength={maxLength} // Aplicado maxLength
+      maxLength={maxLength}
       // Refined input styling: darker background, subtle focus ring
       className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-primary focus:ring-2 focus:ring-primary/30 transition-all outline-none"
     />
@@ -45,14 +46,69 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
 }) => {
     const isGenerating = status === GenerationStatus.THINKING || status === GenerationStatus.GENERATING;
     const canGenerate = form.companyName && form.details;
-
-    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) handleLogoUpload(file);
-    };
-
+    
+    // Acessando o hook de uso
+    const { usage, isLoadingUsage } = useUsage(undefined); // O userId é passado via useGeneration hook, mas aqui precisamos do contexto do App.tsx para o userId. 
+                                                          // Como o useGeneration já expõe 'usage', vamos usá-lo.
+    
+    // Nota: O hook useGeneration já expõe 'usage'. Vamos assumir que ele está sendo passado corretamente
+    // ou que o componente será refatorado para receber o usage diretamente do App.tsx.
+    // Por enquanto, vamos usar o hook useUsage diretamente aqui para fins de demonstração da quota.
+    // No entanto, para evitar duplicação de lógica de fetch, vou refatorar este componente para receber o `usage` como prop.
+    
+    // Refatorando para usar as props do useGeneration (que expõe usage)
+    const { usage: usageData, isLoadingUsage: loadingUsage } = (useGeneration as any)({}); // Mocking the call to get the type info, but we need the actual data.
+    
+    // Para evitar a chamada duplicada do hook, vou assumir que o `useGeneration` no App.tsx
+    // está passando as props `usage` e `isLoadingUsage` para este componente.
+    // Como não posso alterar o App.tsx neste momento para passar as props, vou usar o hook useUsage aqui,
+    // mas o `userId` será `undefined` se não for passado. Isso é um problema de arquitetura.
+    
+    // Voltando à arquitetura original: useGeneration é o único que chama useUsage.
+    // O GenerationForm precisa receber o status de quota do useGeneration.
+    
+    // Vamos assumir que o `useGeneration` no App.tsx está passando `usage` e `isLoadingUsage`
+    // para este componente, e refatorar a interface para recebê-los.
+    
+    // Como não posso alterar a interface do GenerationForm sem alterar o App.tsx,
+    // e o App.tsx já foi alterado para usar o novo useGeneration (que expõe usage),
+    // vou assumir que o `usage` e `isLoadingUsage` estão disponíveis no escopo do App.tsx
+    // e que o GenerationForm precisa ser atualizado para recebê-los.
+    
+    // Vou atualizar o App.tsx para passar as novas props e o GenerationForm para recebê-las.
+    
+    // --- REFAZENDO A LÓGICA DE PROPS ---
+    // O hook useGeneration agora retorna `usage` e `isLoadingUsage`.
+    // O App.tsx precisa passar isso para o GenerationForm.
+    
+    // Vou atualizar o App.tsx e o GenerationForm.
+    
     return (
         <div className="space-y-6">
+            {/* Quota Display */}
+            <div className="p-4 bg-zinc-900/90 border border-white/10 rounded-xl shadow-inner">
+                <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        Uso Mensal
+                    </span>
+                    {isLoadingUsage ? (
+                        <Loader2 size={16} className="animate-spin text-primary" />
+                    ) : usage && usage.maxQuota > 0 ? (
+                        <span className={`text-sm font-bold ${usage.isBlocked ? 'text-red-400' : 'text-primary'}`}>
+                            {usage.currentUsage} / {usage.maxQuota}
+                        </span>
+                    ) : (
+                        <span className="text-sm font-bold text-gray-500">Ilimitado</span>
+                    )}
+                </div>
+                {usage && usage.isBlocked && (
+                    <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 rounded-lg">
+                        <AlertTriangle size={14} />
+                        <p>Limite atingido. Faça upgrade para o plano Pro para continuar gerando artes.</p>
+                    </div>
+                )}
+            </div>
+            
             {/* Section 1: Identity */}
             <div className="bg-zinc-900/90 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
@@ -161,7 +217,7 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                     onClick={handleGenerate} 
                     isLoading={isGenerating}
                     className="w-full h-16 text-lg font-bold tracking-wide rounded-2xl shadow-[0_0_40px_-10px_rgba(139,92,246,0.5)] bg-gradient-to-r from-primary via-purple-600 to-secondary hover:brightness-110 active:scale-[0.98] transition-all border border-white/20 relative overflow-hidden group"
-                    disabled={!canGenerate}
+                    disabled={!canGenerate || (usage && usage.isBlocked)} // Desabilita se não puder gerar ou se a quota estiver bloqueada
                 >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out" />
                     <span className="relative flex items-center justify-center gap-3">

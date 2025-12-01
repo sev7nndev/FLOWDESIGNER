@@ -8,11 +8,11 @@ import { Sparkles } from 'lucide-react';
 import { useGeneration } from './hooks/useGeneration';
 import { ResultDisplay } from './components/ResultDisplay';
 import { SettingsModal } from './components/Modals';
-import { useProfile } from './hooks/useProfile'; // Import useProfile
+import { useProfile } from './hooks/useProfile';
 import { GenerationForm } from './components/GenerationForm';
-import { AppHeader } from './components/AppHeader'; // Import new header
-import { useLandingImages } from './hooks/useLandingImages'; // Import useLandingImages
-import { DevPanelPage } from './pages/DevPanelPage'; // Import new DevPanelPage
+import { AppHeader } from './components/AppHeader';
+import { useLandingImages } from './hooks/useLandingImages';
+import { DevPanelPage } from './pages/DevPanelPage';
 
 // Define a minimal structure for the authenticated user before profile is loaded
 interface AuthUser {
@@ -45,7 +45,8 @@ export const App: React.FC = () => {
 
   // Generation Logic Hook
   const { 
-    form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage
+    form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage,
+    usage, isLoadingUsage // NOVOS: Quota e Status de Uso
   } = useGeneration(user);
   
   // Landing Images Hook (Used by LandingPage and DevPanel)
@@ -96,9 +97,6 @@ export const App: React.FC = () => {
     }
   }, [user, loadHistory]);
 
-  // Removed: Auto-open Dev Panel if user is Admin/Dev after profile loads
-  // The DevPanelPage will now handle its own access display.
-
   const handleLogout = async () => {
     const supabase = getSupabase();
     if (supabase) await supabase.auth.signOut();
@@ -147,7 +145,7 @@ export const App: React.FC = () => {
         profileRole={profileRole} 
         onLogout={handleLogout} 
         onShowSettings={() => setShowSettings(true)} 
-        onShowDevPanel={() => setView('DEV_PANEL')} // Change to setView
+        onShowDevPanel={() => setView('DEV_PANEL')}
       />
 
       <div className="relative z-10 -mt-8 md:-mt-10">
@@ -168,6 +166,8 @@ export const App: React.FC = () => {
                 handleLogoUpload={handleLogoUpload}
                 handleGenerate={handleGenerate}
                 loadExample={loadExample}
+                usage={usage} // PASSANDO O USO
+                isLoadingUsage={isLoadingUsage} // PASSANDO O STATUS DE CARREGAMENTO
             />
           </div>
 

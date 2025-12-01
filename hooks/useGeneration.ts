@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User } from '../types';
 import { api } from '../services/api';
 import { PLACEHOLDER_EXAMPLES } from '../constants';
+import { useUsage } from './useUsage'; // Importando o novo hook de uso
 
 const INITIAL_FORM: BusinessInfo = {
     companyName: '', phone: '', addressStreet: '', addressNumber: '',
@@ -21,6 +22,7 @@ const MAX_LOGO_KB = Math.round(MAX_LOGO_BASE64_LENGTH / 1.33 / 1024); // Approx 
 export const useGeneration = (user: User | null) => {
     const [form, setForm] = useState<BusinessInfo>(INITIAL_FORM);
     const [state, setState] = useState<GenerationState>(INITIAL_STATE);
+    const { usage, isLoadingUsage, refreshUsage } = useUsage(user?.id); // Usando o novo hook
 
     const handleInputChange = useCallback((field: keyof BusinessInfo, value: string) => {
         setForm((prev: BusinessInfo) => ({ ...prev, [field]: value }));
@@ -59,16 +61,31 @@ export const useGeneration = (user: User | null) => {
 
     const handleGenerate = useCallback(async () => {
         if (!form.companyName || !form.details) return;
+        
+        // Verifica a quota localmente (embora o backend também verifique)
+        if (usage?.isBlocked) {
+            setState((prev: GenerationState) => ({ 
+                ...prev, 
+                status: GenerationStatus.ERROR, 
+                error: `Você atingiu o limite de ${usage.maxQuota} gerações. Faça upgrade para continuar.` 
+            }));
+            return;
+        }
 
         setState((prev: GenerationState) => ({ ...prev, status: GenerationStatus.GENERATING, error: undefined }));
 
         try {
             const newImage = await api.generate(form);
             
+            // Após o sucesso, atualiza o uso e o histórico
+            await refreshUsage();
+            await loadHistory(); // Recarrega o histórico para obter o registro completo
+            
+            // Encontra a imagem recém-gerada no histórico (a mais recente)
             setState((prev: GenerationState) => ({
                 status: GenerationStatus.SUCCESS,
                 currentImage: newImage,
-                history: [newImage, ...prev.history]
+                history: [newImage, ...prev.history.filter(img => img.id !== newImage.id)] // Garante que a nova imagem esteja no topo
             }));
 
         } catch (err: any) {
@@ -79,7 +96,7 @@ export const useGeneration = (user: User | null) => {
                 error: err.message || "Erro ao gerar arte. Verifique se o Backend está rodando." 
             }));
         }
-    }, [form]);
+    }, [form, usage, refreshUsage, loadHistory]);
 
     const downloadImage = useCallback((image: GeneratedImage) => {
         const link = document.createElement('a');
@@ -100,6 +117,8 @@ export const useGeneration = (user: User | null) => {
         loadHistory,
         downloadImage,
         setForm,
-        setState
+        setState,
+        usage, // Expondo o uso
+        isLoadingUsage
     };
 };

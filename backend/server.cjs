@@ -15,50 +15,48 @@ const express = require('express');
     // Environment Variables
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY; // Added for JWT verification
+    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    const FREEPIK_API_KEY = process.env.FREEPIK_API_KEY;
+    // REMOVIDO: const FREEPIK_API_KEY = process.env.FREEPIK_API_KEY;
 
     // Validate environment variables
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SUPABASE_ANON_KEY || !GEMINI_API_KEY || !FREEPIK_API_KEY) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SUPABASE_ANON_KEY || !GEMINI_API_KEY) {
       console.error("Missing one or more environment variables. Please check your .env.local file.");
       process.exit(1);
     }
 
     // Supabase Clients
-    // Service Role Client (High Privilege)
     const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Anon Client (Low Privilege - for JWT verification)
     const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
     // Gemini AI Client
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // O modelo de imagem (imagen-3.0-generate-002) será usado para gerar a arte final
+    const imageModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-002" });
+
 
     // Middleware
     app.use(cors({
-      origin: ['http://localhost:3000', 'https://ai.studio'], // Allow your frontend origin
+      origin: ['http://localhost:3000', 'https://ai.studio'],
       methods: ['GET', 'POST', 'DELETE', 'PUT'],
       allowedHeaders: ['Content-Type', 'Authorization'],
     }));
-    app.use(express.json({ limit: '50mb' })); // Increased limit for potential base64 logos
-
-    // Trust proxy for correct IP identification in rate limiting
+    app.use(express.json({ limit: '50mb' }));
     app.set('trust proxy', 1);
 
     // Rate Limiting for generation endpoint (user-based)
     const generationLimiter = rateLimit({
-      windowMs: 60 * 1000, // 1 minute
-      max: 5, // Limit each user to 5 requests per windowMs
+      windowMs: 60 * 1000,
+      max: 5,
       message: "Muitas requisições de geração. Por favor, tente novamente após um minuto.",
-      standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-      legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-      keyGenerator: (req, res) => req.user.id, // Use authenticated user's ID for rate limiting
+      standardHeaders: true,
+      legacyHeaders: false,
+      keyGenerator: (req, res) => req.user.id,
     });
 
     // Helper function to verify JWT token
@@ -78,7 +76,7 @@ const express = require('express');
           return res.status(403).json({ error: 'Token inválido ou expirado.' });
         }
 
-        req.user = { id: user.id, email: user.email, token: token }; // Attach user info to request
+        req.user = { id: user.id, email: user.email, token: token };
         next();
       } catch (e) {
         console.error("Error during token authentication:", e.message);
@@ -110,194 +108,280 @@ const express = require('express');
       }
     };
 
-    // AI Prompt Generation
-    async function generateDetailedPrompt(userPrompt) {
-      const prompt = `Você é um especialista em marketing e design. Sua tarefa é transformar um pedido simples de um usuário em um briefing de imagem detalhado para uma IA de geração de imagens. O briefing deve ser extremamente descritivo, com foco em:
-      - Estilo artístico (ex: fotorrealista, 3D render, ilustração vetorial, cyberpunk, minimalista, vintage)
-      - Paleta de cores (ex: tons vibrantes, monocromático, pastel, neon)
-      - Iluminação (ex: dramática, suave, luz natural, estúdio)
-      - Composição (ex: close-up, grande angular, simétrico, dinâmico)
-      - Elementos específicos (objetos, pessoas, texturas, fundos)
-      - Atmosfera/Sentimento (ex: moderno, acolhedor, futurista, luxuoso)
-      - Qualidade da imagem (ex: 8K, ultra detalhado, fotorrealista)
+    // --- Funções de Quota e Uso ---
 
-      O objetivo é que a IA crie uma imagem de alta qualidade que represente visualmente o negócio ou a promoção descrita.
+    async function checkImageQuota(userId) {
+        const { data: usageData, error: usageError } = await supabaseService
+            .from('user_usage')
+            .select('current_usage, plan_id, plans:plan_id(max_images_per_month)')
+            .eq('user_id', userId)
+            .single();
 
-      Exemplo de entrada do usuário: "Oficina mecânica completa. Faço lanternagem, pintura, rebaixamento, consertos de motor e troca de óleo. Faço tudo em carros nacionais e importados."
-
-      Exemplo de saída detalhada: "Fotorrealista, imagem de alta resolução 8K de uma oficina mecânica moderna e limpa. A paleta de cores é dominada por tons de cinza escuro, preto e detalhes em vermelho vibrante e azul neon. A iluminação é dramática, com focos de luz destacando ferramentas cromadas e a silhueta de um carro esportivo sendo trabalhado. Composição em grande angular mostrando diferentes estações de trabalho: uma área de pintura com um carro sendo preparado, uma área de lanternagem com ferramentas específicas, e um elevador com um carro importado. Detalhes como respingos de óleo limpos no chão, pneus empilhados e um logotipo sutil da oficina na parede. A atmosfera é de profissionalismo, tecnologia e eficiência. Foco em texturas metálicas e reflexos."
-
-      Agora, transforme o seguinte pedido do usuário em um briefing detalhado para a IA: "${userPrompt}"`;
-
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
-    }
-
-    // Freepik Image Generation
-    async function generateImage(detailedPrompt) {
-      try {
-        const response = await axios.post(
-          'https://api.freepik.com/v1/ai/image-generator',
-          {
-            prompt: detailedPrompt,
-            art_style: 'photorealistic', // You can make this dynamic if needed
-            aspect_ratio: '3:4', // Common for flyers/social media posts
-            output_type: 'url',
-            num_images: 1,
-          },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Freepik-API-Key': FREEPIK_API_KEY,
-            },
-          }
-        );
-
-        if (response.data && response.data.data && response.data.data.length > 0) {
-          return response.data.data[0].image_url;
-        } else {
-          throw new Error('Nenhuma imagem gerada pela Freepik.');
+        if (usageError || !usageData) {
+            console.error("Quota check failed:", usageError?.message);
+            return { status: 'ERROR', message: 'Falha ao verificar o plano de uso.' };
         }
-      } catch (error) {
-        console.error('Erro ao gerar imagem com Freepik:', error.response ? error.response.data : error.message);
-        throw new Error('Falha ao gerar imagem. Tente novamente mais tarde.');
-      }
+
+        const maxQuota = usageData.plans?.max_images_per_month || 0;
+        const currentUsage = usageData.current_usage || 0;
+        const planId = usageData.plan_id;
+
+        // Admin/Devs têm uso ilimitado
+        if (planId === 'admin' || planId === 'dev') {
+            return { status: 'OK', message: 'Uso ilimitado.', currentUsage, maxQuota };
+        }
+
+        if (currentUsage >= maxQuota) {
+            return { 
+                status: 'BLOCKED', 
+                message: `Você atingiu o limite de ${maxQuota} gerações para o seu plano (${planId}). Faça upgrade para continuar.` 
+            };
+        }
+
+        return { status: 'OK', message: 'Geração permitida.', currentUsage, maxQuota };
     }
 
-    // Supabase Storage Upload
-    async function uploadImageToSupabase(imageUrl, userId) {
-      try {
-        const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
-        const actualContentType = imageResponse.headers['content-type'] || 'image/png'; // Fallback to png
-
-        const filePath = `${userId}/${uuidv4()}.png`; // Store images under user's ID
-        const { data, error } = await supabaseService.storage
-          .from('generated-arts')
-          .upload(filePath, imageBuffer, {
-            contentType: actualContentType, // Use dynamic content type
-            upsert: false,
-          });
+    async function incrementUsage(userId) {
+        const { error } = await supabaseService
+            .rpc('increment_user_usage', { user_id_input: userId });
 
         if (error) {
-          throw new Error(`Erro ao fazer upload para Supabase Storage: ${error.message}`);
+            console.error(`Falha ao incrementar o uso para o usuário ${userId}:`, error);
+            throw new Error('Falha ao registrar o uso da imagem.');
         }
-        return data.path; // Return the path in the bucket
-      } catch (error) {
-        console.error('Erro ao fazer upload da imagem para o Supabase Storage:', error.message);
-        throw new Error('Falha ao salvar a imagem gerada.');
-      }
+    }
+    
+    // --- Função de Construção do Prompt (Substitui generateDetailedPrompt) ---
+
+    function constructFinalImagePrompt(businessInfo) {
+        // Extrai informações para o prompt
+        const { companyName, phone, addressStreet, addressNumber, addressNeighborhood, addressCity, details } = businessInfo;
+        
+        // Constrói a lista de serviços/diferenciais
+        const servicesList = details.split('.').map(s => s.trim()).filter(s => s.length > 0).join('; ');
+        
+        // Constrói o endereço completo
+        const address = [addressStreet, addressNumber, addressNeighborhood, addressCity]
+            .filter(Boolean)
+            .join(', ');
+
+        // O prompt final segue o template fornecido pelo usuário
+        const finalPrompt = `Você é um designer profissional de social media. Gere uma arte de FLYER VERTICAL em alta qualidade, com aparência profissional.
+        Use como referência o nível de qualidade de flyers modernos de pet shop, oficina mecânica, barbearia, lanchonete, salão de beleza, imobiliária e clínica, com:
+        - composição bem organizada;
+        - tipografia clara e hierarquia entre título, subtítulo e lista de serviços;
+        - ilustrações ou imagens relacionadas ao nicho;
+        - fundo bem trabalhado, mas sem poluir o texto.
+        Nicho do cliente: ${details}.
+        Dados que DEVEM aparecer no flyer:
+        - Nome da empresa: ${companyName}
+        - Serviços principais: ${servicesList}
+        - Telefone/WhatsApp: ${phone}
+        - Endereço (se houver): ${address}
+        Diretrizes de design:
+        - Usar cores coerentes com o nicho (ex.: suaves para pet shop/saúde; escuras e fortes para mecânica/barbearia; quentes para lanchonete etc.).
+        - Reservar espaço para o logotipo.
+        - Não inventar textos aleatórios; use somente os dados fornecidos.`;
+
+        return finalPrompt;
     }
 
-    // --- API Endpoints ---
+    // --- Função de Geração de Imagem (Usando Gemini Image API) ---
 
-    // Generate Image Endpoint
+    const processImageGeneration = async (jobId, userId, promptInfo) => {
+        console.log(`[JOB ${jobId}] Iniciando processamento para o usuário ${userId}...`);
+        
+        const updateJobStatus = async (status, data = {}) => {
+            const { error } = await supabaseService
+                .from('generation_jobs')
+                .update({ status, ...data, updated_at: new Date().toISOString() })
+                .eq('id', jobId);
+            if (error) {
+                console.error(`[JOB ${jobId}] Falha ao atualizar o status para ${status}:`, error);
+            }
+        };
+
+        try {
+            // 1. Quota Check (Segurança extra, embora já checado no /api/generate)
+            const quotaStatus = await checkImageQuota(userId);
+            if (quotaStatus.status === 'BLOCKED') {
+                throw new Error(quotaStatus.message);
+            }
+
+            // 2. Construção do Prompt Final
+            const finalPrompt = constructFinalImagePrompt(promptInfo);
+            console.log(`[JOB ${jobId}] Prompt Final (primeiros 100 chars): ${finalPrompt.substring(0, 100)}...`);
+
+            // 3. Geração da Imagem (Gemini Image API)
+            let imageBase64;
+            try {
+                const imageResult = await imageModel.generateContent({
+                    model: 'imagen-3.0-generate-002',
+                    prompt: finalPrompt,
+                    config: {
+                        numberOfImages: 1,
+                        outputMimeType: 'image/jpeg',
+                        aspectRatio: '3:4', // Vertical Flyer
+                    },
+                });
+                
+                // Verifica se a imagem foi gerada
+                if (!imageResult.generatedImages || imageResult.generatedImages.length === 0) {
+                    throw new Error('A IA não conseguiu gerar a imagem com o prompt fornecido.');
+                }
+                
+                imageBase64 = imageResult.generatedImages[0].image.imageBytes;
+            } catch (geminiError) {
+                console.error(`[JOB ${jobId}] Erro na API Gemini Image:`, geminiError);
+                throw new Error('Falha na geração da imagem pela IA. Tente refinar o briefing.');
+            }
+
+            // 4. Upload e Registro no DB
+            let imagePath;
+            try {
+                // 4a. Upload da imagem (Base64 para Buffer)
+                const imageBuffer = Buffer.from(imageBase64, 'base64');
+                const filePath = `${userId}/${uuidv4()}.jpeg`;
+                
+                const { data: uploadData, error: uploadError } = await supabaseService.storage
+                    .from('generated-arts') // Usando o bucket existente
+                    .upload(filePath, imageBuffer, {
+                        contentType: 'image/jpeg',
+                        upsert: false,
+                    });
+
+                if (uploadError) throw uploadError;
+                imagePath = uploadData.path;
+
+                // 4b. Salva o registro na tabela 'images'
+                const { data: imageRecord, error: dbError } = await supabaseService
+                    .from('images')
+                    .insert({
+                        user_id: userId,
+                        prompt: finalPrompt, // Salva o prompt final detalhado
+                        image_url: imagePath,
+                        business_info: promptInfo,
+                    })
+                    .select()
+                    .single();
+
+                if (dbError) throw dbError;
+                
+                // 4c. Incrementa o uso APÓS o sucesso total
+                await incrementUsage(userId);
+                
+                // 4d. Obtém URL pública (para retornar ao frontend)
+                const { data: { publicUrl } } = supabaseService.storage
+                    .from('generated-arts')
+                    .getPublicUrl(imagePath);
+                    
+                // 5. Sucesso: Atualiza o status do trabalho
+                await updateJobStatus('COMPLETED', { image_url: publicUrl });
+                console.log(`[JOB ${jobId}] Processamento concluído com sucesso. Path: ${imagePath}`);
+
+            } catch (dbError) {
+                console.error(`[JOB ${jobId}] Erro no Supabase (Upload/DB/Incremento):`, dbError);
+                throw new Error('Falha ao salvar a imagem ou registrar o uso.');
+            }
+
+        } catch (error) {
+            // 6. Falha: Atualiza o status do trabalho com a mensagem de erro
+            const errorMessage = error.message || 'Erro desconhecido durante o processamento.';
+            await updateJobStatus('FAILED', { error_message: errorMessage });
+            console.error(`[JOB ${jobId}] Processamento falhou:`, errorMessage);
+        }
+    };
+
+    // --- API Endpoints (Mantendo a lógica de fila) ---
+
+    // Generate Image Endpoint (Inicia o trabalho)
     app.post('/api/generate', authenticateToken, generationLimiter, async (req, res, next) => {
       const { promptInfo } = req.body;
       const user = req.user;
 
-      if (!promptInfo) {
-        return res.status(400).json({ error: "Corpo da requisição inválido: objeto 'promptInfo' ausente." });
-      }
-
-      // Input validation and sanitization
-      const sanitizedPromptInfo = {
-        companyName: sanitizeHtml(promptInfo.companyName || '', { allowedTags: [], allowedAttributes: {} }),
-        phone: sanitizeHtml(promptInfo.phone || '', { allowedTags: [], allowedAttributes: {} }),
-        addressStreet: sanitizeHtml(promptInfo.addressStreet || '', { allowedTags: [], allowedAttributes: {} }),
-        addressNumber: sanitizeHtml(promptInfo.addressNumber || '', { allowedTags: [], allowedAttributes: {} }),
-        addressNeighborhood: sanitizeHtml(promptInfo.addressNeighborhood || '', { allowedTags: [], allowedAttributes: {} }),
-        addressCity: sanitizeHtml(promptInfo.addressCity || '', { allowedTags: [], allowedAttributes: {} }),
-        details: sanitizeHtml(promptInfo.details || '', { allowedTags: [], allowedAttributes: {} }),
-        logo: promptInfo.logo // Logo is base64, handled separately
-      };
-
-      if (!sanitizedPromptInfo.companyName || !sanitizedPromptInfo.details) {
+      if (!promptInfo || !promptInfo.companyName || !promptInfo.details) {
         return res.status(400).json({ error: "Nome da empresa e detalhes são obrigatórios." });
       }
       
-      // Server-side logo size validation (Issue 1 Fix)
-      const MAX_LOGO_BASE64_LENGTH_SERVER = 40000; // Approx 30KB original file size
-      if (sanitizedPromptInfo.logo && sanitizedPromptInfo.logo.length > MAX_LOGO_BASE64_LENGTH_SERVER) {
+      // Server-side logo size validation (Mantido)
+      const MAX_LOGO_BASE64_LENGTH_SERVER = 40000;
+      if (promptInfo.logo && promptInfo.logo.length > MAX_LOGO_BASE64_LENGTH_SERVER) {
         return res.status(400).json({ error: `O logo é muito grande. O tamanho máximo permitido é de ${Math.round(MAX_LOGO_BASE64_LENGTH_SERVER / 1.33 / 1024)}KB.` });
       }
-
+      
+      // 1. Quota Check (Falha Rápida)
+      const quotaResponse = await checkImageQuota(user.id);
+      
+      if (quotaResponse.status === 'BLOCKED') {
+          return res.status(403).json({ 
+              error: quotaResponse.message, 
+              quotaStatus: 'BLOCKED'
+          });
+      }
+      
+      // 2. Cria o registro do trabalho no DB (PENDING)
       try {
-        // Check user role and generation count
-        const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            global: { headers: { Authorization: `Bearer ${user.token}` } }
-        });
-        const { data: profile, error: profileError } = await supabaseAuth.from('profiles').select('role, generations_count').eq('id', user.id).single();
-        if (profileError) throw new Error(`Acesso negado ou perfil não encontrado no Supabase: ${profileError.message}. Verifique a configuração do Supabase.`);
-        
-        const userRole = profile?.role || 'free';
-        const generationsCount = profile?.generations_count || 0;
+          const { data, error } = await supabaseService
+              .from('generation_jobs')
+              .insert({ 
+                  user_id: user.id, 
+                  prompt_info: promptInfo,
+                  status: 'PENDING'
+              })
+              .select('id')
+              .single();
 
-        if (userRole === 'free' && generationsCount >= 3) {
-          return res.status(403).json({ error: 'Você atingiu o limite de 3 gerações gratuitas. Faça upgrade para um plano pago para continuar gerando artes.' });
-        }
-        
-        if (!['admin', 'pro', 'dev', 'free'].includes(userRole)) {
-          return res.status(403).json({ error: 'Acesso negado. A geração de arte requer um plano Pro.' });
-        }
-        
-        // --- REAL AI GENERATION FLOW ---
-        console.log(`[${user.id}] Step 1: Generating detailed prompt for user ${user.email}...`);
-        const detailedPrompt = await generateDetailedPrompt(sanitizedPromptInfo.details);
-        console.log(`[${user.id}] Step 1 Complete. Detailed prompt (first 100 chars): ${detailedPrompt.substring(0, 100)}...`);
+          if (error) throw error;
+          
+          const jobId = data.id;
 
-        console.log(`[${user.id}] Step 2: Generating image with Freepik...`);
-        const generatedImageUrl = await generateImage(detailedPrompt);
-        console.log(`[${user.id}] Step 2 Complete. Generated URL: ${generatedImageUrl}`);
+          // 3. Inicia o processamento em background
+          setTimeout(() => {
+              processImageGeneration(jobId, user.id, promptInfo);
+          }, 0); 
 
-        console.log(`[${user.id}] Step 3: Uploading image to Supabase for user ${user.id}...`);
-        const imagePath = await uploadImageToSupabase(generatedImageUrl, user.id);
-        console.log(`[${user.id}] Step 3 Complete. Supabase path: ${imagePath}`);
-
-        console.log(`[${user.id}] Step 4: Saving record to database for user ${user.id}...`);
-        const { data: image, error: dbError } = await supabaseService
-          .from('images')
-          .insert({
-            user_id: user.id,
-            prompt: detailedPrompt,
-            image_url: imagePath, // Store the path, not the public URL
-            business_info: sanitizedPromptInfo,
-          })
-          .select()
-          .single();
-
-        if (dbError) {
-          console.error(`[${user.id}] DB Insert Error:`, dbError);
-          const errorMessage = dbError.message || 'Erro desconhecido ao inserir no banco de dados Supabase.';
-          return res.status(500).json({ error: `Erro ao salvar a imagem no banco de dados Supabase: ${errorMessage}. Verifique a tabela 'images' e suas permissões.` });
-        }
-        console.log(`[${user.id}] Step 4 Complete. Image ID: ${image.id}`);
-
-        // Increment generations_count for free users
-        if (userRole === 'free') {
-            const { error: updateError } = await supabaseService
-                .from('profiles')
-                .update({ generations_count: generationsCount + 1 })
-                .eq('id', user.id);
-            if (updateError) {
-                console.error(`[${user.id}] Error incrementing generations_count:`, updateError);
-                // This is a non-critical error, but should be logged.
-            }
-        }
-
-        res.json({ 
-          message: 'Arte gerada com sucesso!',
-          image: image
-        });
+          // 4. Retorna 202 Accepted (Processando)
+          res.status(202).json({ 
+              message: 'Geração iniciada. Verifique o status em breve.', 
+              jobId: jobId 
+          });
 
       } catch (error) {
-        // Pass the error to the global error handler
-        next(error);
+          console.error(`Erro ao iniciar o trabalho de geração:`, error);
+          res.status(500).json({ error: 'Falha ao registrar o pedido de geração.' });
       }
     });
 
-    // Admin endpoint to get all generated images
+    // Endpoint /api/job-status/:jobId (Verifica o status do trabalho)
+    app.get('/api/job-status/:jobId', authenticateToken, async (req, res) => {
+        const { jobId } = req.params;
+        const user = req.user;
+
+        try {
+            const { data, error } = await supabaseService
+                .from('generation_jobs')
+                .select('status, image_url, error_message')
+                .eq('id', jobId)
+                .eq('user_id', user.id)
+                .single();
+
+            if (error || !data) {
+                return res.status(404).json({ error: 'Trabalho não encontrado ou acesso negado.' });
+            }
+
+            res.json({
+                status: data.status,
+                imageUrl: data.image_url,
+                error: data.error_message
+            });
+
+        } catch (error) {
+            console.error(`Erro ao buscar status do trabalho ${jobId}:`, error);
+            res.status(500).json({ error: 'Falha ao buscar o status do trabalho.' });
+        }
+    });
+
+    // Admin endpoint to get all generated images (Mantido)
     app.get('/api/admin/images', authenticateToken, checkAdminOrDev, async (req, res, next) => {
       try {
         const { data, error } = await supabaseService
@@ -316,7 +400,7 @@ const express = require('express');
       }
     });
 
-    // Admin endpoint to delete a generated image
+    // Admin endpoint to delete a generated image (Mantido)
     app.delete('/api/admin/images/:id', authenticateToken, checkAdminOrDev, async (req, res, next) => {
       const { id } = req.params;
       const { imageUrl } = req.body; // This is the path in storage, e.g., "user-id/uuid.png"
@@ -353,7 +437,7 @@ const express = require('express');
       }
     });
 
-    // Admin endpoint to upload a landing carousel image (NEW)
+    // Admin endpoint to upload a landing carousel image (Mantido)
     app.post('/api/admin/landing-images/upload', authenticateToken, checkAdminOrDev, async (req, res, next) => {
       const { fileBase64, fileName, userId } = req.body;
       const user = req.user; // Authenticated user from token
@@ -363,7 +447,6 @@ const express = require('express');
       }
 
       // Security check: Ensure the userId in the body matches the authenticated user's ID
-      // This prevents a dev/admin from uploading files under another user's ID if they tried to manipulate the request.
       if (user.id !== userId) {
         return res.status(403).json({ error: "Ação não autorizada para o usuário especificado." });
       }
@@ -433,7 +516,7 @@ const express = require('express');
     });
 
 
-    // Admin endpoint to delete a landing carousel image
+    // Admin endpoint to delete a landing carousel image (Mantido)
     app.delete('/api/admin/landing-images/:id', authenticateToken, checkAdminOrDev, async (req, res, next) => {
       const { id } = req.params;
       const { imagePath } = req.body; // This is the path in storage, e.g., "user-id/uuid.png"
