@@ -1,66 +1,103 @@
-// backend/routes/generationRoutes.cjs
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const { authenticateToken } = require('../middleware/auth');
-const { processImageGeneration, checkAndIncrementQuota, getJobStatus } = require('../services/generationService');
+const { processImageGeneration, checkImageQuota } = require('../services/generationService');
+const { supabaseService } = require('../config');
 
-// POST route to initiate image generation
-router.post('/generate', authenticateToken, async (req, res) => {
-    try {
-        const { businessInfo } = req.body;
-        const userId = req.user.id; // From the authenticated user object
-
-        // 1. Quota Check and increment (This throws an error if quota is reached)
-        // NOTE: Quota check is done before starting the job to fail fast.
-        await checkAndIncrementQuota(userId);
-
-        // 2. Start image generation (returns job ID)
-        const { jobId, status } = await processImageGeneration(userId, businessInfo);
-
-        res.status(202).json({ jobId, status }); // Return the job ID
-    } catch (error) {
-        console.error('Generate image route error:', error);
-        // Check for specific quota error message
-        if (error.message.includes('Quota Reached')) {
-            return res.status(403).json({ error: error.message });
-        }
-        res.status(500).json({ error: error.message || 'Internal server error' });
-    }
+// Rate Limiting for generation endpoint (user-based)
+const generationLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: "Muitas requisições de geração. Por favor, tente novamente após um minuto.",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req, res) => req.user.id,
 });
 
-// GET route to check generation status (for client polling)
-router.get('/status/:jobId', authenticateToken, async (req, res) => {
+// Generate Image Endpoint (Inicia o trabalho)
+router.post('/generate', authenticateToken, generationLimiter, async (req, res, next) => {
+  const { promptInfo } = req.body;
+  const user = req.user;
+
+  if (!promptInfo || !promptInfo.companyName || !promptInfo.details) {
+    return res.status(400).json({ error: "Nome da empresa e detalhes são obrigatórios." });
+  }
+  
+  const MAX_LOGO_BASE64_LENGTH_SERVER = 40000;
+  if (promptInfo.logo && promptInfo.logo.length > MAX_LOGO_BASE64_LENGTH_SERVER) {
+    return res.status(400).json({ error: `O logo é muito grande. O tamanho máximo permitido é de ${Math.round(MAX_LOGO_BASE64_LENGTH_SERVER / 1.33 / 1024)}KB.` });
+  }
+  
+  // 1. Quota Check (Falha Rápida)
+  const quotaResponse = await checkImageQuota(user.id);
+  
+  if (quotaResponse.status === 'BLOCKED') {
+      return res.status(403).json({ 
+          error: quotaResponse.message, 
+          quotaStatus: 'BLOCKED'
+      });
+  }
+  
+  // 2. Cria o registro do trabalho no DB (PENDING)
+  try {
+      const { data, error } = await supabaseService
+          .from('generation_jobs')
+          .insert({ 
+              user_id: user.id, 
+              prompt_info: promptInfo,
+              status: 'PENDING'
+          })
+          .select('id')
+          .single();
+
+      if (error) throw error;
+      
+      const jobId = data.id;
+
+      // 3. Inicia o processamento em background
+      setTimeout(() => {
+          processImageGeneration(jobId, user.id, promptInfo);
+      }, 0); 
+
+      // 4. Retorna 202 Accepted (Processando)
+      res.status(202).json({ 
+          message: 'Geração iniciada. Verifique o status em breve.', 
+          jobId: jobId 
+      });
+
+  } catch (error) {
+      console.error(`Erro ao iniciar o trabalho de geração:`, error);
+      res.status(500).json({ error: 'Falha ao registrar o pedido de geração.' });
+  }
+});
+
+// Endpoint /api/job-status/:jobId (Verifica o status do trabalho)
+router.get('/job-status/:jobId', authenticateToken, async (req, res) => {
+    const { jobId } = req.params;
+    const user = req.user;
+
     try {
-        const { jobId } = req.params;
-        // We rely on RLS/security in the service layer, but the token ensures the user is logged in.
+        const { data, error } = await supabaseService
+            .from('generation_jobs')
+            .select('status, image_url, error_message')
+            .eq('id', jobId)
+            .eq('user_id', user.id)
+            .single();
 
-        const jobDetails = await getJobStatus(jobId);
-
-        if (jobDetails.status === 'FAILED') {
-            return res.status(200).json({
-                status: 'FAILED',
-                error: jobDetails.error_message || 'Generation failed.',
-            });
+        if (error || !data) {
+            return res.status(404).json({ error: 'Trabalho não encontrado ou acesso negado.' });
         }
 
-        if (jobDetails.status === 'COMPLETE' && jobDetails.image_path) {
-            // Generate the public URL for the client
-            const { data } = require('../config').supabaseService.storage
-                .from('generated-arts')
-                .getPublicUrl(jobDetails.image_path);
+        res.json({
+            status: data.status,
+            imageUrl: data.image_url,
+            error: data.error_message
+        });
 
-            res.status(200).json({
-                status: 'COMPLETE',
-                imageUrl: data.publicUrl,
-            });
-        } else {
-            res.status(200).json({
-                status: jobDetails.status,
-            });
-        }
     } catch (error) {
-        console.error('Job status route error:', error);
-        res.status(404).json({ error: error.message || 'Job not found.' });
+        console.error(`Erro ao buscar status do trabalho ${jobId}:`, error);
+        res.status(500).json({ error: 'Falha ao buscar o status do trabalho.' });
     }
 });
 

@@ -1,198 +1,192 @@
-// backend/services/generationService.cjs
-const { GoogleGenAI } = require('@google/genai');
-const { supabaseService, GEMINI_API_KEY, FREE_LIMIT, STARTER_LIMIT } = require('../config');
+const { supabaseService, imageModel } = require('../config');
+const { v4: uuidv4 } = require('uuid');
 
-const ai = new GoogleGenAI(GEMINI_API_KEY);
+// --- Funções de Quota e Uso ---
 
-/**
- * Checks the user's current quota and increments the usage count if allowed.
- * @param {string} userId - The ID of the user.
- */
-const checkAndIncrementQuota = async (userId) => {
-    // 1. Get user role from profiles
-    const { data: profileData, error: profileError } = await supabaseService
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single();
-        
-    if (profileError || !profileData) {
-        throw new Error('User profile not found or failed to retrieve role.');
-    }
-    
-    const role = profileData.role;
-
-    // 2. Get current usage from user_usage
+async function checkImageQuota(userId) {
     const { data: usageData, error: usageError } = await supabaseService
         .from('user_usage')
-        .select('current_usage')
+        .select('current_usage, plan_id, plans:plan_id(max_images_per_month)')
         .eq('user_id', userId)
         .single();
-        
+
     if (usageError || !usageData) {
-        // Assume 0 usage if record is missing (should be handled by trigger, but safe fallback)
-        console.warn(`User ${userId} missing user_usage record. Assuming 0.`);
-        usageData.current_usage = 0;
+        console.error("Quota check failed:", usageError?.message);
+        // Se falhar, assumimos o plano free padrão para evitar bloqueio total
+        return { status: 'OK', message: 'Falha ao verificar o plano de uso, assumindo Free.', currentUsage: 0, maxQuota: 3, planId: 'free' };
     }
 
-    const usage_count = usageData.current_usage;
-    let limit = 0;
-    let isUnlimited = false;
+    const maxQuota = usageData.plans?.max_images_per_month || 0;
+    const currentUsage = usageData.current_usage || 0;
+    const planId = usageData.plan_id;
 
-    switch (role) {
-        case 'owner':
-        case 'dev':
-        case 'admin': // Adicionando admin
-            isUnlimited = true;
-            break;
-        case 'pro': // Assumindo que 'pro' é o plano de maior limite
-            limit = 50; // Usando um limite alto para 'pro'
-            break;
-        case 'starter':
-            limit = STARTER_LIMIT;
-            break;
-        case 'free':
-        default:
-            limit = FREE_LIMIT;
-            break;
+    // Admin/Devs têm uso ilimitado
+    if (planId === 'admin' || planId === 'dev' || maxQuota === 0) {
+        return { status: 'OK', message: 'Uso ilimitado.', currentUsage, maxQuota, planId };
     }
 
-    // 3. Check Quota
-    if (!isUnlimited && usage_count >= limit) {
-        throw new Error(`Quota Reached. Current usage: ${usage_count}/${limit}. Please upgrade your plan.`);
+    if (currentUsage >= maxQuota) {
+        return { 
+            status: 'BLOCKED', 
+            message: `Você atingiu o limite de ${maxQuota} gerações para o seu plano (${planId}). Faça upgrade para continuar.`,
+            currentUsage, maxQuota, planId
+        };
     }
 
-    // 4. Increment Usage Count (using RPC function for safety)
-    if (!isUnlimited) {
-        const { error: rpcError } = await supabaseService
-            .rpc('increment_user_usage', { user_id_input: userId });
+    return { status: 'OK', message: 'Geração permitida.', currentUsage, maxQuota, planId };
+}
 
-        if (rpcError) {
-            console.error('Failed to increment usage count:', rpcError);
-            throw new Error('Failed to update user quota.');
-        }
+async function incrementUsage(userId) {
+    const { error } = await supabaseService
+        .rpc('increment_user_usage', { user_id_input: userId });
+
+    if (error) {
+        console.error(`Falha ao incrementar o uso para o usuário ${userId}:`, error);
+        throw new Error('Falha ao registrar o uso da imagem.');
     }
+}
+
+// --- Função de Construção do Prompt ---
+
+function constructFinalImagePrompt(businessInfo) {
+    const { companyName, phone, addressStreet, addressNumber, addressNeighborhood, addressCity, details } = businessInfo;
     
-    // Return the role for consistency, although not strictly needed here
-    return { role, usage_count, limit, isUnlimited };
-};
+    const servicesList = details.split('.').map(s => s.trim()).filter(s => s.length > 0).join('; ');
+    
+    const address = [addressStreet, addressNumber, addressNeighborhood, addressCity]
+        .filter(Boolean)
+        .join(', ');
 
-/**
- * Initiates the image generation process asynchronously.
- * @param {string} userId - The ID of the user.
- * @param {string} businessInfo - The prompt for the image generation.
- * @returns {Promise<{jobId: string, status: string}>} - The ID and initial status of the job.
- */
-const processImageGeneration = async (userId, businessInfo) => {
-    const prompt = `Generate a high-quality, professional image for a business based on this description: "${businessInfo}". The image should be suitable for a website banner or social media profile.`;
+    const finalPrompt = `Você é um designer profissional de social media. Gere uma arte de FLYER VERTICAL em alta qualidade, com aparência profissional.
+    Use como referência o nível de qualidade de flyers modernos de pet shop, oficina mecânica, barbearia, lanchonete, salão de beleza, imobiliária e clínica, com:
+    - composição bem organizada;
+    - tipografia clara e hierarquia entre título, subtítulo e lista de serviços;
+    - ilustrações ou imagens relacionadas ao nicho;
+    - fundo bem trabalhado, mas sem poluir o texto.
+    Nicho do cliente: ${details}.
+    Dados que DEVEM aparecer no flyer:
+    - Nome da empresa: ${companyName}
+    - Serviços principais: ${servicesList}
+    - Telefone/WhatsApp: ${phone}
+    - Endereço (se houver): ${address}
+    Diretrizes de design:
+    - Usar cores coerentes com o nicho (ex.: suaves para pet shop/saúde; escuras e fortes para mecânica/barbearia; quentes para lanchonete etc.).
+    - Reservar espaço para o logotipo.
+    - Não inventar textos aleatórios; use somente os dados fornecidos.`;
 
-    // 1. Create a new job entry in the database (status: PENDING)
-    const { data: jobData, error: jobError } = await supabaseService
-        .from('generation_jobs') // Usando a tabela existente 'generation_jobs'
-        .insert({ user_id: userId, prompt_info: { details: businessInfo }, status: 'PENDING' }) // Ajustando para o schema de generation_jobs
-        .select('id')
-        .single();
+    return finalPrompt;
+}
 
-    if (jobError || !jobData) {
-        console.error('Failed to create image job:', jobError);
-        throw new Error('Failed to initialize image generation job.');
-    }
+// --- Função de Geração de Imagem (Orquestrador) ---
 
-    const jobId = jobData.id;
+const processImageGeneration = async (jobId, userId, promptInfo) => {
+    console.log(`[JOB ${jobId}] Iniciando processamento para o usuário ${userId}...`);
+    
+    const updateJobStatus = async (status, data = {}) => {
+        const { error } = await supabaseService
+            .from('generation_jobs')
+            .update({ status, ...data, updated_at: new Date().toISOString() })
+            .eq('id', jobId);
+        if (error) {
+            console.error(`[JOB ${jobId}] Falha ao atualizar o status para ${status}:`, error);
+        }
+    };
 
-    // 2. Asynchronously call the AI model and update the job status
-    (async () => {
-        let imagePath = null;
-        let status = 'FAILED';
+    try {
+        // 1. Quota Check (Segurança extra)
+        const quotaStatus = await checkImageQuota(userId);
+        if (quotaStatus.status === 'BLOCKED') {
+            throw new Error(quotaStatus.message);
+        }
 
+        // 2. Construção do Prompt Final
+        const finalPrompt = constructFinalImagePrompt(promptInfo);
+
+        // 3. Geração da Imagem (Gemini Image API)
+        let imageBase64;
         try {
-            // 3. Call Gemini API for image generation
-            const response = await ai.models.generateImages({
+            const imageResult = await imageModel.generateContent({
                 model: 'imagen-3.0-generate-002',
-                prompt: prompt,
+                prompt: finalPrompt,
                 config: {
                     numberOfImages: 1,
                     outputMimeType: 'image/jpeg',
-                    aspectRatio: '1:1',
+                    aspectRatio: '3:4', // Vertical Flyer
                 },
             });
+            
+            if (!imageResult.generatedImages || imageResult.generatedImages.length === 0) {
+                throw new Error('A IA não conseguiu gerar a imagem com o prompt fornecido.');
+            }
+            
+            imageBase64 = imageResult.generatedImages[0].image.imageBytes;
+        } catch (geminiError) {
+            console.error(`[JOB ${jobId}] Erro na API Gemini Image:`, geminiError);
+            throw new Error('Falha na geração da imagem pela IA. Tente refinar o briefing.');
+        }
 
-            // NOTE: The Gemini SDK returns imageBytes as base64 string
-            const imageBase64 = response.generatedImages[0].image.imageBytes;
-
-            // 4. Upload to Supabase Storage
-            const filePath = `${userId}/${jobId}.jpeg`; // Usando o ID do job como nome do arquivo
+        // 4. Upload e Registro no DB
+        let imagePath;
+        let publicUrl;
+        try {
+            // 4a. Upload da imagem (Base64 para Buffer)
+            const imageBuffer = Buffer.from(imageBase64, 'base64');
+            const filePath = `${userId}/${uuidv4()}.jpeg`;
             
             const { data: uploadData, error: uploadError } = await supabaseService.storage
-                .from('generated-arts')
-                .upload(filePath, Buffer.from(imageBase64, 'base64'), {
+                .from('generated-arts') // Usando o bucket existente
+                .upload(filePath, imageBuffer, {
                     contentType: 'image/jpeg',
+                    upsert: false,
                 });
 
-            if (uploadError) {
-                console.error('Image upload failed:', uploadError);
-                throw new Error('Failed to upload image to storage.');
-            }
-
+            if (uploadError) throw uploadError;
             imagePath = uploadData.path;
-            status = 'COMPLETE';
-            
-            // 5. Save the final image record in the 'images' table (as per original schema)
-            const { error: imageInsertError } = await supabaseService
+
+            // 4b. Salva o registro na tabela 'images'
+            const { data: imageRecord, error: dbError } = await supabaseService
                 .from('images')
                 .insert({
                     user_id: userId,
-                    prompt: prompt,
+                    prompt: finalPrompt, // Salva o prompt final detalhado
                     image_url: imagePath,
-                    business_info: { details: businessInfo }, // Simplified business info
-                });
-                
-            if (imageInsertError) {
-                console.error('Failed to insert into images table:', imageInsertError);
-                // Continue to update job status even if image insert fails
-            }
+                    business_info: promptInfo,
+                })
+                .select()
+                .single();
 
-            // 6. Update job status in database with the image path
-            const { error: updateError } = await supabaseService
-                .from('generation_jobs')
-                .update({ status, image_url: imagePath })
-                .eq('id', jobId);
+            if (dbError) throw dbError;
+            
+            // 4c. Incrementa o uso APÓS o sucesso total
+            await incrementUsage(userId);
+            
+            // 4d. Obtém URL pública (para retornar ao frontend)
+            const { data: urlData } = supabaseService.storage
+                .from('generated-arts')
+                .getPublicUrl(imagePath);
+            
+            publicUrl = urlData.publicUrl;
 
-            if (updateError) {
-                console.error('Database update failed:', updateError);
-                // Do not rethrow here, as this is an async background process
-            }
-        } catch (error) {
-            console.error('Image generation failed:', error);
-            // Set status to FAILED in the database
-            await supabaseService.from('generation_jobs').update({ status: 'FAILED', error_message: error.message }).eq('id', jobId);
+            // 5. Sucesso: Atualiza o status do trabalho
+            await updateJobStatus('COMPLETED', { image_url: publicUrl });
+            console.log(`[JOB ${jobId}] Processamento concluído com sucesso. Path: ${imagePath}`);
+
+        } catch (dbError) {
+            console.error(`[JOB ${jobId}] Erro no Supabase (Upload/DB/Incremento):`, dbError);
+            throw new Error('Falha ao salvar a imagem ou registrar o uso.');
         }
-    })();
 
-    return { jobId, status: 'PENDING' };
-};
-
-/**
- * Retrieves the status and image path of a specific job.
- * @param {string} jobId - The ID of the job.
- * @returns {Promise<{status: string, image_path: string | null, error_message: string | null}>} - Job details.
- */
-const getJobStatus = async (jobId) => {
-    const { data, error } = await supabaseService
-        .from('generation_jobs')
-        .select('status, image_url, error_message')
-        .eq('id', jobId)
-        .single();
-
-    if (error || !data) {
-        throw new Error('Job not found or database error.');
+    } catch (error) {
+        // 6. Falha: Atualiza o status do trabalho com a mensagem de erro
+        const errorMessage = error.message || 'Erro desconhecido durante o processamento.';
+        await updateJobStatus('FAILED', { error_message: errorMessage });
+        console.error(`[JOB ${jobId}] Processamento falhou:`, errorMessage);
     }
-
-    return { status: data.status, image_path: data.image_url, error_message: data.error_message };
 };
 
 module.exports = {
+    checkImageQuota,
     processImageGeneration,
-    checkAndIncrementQuota,
-    getJobStatus,
+    incrementUsage,
+    constructFinalImagePrompt,
 };
