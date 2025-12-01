@@ -4,6 +4,7 @@ const cors = require('cors');
 const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config'); // Import the anonymous client and limits
 const generationRoutes = require('./routes/generationRoutes'); // Import the new routes
 const ownerRoutes = require('./routes/ownerRoutes'); // NOVO: Importando rotas do proprietário
+const adminRoutes = require('./routes/adminRoutes'); // NOVO: Importando rotas do Admin
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -12,7 +13,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
     // CORREÇÃO CRÍTICA: Adicionando a porta 3000 (Vite default)
     origin: ['http://localhost:5173', 'http://localhost:3000'], 
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'DELETE'], // Adicionando DELETE para rotas admin
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
@@ -27,6 +28,9 @@ app.get('/', (req, res) => {
 app.use('/api/generation', generationRoutes);
 // NOVO: Rotas do Proprietário
 app.use('/api/owner', ownerRoutes);
+// NOVO: Rotas do Administrador
+app.use('/api/admin', adminRoutes);
+
 
 // --- Quota/Usage Endpoint (Public, but requires user ID/token for data retrieval) ---
 app.get('/api/usage/:userId', async (req, res) => {

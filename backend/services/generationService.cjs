@@ -76,94 +76,87 @@ const checkAndIncrementQuota = async (userId) => {
 
 /**
  * Initiates the image generation process asynchronously.
- * @param {string} userId - The ID of the user.
- * @param {string} businessInfo - The prompt for the image generation.
- * @returns {Promise<{jobId: string, status: string}>} - The ID and initial status of the job.
+ * @param {string} jobId - The ID of the job (used for file path and job update).
+ * @param {string} userId - The ID of the user (CRITICAL FIX: used for RLS and ownership).
+ * @param {object} promptInfo - The prompt information object.
  */
-const processImageGeneration = async (userId, businessInfo) => {
-    const prompt = `Generate a high-quality, professional image for a business based on this description: "${businessInfo}". The image should be suitable for a website banner or social media profile.`;
+const processImageGeneration = async (jobId, userId, promptInfo) => {
+    const prompt = `Generate a high-quality, professional image for a business based on this description: "${promptInfo.details}". The image should be suitable for a website banner or social media profile.`;
 
-    // 1. Create a new job entry in the database (status: PENDING)
-    const { data: jobData, error: jobError } = await supabaseService
-        .from('generation_jobs')
-        .insert({ user_id: userId, prompt_info: { details: businessInfo }, status: 'PENDING' })
-        .select('id')
-        .single();
+    // Status inicial é PENDING, mas o job já foi criado no router.
+    let imagePath = null;
+    let status = 'FAILED';
+    let errorMessage = null;
 
-    if (jobError || !jobData) {
-        console.error('Failed to create image job:', jobError);
-        throw new Error('Falha ao inicializar o trabalho de geração de imagem.');
-    }
+    try {
+        // 1. Call Gemini API for image generation using the shared imageModel
+        const response = await imageModel.generateContent({
+            model: 'imagen-3.0-generate-002',
+            prompt: prompt,
+            config: {
+                numberOfImages: 1,
+                outputMimeType: 'image/jpeg',
+                aspectRatio: '3:4', // Usando 3:4 vertical conforme o frontend espera
+            },
+        });
 
-    const jobId = jobData.id;
+        const imageBase64 = response.generatedImages[0].image.imageBytes;
 
-    // 2. Asynchronously call the AI model and update the job status
-    (async () => {
-        let imagePath = null;
-        let status = 'FAILED';
-
-        try {
-            // 3. Call Gemini API for image generation using the shared imageModel
-            const response = await imageModel.generateContent({
-                model: 'imagen-3.0-generate-002',
-                prompt: prompt,
-                config: {
-                    numberOfImages: 1,
-                    outputMimeType: 'image/jpeg',
-                    aspectRatio: '1:1',
-                },
+        // 2. Upload to Supabase Storage
+        // CRITICAL FIX: Using userId in the path for RLS security
+        const filePath = `${userId}/${jobId}.jpeg`; 
+        
+        const { data: uploadData, error: uploadError } = await supabaseService.storage
+            .from('generated-arts')
+            .upload(filePath, Buffer.from(imageBase64, 'base64'), {
+                contentType: 'image/jpeg',
             });
 
-            const imageBase64 = response.generatedImages[0].image.imageBytes;
-
-            // 4. Upload to Supabase Storage
-            const filePath = `${userId}/${jobId}.jpeg`;
-            
-            const { data: uploadData, error: uploadError } = await supabaseService.storage
-                .from('generated-arts')
-                .upload(filePath, Buffer.from(imageBase64, 'base64'), {
-                    contentType: 'image/jpeg',
-                });
-
-            if (uploadError) {
-                console.error('Image upload failed:', uploadError);
-                throw new Error('Falha ao fazer upload da imagem para o armazenamento.');
-            }
-
-            imagePath = uploadData.path;
-            status = 'COMPLETE';
-            
-            // 5. Save the final image record in the 'images' table (as per original schema)
-            const { error: imageInsertError } = await supabaseService
-                .from('images')
-                .insert({
-                    user_id: userId,
-                    prompt: prompt,
-                    image_url: imagePath,
-                    business_info: { details: businessInfo },
-                });
-                
-            if (imageInsertError) {
-                console.error('Failed to insert into images table:', imageInsertError);
-            }
-
-            // 6. Update job status in database with the image path
-            const { error: updateError } = await supabaseService
-                .from('generation_jobs')
-                .update({ status, image_url: imagePath })
-                .eq('id', jobId);
-
-            if (updateError) {
-                console.error('Database update failed:', updateError);
-            }
-        } catch (error) {
-            console.error('Image generation failed:', error);
-            // Set status to FAILED in the database
-            await supabaseService.from('generation_jobs').update({ status: 'FAILED', error_message: error.message }).eq('id', jobId);
+        if (uploadError) {
+            console.error('Image upload failed:', uploadError);
+            throw new Error('Falha ao fazer upload da imagem para o armazenamento.');
         }
-    })();
 
-    return { jobId, status: 'PENDING' };
+        imagePath = uploadData.path;
+        status = 'COMPLETE';
+        
+        // 3. Save the final image record in the 'images' table
+        const { error: imageInsertError } = await supabaseService
+            .from('images')
+            .insert({
+                user_id: userId, // CRITICAL FIX: Correct user_id
+                prompt: prompt,
+                image_url: imagePath,
+                business_info: promptInfo, // Saving the full business info object
+            });
+            
+        if (imageInsertError) {
+            console.error('Failed to insert into images table:', imageInsertError);
+            errorMessage = 'Falha ao registrar a imagem no histórico.';
+            status = 'FAILED';
+        }
+
+    } catch (error) {
+        console.error('Image generation failed:', error.message);
+        errorMessage = error.message;
+        status = 'FAILED';
+    } finally {
+        // 4. Update job status in database
+        const updatePayload = { 
+            status, 
+            image_url: imagePath, 
+            error_message: errorMessage 
+        };
+        
+        const { error: updateError } = await supabaseService
+            .from('generation_jobs')
+            .update(updatePayload)
+            .eq('id', jobId);
+
+        if (updateError) {
+            console.error('Database job update failed:', updateError);
+        }
+    }
 };
 
 /**

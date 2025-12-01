@@ -28,6 +28,7 @@ export default {
         'shimmer': 'shimmer 2s linear infinite',
         'scroll': 'scroll 40s linear infinite',
         'glow': 'glow 4s ease-in-out infinite',
+        'marquee': 'marquee 40s linear infinite', // NOVA ANIMAÇÃO
       },
       keyframes: {
         fadeIn: {
@@ -38,9 +39,13 @@ export default {
           '0%': { backgroundPosition: '0% 0%' },
           '100%': { backgroundPosition: '-200% 0%' },
         },
-        scroll: { // NOVO AJUSTE AGRESSIVO
+        scroll: {
           '0%': { transform: 'translateX(0)' },
-          '100%': { transform: 'translateX(-51%)' }, 
+          '100%': { transform: 'translateX(-100%)' },
+        },
+        marquee: { // NOVO KEYFRAME
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' }, // Move 50% do total (que é o tamanho da lista original)
         },
         glow: {
           '0%, 100%': { opacity: '0.3' },

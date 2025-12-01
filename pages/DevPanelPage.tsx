@@ -183,7 +183,9 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
         setDeletingId(image.id);
         setDeleteError(null);
         try {
-            // O hook useLandingImages já extrai o path do storage a partir da URL pública
+            // CRITICAL FIX: O hook useLandingImages agora extrai o path do storage a partir da URL pública
+            // O backend/routes/adminRoutes.cjs espera o 'imagePath' no corpo da requisição DELETE.
+            // Precisamos extrair o path aqui para passar ao hook, que o passará ao backend.
             const urlParts = image.url.split('/landing-carousel/');
             const path = urlParts.length > 1 ? urlParts[1] : '';
             

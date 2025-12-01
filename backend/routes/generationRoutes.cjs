@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const { authenticateToken } = require('../middleware/auth');
-const { processImageGeneration, checkImageQuota } = require('../services/generationService');
+const { processImageGeneration, checkAndIncrementQuota } = require('../services/generationService'); // Importando checkAndIncrementQuota
 const { supabaseService } = require('../config');
 
 // Rate Limiting for generation endpoint (user-based)
@@ -29,12 +29,13 @@ router.post('/generate', authenticateToken, generationLimiter, async (req, res, 
     return res.status(400).json({ error: `O logo é muito grande. O tamanho máximo permitido é de ${Math.round(MAX_LOGO_BASE64_LENGTH_SERVER / 1.33 / 1024)}KB.` });
   }
   
-  // 1. Quota Check (Falha Rápida)
-  const quotaResponse = await checkImageQuota(user.id);
-  
-  if (quotaResponse.status === 'BLOCKED') {
+  // 1. Quota Check and Increment (Falha Rápida)
+  try {
+      await checkAndIncrementQuota(user.id);
+  } catch (quotaError) {
+      // Se a quota for atingida, retorna 403
       return res.status(403).json({ 
-          error: quotaResponse.message, 
+          error: quotaError.message, 
           quotaStatus: 'BLOCKED'
       });
   }
@@ -57,7 +58,8 @@ router.post('/generate', authenticateToken, generationLimiter, async (req, res, 
 
       // 3. Inicia o processamento em background
       setTimeout(() => {
-          processImageGeneration(jobId, user.id, promptInfo);
+          // CRITICAL FIX: Passando jobId e userId corretamente
+          processImageGeneration(jobId, user.id, promptInfo); 
       }, 0); 
 
       // 4. Retorna 202 Accepted (Processando)
@@ -67,7 +69,7 @@ router.post('/generate', authenticateToken, generationLimiter, async (req, res, 
       });
 
   } catch (error) {
-      console.error(`Erro ao iniciar o trabalho de geração:`, error);
+      console.error(`Erro ao registrar o trabalho de geração:`, error);
       res.status(500).json({ error: 'Falha ao registrar o pedido de geração.' });
   }
 });
