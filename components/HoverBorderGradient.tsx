@@ -71,8 +71,8 @@ export function HoverBorderGradient({
     >
       <div
         className={cn(
-          // REVERTENDO: Fundo para slate-900 (tom escuro original) e mantendo px-3
-          "w-auto text-white z-10 bg-slate-900 px-3 py-2 rounded-[inherit] flex items-center justify-center",
+          // MUDANÇA AQUI: Fundo para indigo-600 (cor vibrante) e mantendo px-3
+          "w-auto text-white z-10 bg-indigo-600 px-3 py-2 rounded-[inherit] flex items-center justify-center",
           className
         )}
       >
@@ -96,8 +96,8 @@ export function HoverBorderGradient({
         }}
         transition={{ ease: "linear", duration: duration ?? 1 }}
       />
-      {/* REVERTENDO: Máscara interna para slate-900 */}
-      <div className="bg-slate-900 absolute z-1 flex-none inset-[2px] rounded-[inherit]" />
+      {/* MUDANÇA AQUI: Máscara interna para indigo-600 */}
+      <div className="bg-indigo-600 absolute z-1 flex-none inset-[2px] rounded-[inherit]" />
     </Tag>
   );
 }
