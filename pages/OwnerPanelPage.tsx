@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { User } from '../types';
 import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star, LogOut, ShieldOff, CreditCard, Link2, Link2Off } from 'lucide-react';
 import { Button } from '../components/Button';
@@ -78,7 +78,7 @@ const ClientTable: React.FC<ClientTableProps> = ({ clients, isLoading }) => {
 };
 
 // --- Componente de Pagamentos ---
-const PaymentsPanel: React.FC<{ user: User, status: string, onRefresh: () => void }> = ({ user, status, onRefresh }) => {
+const PaymentsPanel: React.FC<{ user: User, status: string, onRefresh: () => void }> = ({ user: _user, status, onRefresh }) => {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleConnect = async () => {

@@ -2,7 +2,7 @@ import React, { memo, useState } from 'react';
 import { BusinessInfo, GenerationStatus } from '../types';
 import { Button } from './Button';
 import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, AlertTriangle, Loader2 } from 'lucide-react';
-import { UsageData } from '../hooks/useUsage';
+import { UsageData } from '../src/hooks/useUsage'; // Corrigido o caminho de importação
 import { PricingModal } from './PricingModal';
 
 interface InputFieldProps {

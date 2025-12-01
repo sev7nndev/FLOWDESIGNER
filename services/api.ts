@@ -1,4 +1,4 @@
-import { GeneratedImage, BusinessInfo, LandingImage, ChatMessage } from "../types";
+import { GeneratedImage, BusinessInfo, LandingImage } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // URL do seu Backend Node.js local (ou deployado)
