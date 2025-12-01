@@ -4,6 +4,7 @@ const rateLimit = require('express-rate-limit');
 const { authenticateToken } = require('../middleware/auth');
 const { processImageGeneration, checkAndIncrementQuota } = require('../services/generationService');
 const { supabaseService, supabaseAnon } = require('../config');
+const sanitizeHtml = require('sanitize-html'); // Importando o sanitizador
 
 // Helper para obter URL pública (usado para retornar o objeto GeneratedImage completo)
 const getPublicUrl = (bucketName, path) => {
@@ -31,6 +32,14 @@ router.post('/generate', authenticateToken, generationLimiter, async (req, res, 
   if (!promptInfo || !promptInfo.companyName || !promptInfo.details) {
     return res.status(400).json({ error: "Nome da empresa e detalhes são obrigatórios." });
   }
+  
+  // --- SECURITY FIX: Sanitize user input before processing/storage ---
+  const sanitizedDetails = sanitizeHtml(promptInfo.details, {
+      allowedTags: [], // Remove all HTML tags
+      allowedAttributes: {},
+  });
+  promptInfo.details = sanitizedDetails;
+  // -------------------------------------------------------------------
   
   const MAX_LOGO_BASE64_LENGTH_SERVER = 40000;
   if (promptInfo.logo && promptInfo.logo.length > MAX_LOGO_BASE64_LENGTH_SERVER) {

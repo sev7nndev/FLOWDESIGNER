@@ -2,6 +2,29 @@
 const { supabaseService } = require('../config');
 
 /**
+ * Masks an email address (e.g., user@example.com -> u***@e***.com)
+ * @param {string} email 
+ * @returns {string} Masked email
+ */
+const maskEmail = (email) => {
+    if (!email || typeof email !== 'string') return 'N/A';
+    const [localPart, domain] = email.split('@');
+    if (!localPart || !domain) return 'N/A';
+
+    const maskedLocal = localPart.length > 1 
+        ? localPart[0] + '***' 
+        : localPart;
+
+    const domainParts = domain.split('.');
+    const maskedDomain = domainParts[0].length > 1 
+        ? domainParts[0][0] + '***' 
+        : domainParts[0];
+        
+    return `${maskedLocal}@${maskedDomain}.${domainParts.slice(1).join('.')}`;
+};
+
+
+/**
  * Busca métricas agregadas de usuários (contagem por plano e status).
  * @returns {Promise<{planCounts: object, statusCounts: object}>}
  */
@@ -46,7 +69,8 @@ const fetchOwnerMetrics = async () => {
     const clientList = clients.map(client => ({
         id: client.id,
         name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
-        email: client.auth_user?.email || 'N/A',
+        // Aplica a máscara ao e-mail
+        email: maskEmail(client.auth_user?.email || 'N/A'), 
         plan: client.role,
         status: client.status,
     }));
