@@ -5,6 +5,8 @@ const cors = require('cors');
 const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config.cjs'); 
 const generationRoutes = require('./routes/generationRoutes');
 const ownerRoutes = require('./routes/ownerRoutes');
+// NOVO: Importando o middleware de autenticação
+const { authenticateToken } = require('./middleware/auth.cjs'); 
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -13,7 +15,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
     // CORREÇÃO CRÍTICA: Adicionando a porta 3000 (Vite default)
     origin: ['http://localhost:5173', 'http://localhost:3000'], 
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'DELETE'], // Adicionado DELETE para rotas admin
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
@@ -29,13 +31,28 @@ app.use('/api/generation', generationRoutes);
 // NOVO: Rotas do Proprietário
 app.use('/api/owner', ownerRoutes);
 
-// --- Quota/Usage Endpoint (Public, but requires user ID/token for data retrieval) ---
-app.get('/api/usage/:userId', async (req, res) => {
+// --- Quota/Usage Endpoint (Requires Authentication) ---
+// CORREÇÃO: Adicionando authenticateToken
+app.get('/api/usage/:userId', authenticateToken, async (req, res) => {
     const { userId } = req.params;
+    const user = req.user; // Obtido do middleware authenticateToken
+
+    // CRITICAL CHECK: Ensure the requested userId matches the authenticated user's ID
+    if (userId !== user.id) {
+        return res.status(403).json({ error: 'Acesso negado. Você só pode consultar seu próprio uso.' });
+    }
 
     try {
         // 1. Get Role from profiles
-        const { data: profileData, error: profileError } = await supabaseAnon
+        // Usamos supabaseAnon aqui, mas como o token foi verificado no middleware,
+        // a requisição para o Supabase API precisa do token para passar pelo RLS.
+        // Como o backend não tem o token do usuário, precisamos usar o Service Key
+        // para buscar o perfil, ou refatorar o frontend para passar o token.
+        
+        // ALTERNATIVA: Usar o Service Key para buscar o perfil (já que o usuário foi autenticado)
+        const { supabaseService } = require('./config.cjs'); // Importa o service client
+        
+        const { data: profileData, error: profileError } = await supabaseService
             .from('profiles')
             .select('role')
             .eq('id', userId)
@@ -44,7 +61,7 @@ app.get('/api/usage/:userId', async (req, res) => {
         const role = profileData?.role || 'free';
 
         // 2. Get Usage Count from user_usage
-        const { data: usageData, error: usageError } = await supabaseAnon
+        const { data: usageData, error: usageError } = await supabaseService // Usando Service Key
             .from('user_usage')
             .select('current_usage')
             .eq('user_id', userId)
@@ -82,13 +99,10 @@ app.get('/api/usage/:userId', async (req, res) => {
         });
 
     } catch (error) {
-        // If any error occurs (e.g., user not found in profiles/usage), return default free plan
+        // Se ocorrer um erro (ex: perfil não encontrado), retorna 500
         console.error('Error fetching usage data:', error);
-        res.status(200).json({
-            role: 'free',
-            current: 0,
-            limit: FREE_LIMIT,
-            isUnlimited: false,
+        res.status(500).json({
+            error: 'Falha ao buscar dados de uso.',
         });
     }
 });
