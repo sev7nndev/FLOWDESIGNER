@@ -8,8 +8,8 @@
     "install:backend": "cd backend && npm install",
     "install:all": "npm run install:frontend && npm run install:backend",
     "frontend": "cd frontend && npm run dev",
-    "backend": "cd backend && node server.js",
-    "dev": "cd backend && nodemon server.js",
+    "backend": "node backend/server.cjs",
+    "dev": "nodemon backend/server.cjs --port 32100",
     "start": "concurrently \"npm run frontend\" \"npm run dev\""
   },
   "keywords": [
@@ -23,7 +23,7 @@
   "license": "ISC",
   "dependencies": {
     "concurrently": "^8.2.2",
-    "dotenv-cli": "^7.4.2",
+    "dotenv": "^16.4.5",
     "nodemon": "^3.1.0"
   },
   "devDependencies": {}
