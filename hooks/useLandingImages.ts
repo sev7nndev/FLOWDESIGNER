@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { LandingImage, UserRole } from '../types';
 import { api } from '../services/api';
+import { LandingImage, User } from '../types';
 
-export const useLandingImages = (userRole: UserRole) => {
+export const useLandingImages = (user: User | null) => {
     const [images, setImages] = useState<LandingImage[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     const fetchImages = useCallback(async () => {
         setIsLoading(true);
@@ -15,7 +16,7 @@ export const useLandingImages = (userRole: UserRole) => {
             setImages(fetchedImages);
         } catch (e: any) {
             console.error("Failed to fetch landing images:", e);
-            setError("Falha ao carregar imagens da Landing Page.");
+            setError(e.message || "Falha ao carregar imagens da Landing Page.");
         } finally {
             setIsLoading(false);
         }
@@ -24,40 +25,53 @@ export const useLandingImages = (userRole: UserRole) => {
     useEffect(() => {
         fetchImages();
     }, [fetchImages]);
-    
-    const uploadImage = useCallback(async (file: File, userId: string) => {
-        if (userRole !== 'admin' && userRole !== 'dev') {
-            throw new Error("Acesso negado. Apenas administradores e desenvolvedores podem fazer upload.");
+
+    const uploadImage = useCallback(async (file: File) => {
+        if (!user || user.role !== 'dev') {
+            setError("Permissão negada.");
+            return;
         }
         
-        try {
-            const newImage = await api.uploadLandingImage(file, userId);
-            setImages((prev: LandingImage[]) => [...prev, newImage].sort((a, b) => a.sortOrder - b.sortOrder));
-        } catch (e: any) {
-            throw new Error(e.message || "Erro ao fazer upload da imagem.");
-        }
-    }, [userRole]);
-    
-    // CORREÇÃO: Agora aceita imagePath e o passa para a API
-    const deleteImage = useCallback(async (id: string, path: string) => {
-        if (userRole !== 'admin' && userRole !== 'dev') {
-            throw new Error("Acesso negado. Apenas administradores e desenvolvedores podem deletar.");
-        }
+        setIsUploading(true);
+        setError(null);
         
         try {
-            await api.deleteLandingImage(id, path);
-            setImages((prev: LandingImage[]) => prev.filter((img: LandingImage) => img.id !== id));
+            const newImage = await api.uploadLandingImage(file, user.id);
+            setImages(prev => [newImage, ...prev]); // Adiciona a nova imagem ao topo
+            return newImage;
         } catch (e: any) {
-            throw new Error(e.message || "Erro ao deletar a imagem.");
+            console.error("Failed to upload landing image:", e);
+            setError(e.message || "Falha ao fazer upload da imagem.");
+            throw e; // Re-lança para o componente poder tratar
+        } finally {
+            setIsUploading(false);
         }
-    }, [userRole]);
+    }, [user]);
+
+    const deleteImage = useCallback(async (id: string, imagePath: string) => {
+        if (!user || user.role !== 'dev') {
+            setError("Permissão negada.");
+            return;
+        }
+        
+        setError(null);
+        try {
+            await api.deleteLandingImage(id, imagePath);
+            setImages(prev => prev.filter(img => img.id !== id));
+        } catch (e: any) {
+            console.error("Failed to delete landing image:", e);
+            setError(e.message || "Falha ao deletar a imagem.");
+            throw e;
+        }
+    }, [user]);
 
     return {
         images,
         isLoading,
         error,
+        isUploading,
         fetchImages,
         uploadImage,
-        deleteImage
+        deleteImage,
     };
 };
