@@ -23,7 +23,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
         <div className="mt-8">
           <Button 
             onClick={onGetStarted} 
-            className="h-14 px-8 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20"
+            className="h-14 px-8 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20 animate-pulse-slow hover:animate-none hover:scale-105 transition-transform"
           >
             Começar Agora <ChevronRight className="ml-2" />
           </Button>
