@@ -38,9 +38,9 @@ export default {
           '0%': { backgroundPosition: '0% 0%' },
           '100%': { backgroundPosition: '-200% 0%' },
         },
-        scroll: { // AJUSTANDO O KEYFRAME 'scroll' para forçar a sobreposição
+        scroll: { // NOVO AJUSTE AGRESSIVO
           '0%': { transform: 'translateX(0)' },
-          '100%': { transform: 'translateX(-50.5%)' }, // Agressivo para eliminar o gap
+          '100%': { transform: 'translateX(-51%)' }, 
         },
         glow: {
           '0%, 100%': { opacity: '0.3' },
