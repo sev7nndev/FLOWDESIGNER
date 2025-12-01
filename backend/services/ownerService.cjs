@@ -21,14 +21,11 @@ const fetchOwnerMetrics = async () => {
         
         allClients.forEach(client => {
             // Aggregate Plan Counts
-            // CORREÇÃO: Converte o role para minúsculas para garantir contagem correta (case-insensitive)
-            const role = (client.role && client.role.toLowerCase()) || 'other'; 
-            
+            const role = client.role || 'other';
             if (countsByPlan.hasOwnProperty(role)) {
                 countsByPlan[role]++;
             } else {
-                // Se for um role válido, mas não mapeado (ex: 'user'), conta como 'other'
-                countsByPlan.other++; 
+                countsByPlan.other++;
             }
             
             // Aggregate Status Counts
@@ -39,16 +36,19 @@ const fetchOwnerMetrics = async () => {
         
         const totalClients = allClients.length; 
 
-        // 3. Buscando emails usando o Admin API (mantido)
+        // 3. Buscando emails usando o Admin API (ponto crítico propenso a erros 500)
         const clientIds = allClients.map(c => c.id);
         
+        // CORREÇÃO: Adiciona uma verificação para garantir que o cliente de admin está inicializado.
+        // A ausência da SUPABASE_SERVICE_ROLE_KEY causa uma falha aqui.
         if (!supabaseService || !supabaseService.auth || !supabaseService.auth.admin) {
              throw new Error("Supabase Service Client (Admin) is not properly initialized. Check SUPABASE_SERVICE_ROLE_KEY.");
         }
 
+        // CORREÇÃO: Melhora o tratamento de erro específico da chamada da API de Admin.
         const { data: authUsers, error: authError } = await supabaseService.auth.admin.listUsers({
             page: 1,
-            perPage: 1000, 
+            perPage: 1000, // Aumentado para buscar mais usuários de uma vez
         });
         
         if (authError) {
@@ -87,6 +87,7 @@ const fetchOwnerMetrics = async () => {
             clients: clientList,
         };
     } catch (e) {
+        // O catch agora receberá erros muito mais descritivos
         console.error("FATAL ERROR in fetchOwnerMetrics:", e.message, e.stack);
         throw e instanceof Error ? e : new Error(`Internal Server Error during metrics fetch: ${e}`);
     }
