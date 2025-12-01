@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { getSupabase } from '../services/supabaseClient';
+import { getSupabase } from '../../services/supabaseClient';
 
 export interface UsageData {
     currentUsage: number;

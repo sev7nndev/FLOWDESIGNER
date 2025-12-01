@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User } from '../types';
-import { api } from '../services/api';
-import { PLACEHOLDER_EXAMPLES } from '../constants';
+import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User } from '../../types';
+import { api } from '../../services/api';
+import { PLACEHOLDER_EXAMPLES } from '../../constants';
 import { useUsage } from './useUsage'; // Importando o novo hook de uso
 import { toast } from 'sonner';
 
@@ -35,7 +35,7 @@ export const useGeneration = (user: User | null) => {
     }, [usage?.isNearLimit, usage?.currentUsage, usage?.maxQuota]);
 
     const handleInputChange = useCallback((field: keyof BusinessInfo, value: string) => {
-        setForm((prev) => ({ ...prev, [field]: value }));
+        setForm((prev: BusinessInfo) => ({ ...prev, [field]: value }));
     }, []);
 
     const handleLogoUpload = useCallback((file: File) => {
@@ -45,9 +45,9 @@ export const useGeneration = (user: User | null) => {
                 const base64String = reader.result as string;
                 if (base64String.length > MAX_LOGO_BASE64_LENGTH) {
                     toast.error(`O logo é muito grande. O tamanho máximo permitido é de ${MAX_LOGO_KB}KB.`);
-                    setForm((prev) => ({ ...prev, logo: '' }));
+                    setForm((prev: BusinessInfo) => ({ ...prev, logo: '' }));
                 } else {
-                    setForm((prev) => ({ ...prev, logo: base64String }));
+                    setForm((prev: BusinessInfo) => ({ ...prev, logo: base64String }));
                 }
             };
             reader.readAsDataURL(file);
@@ -63,7 +63,7 @@ export const useGeneration = (user: User | null) => {
         if (!user) return;
         try {
             const history = await api.getHistory();
-            setState((prev) => ({ ...prev, history }));
+            setState((prev: GenerationState) => ({ ...prev, history }));
         } catch (e) {
             console.error("Failed to load history", e);
         }
@@ -73,7 +73,7 @@ export const useGeneration = (user: User | null) => {
         if (!form.companyName || !form.details) return;
         
         if (usage?.isBlocked) {
-            setState((prev) => ({ 
+            setState((prev: GenerationState) => ({ 
                 ...prev, 
                 status: GenerationStatus.ERROR, 
                 error: `Você atingiu o limite de ${usage.maxQuota} gerações. Faça upgrade para continuar.` 
@@ -81,7 +81,7 @@ export const useGeneration = (user: User | null) => {
             return;
         }
 
-        setState((prev) => ({ ...prev, status: GenerationStatus.GENERATING, error: undefined }));
+        setState((prev: GenerationState) => ({ ...prev, status: GenerationStatus.GENERATING, error: undefined }));
 
         try {
             const newImage = await api.generate(form);
@@ -89,16 +89,16 @@ export const useGeneration = (user: User | null) => {
             await refreshUsage();
             await loadHistory();
             
-            setState((prev) => ({
+            setState((prev: GenerationState) => ({
                 status: GenerationStatus.SUCCESS,
                 currentImage: newImage,
-                history: [newImage, ...prev.history.filter(img => img.id !== newImage.id)]
+                history: [newImage, ...prev.history.filter((img: GeneratedImage) => img.id !== newImage.id)]
             }));
             toast.success("Sua arte foi gerada com sucesso!");
 
         } catch (err: any) {
             console.error(err);
-            setState((prev) => ({ 
+            setState((prev: GenerationState) => ({ 
                 ...prev, 
                 status: GenerationStatus.ERROR, 
                 error: err.message || "Erro ao gerar arte. Verifique se o Backend está rodando." 

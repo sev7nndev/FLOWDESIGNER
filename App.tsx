@@ -14,7 +14,6 @@ import { AppHeader } from './components/AppHeader';
 import { useLandingImages } from './hooks/useLandingImages';
 import { DevPanelPage } from './pages/DevPanelPage';
 import { OwnerPanelPage } from './pages/OwnerPanelPage';
-import { Session } from '@supabase/supabase-js';
 import { Toaster } from 'sonner'; // Importando o Toaster
 
 interface AuthUser {
