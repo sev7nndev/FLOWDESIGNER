@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth'; // FIX: Assuming path is correct (Error 1)
-import { useGeneration } from './hooks/useGeneration';
-import { UserRole } from './types'; 
-import { AppHeader } from './components/AppHeader';
-import { SettingsModal } from './components/Modals';
-import { GenerationForm } from './components/GenerationForm';
-import { GenerationHistory } from './components/GenerationHistory';
-import { PricingPage } from './components/PricingPage';
-import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/LoginPage'; // FIX: Assuming path is correct (Error 2)
-import { RegisterPage } from './pages/RegisterPage'; // FIX: Assuming path is correct (Error 3)
-import { DevPanelPage } from './pages/DevPanelPage';
-import { OwnerPanelPage } from './pages/OwnerPanelPage';
-import { Button } from './components/Button';
+import { useAuth } from './src/hooks/useAuth'; // FIX: Corrected path to include src/ (Error 12)
+import { useGeneration } from './src/hooks/useGeneration';
+import { UserRole } from './src/types'; 
+import { AppHeader } from './src/components/AppHeader';
+import { SettingsModal } from './src/components/Modals';
+import { GenerationForm } from './src/components/GenerationForm';
+import { GenerationHistory } from './src/components/GenerationHistory';
+import { PricingPage } from './src/components/PricingPage';
+import { LandingPage } from './src/pages/LandingPage';
+import { LoginPage } from './src/pages/LoginPage'; // FIX: Corrected path to include src/ (Error 13)
+import { RegisterPage } from './src/pages/RegisterPage'; // FIX: Corrected path to include src/ (Error 14)
+import { DevPanelPage } from './src/pages/DevPanelPage';
+import { OwnerPanelPage } from './src/pages/OwnerPanelPage';
+import { Button } from './src/components/Button';
 import { Zap } from 'lucide-react';
 
 const App: React.FC = () => {

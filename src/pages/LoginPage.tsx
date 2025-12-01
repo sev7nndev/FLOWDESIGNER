@@ -12,7 +12,7 @@ export const LoginPage: React.FC<LoginPageProps> = () => {
     
     // AuthScreens handles the actual login/register logic internally via authService.
     // onSuccess is called when a session is successfully established (or registration is complete).
-    const handleAuthSuccess = (user: User | null) => {
+    const handleAuthSuccess = (_user: User | null) => { // FIX: Renamed user to _user (Error 10)
         // If successful, navigate to the main app page.
         navigate('/app');
     };

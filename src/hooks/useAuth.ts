@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSupabase } from '../services/supabaseClient';
+import { getSupabase, Database } from '../services/supabaseClient'; 
 import { User, UserRole } from '../types';
 import { authService } from '../services/authService';
 import { useProfile } from './useProfile';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js'; 
 
 interface AuthResult {
     user: User | null;
@@ -19,7 +20,7 @@ export const useAuth = (): AuthResult => {
     const supabase = getSupabase();
 
     // 1. Fetch Profile using the current user ID
-    const { profile, isLoading: isLoadingProfile, fetchProfile } = useProfile(user?.id);
+    const { profile, isLoading: isLoadingProfile, fetchProfile: _fetchProfile } = useProfile(user?.id); // FIX: Renamed fetchProfile to _fetchProfile (Error 8)
 
     // 2. Session Management
     useEffect(() => {
@@ -28,7 +29,7 @@ export const useAuth = (): AuthResult => {
             return;
         }
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => { // FIX: Used _event for unused variable (Error 9)
             if (session?.user) {
                 const supabaseUser = session.user;
                 
@@ -49,7 +50,7 @@ export const useAuth = (): AuthResult => {
         });
 
         // Fetch initial session status
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => { 
             if (session?.user) {
                 const supabaseUser = session.user;
                 setUser({
@@ -65,14 +66,14 @@ export const useAuth = (): AuthResult => {
         });
 
         return () => subscription.unsubscribe();
-    }, [supabase]);
+    }, [supabase, profile?.role]); 
     
     // 3. Update User object when profile changes (especially role)
     useEffect(() => {
         if (user && profile) {
-            setUser(prev => prev ? { ...prev, role: profile.role, firstName: profile.firstName, lastName: profile.lastName } : null);
+            setUser((prev: User | null) => prev ? { ...prev, role: profile.role, firstName: profile.firstName, lastName: profile.lastName } : null); 
         }
-    }, [profile]);
+    }, [profile, user]);
 
 
     // 4. Auth Actions
