@@ -1,205 +1,43 @@
+// backend/routes/adminRoutes.cjs
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, checkAdminOrDev } = require('../middleware/auth');
-const { supabaseService, supabaseAnon } = require('../config');
-const { v4: uuidv4 } = require('uuid');
+const { uploadLandingImage, fetchLandingImages, deleteLandingImage } = require('../services/adminService');
+const { checkRole } = require('../middleware/authMiddleware');
 
-// Helper para obter URL pública (usado para retornar o objeto GeneratedImage completo)
-const getPublicUrl = (bucketName, path) => {
-    const { data: { publicUrl } } = supabaseAnon.storage
-        .from(bucketName)
-        .getPublicUrl(path);
-    return publicUrl;
-};
+// Rota para upload de imagem da Landing Page (Apenas para Dev/Admin)
+router.post('/landing-images/upload', checkRole(['dev', 'owner']), async (req, res) => {
+    const { fileBase64, fileName, userId } = req.body;
 
-// Admin endpoint to get all generated images
-router.get('/images', authenticateToken, checkAdminOrDev, async (req, res, next) => {
-  try {
-    const { data, error } = await supabaseService
-      .from('images')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error("Error fetching all images for admin:", error);
-      throw new Error(error.message);
+    if (!fileBase64 || !fileName || !userId) {
+        return res.status(400).json({ error: "Dados de upload incompletos." });
     }
-    
-    // Mapeia para o formato GeneratedImage e adiciona a URL pública
-    const imagesWithUrls = data.map((row) => ({
-        id: row.id,
-        url: getPublicUrl('generated-arts', row.image_url),
-        prompt: row.prompt,
-        businessInfo: row.business_info,
-        createdAt: new Date(row.created_at).getTime(),
-    }));
 
-    res.json({ images: imagesWithUrls });
-  } catch (error) {
-    next(error);
-  }
+    try {
+        const image = await uploadLandingImage(fileBase64, fileName, userId);
+        res.status(201).json({ message: "Imagem da landing page enviada com sucesso.", image });
+    } catch (error) {
+        console.error("Error in /admin/landing-images/upload:", error.message);
+        // Retorna 500 com a mensagem de erro detalhada do serviço
+        res.status(500).json({ error: error.message || "Falha interna ao processar o upload da imagem." });
+    }
 });
 
-// Admin endpoint to delete a generated image
-router.delete('/images/:id', authenticateToken, checkAdminOrDev, async (req, res, next) => {
-  const { id } = req.params;
-  // O frontend ainda envia imagePath, mas vamos buscar o caminho autoritativo primeiro
-  // const { imagePath } = req.body; 
+// Rota para deletar imagem da Landing Page (Apenas para Dev/Admin)
+router.delete('/landing-images/:id', checkRole(['dev', 'owner']), async (req, res) => {
+    const { id } = req.params;
+    const { imagePath } = req.body;
 
-  try {
-    // 1. Fetch the authoritative image path from the database
-    const { data: imageRecord, error: fetchError } = await supabaseService
-        .from('images')
-        .select('image_url')
-        .eq('id', id)
-        .single();
-        
-    if (fetchError || !imageRecord || !imageRecord.image_url) {
-        return res.status(404).json({ error: "Registro de imagem não encontrado." });
-    }
-    
-    const imagePath = imageRecord.image_url;
-
-    // 2. Delete from Supabase Storage
-    const { error: storageError } = await supabaseService.storage
-      .from('generated-arts')
-      .remove([imagePath]);
-
-    if (storageError) {
-      console.error(`Error deleting image from storage (${imagePath}):`, storageError);
-      // Continue to delete from DB even if storage fails, to keep DB consistent
+    if (!imagePath) {
+        return res.status(400).json({ error: "Caminho da imagem é obrigatório para exclusão." });
     }
 
-    // 3. Delete from Supabase Database
-    const { error: dbError } = await supabaseService
-      .from('images')
-      .delete()
-      .eq('id', id);
-
-    if (dbError) {
-      console.error(`Error deleting image from DB (${id}):`, dbError);
-      throw new Error(dbError.message);
+    try {
+        await deleteLandingImage(id, imagePath);
+        res.status(200).json({ message: "Imagem da landing page deletada com sucesso." });
+    } catch (error) {
+        console.error("Error in /admin/landing-images/delete:", error.message);
+        res.status(500).json({ error: error.message || "Falha interna ao deletar a imagem." });
     }
-
-    res.json({ message: 'Imagem deletada com sucesso.' });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Admin endpoint to upload a landing carousel image
-router.post('/landing-images/upload', authenticateToken, checkAdminOrDev, async (req, res, next) => {
-  // CRITICAL FIX: We only trust the authenticated user ID (req.user.id)
-  const { fileBase64, fileName } = req.body;
-  const user = req.user; // Contains authenticated user info and ID
-
-  if (!fileBase64 || !fileName) {
-    return res.status(400).json({ error: "Dados de arquivo incompletos." });
-  }
-
-  try {
-    const matches = fileBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) {
-      throw new Error('Formato de base64 inválido.');
-    }
-    const contentType = matches[1];
-    const buffer = Buffer.from(matches[2], 'base64');
-
-    const MAX_LANDING_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-    if (buffer.length > MAX_LANDING_IMAGE_SIZE_BYTES) {
-        return res.status(400).json({ error: `O arquivo é muito grande. O tamanho máximo permitido é de ${MAX_LANDING_IMAGE_SIZE_BYTES / (1024 * 1024)}MB.` });
-    }
-
-    const fileExtension = fileName.split('.').pop();
-    // Use req.user.id for the path
-    const filePath = `landing-carousel/${user.id}/${uuidv4()}.${fileExtension}`;
-
-    // 1. Upload to Supabase Storage using service role key
-    const { data: uploadData, error: uploadError } = await supabaseService.storage
-      .from('landing-carousel')
-      .upload(filePath, buffer, {
-        contentType: contentType,
-        upsert: false,
-      });
-
-    if (uploadError) {
-      console.error(`Error uploading to Supabase Storage:`, uploadError);
-      throw new Error(`Falha no upload para o armazenamento: ${uploadError.message}`);
-    }
-
-    // 2. Insert record into Supabase Database
-    const { data: dbData, error: dbError } = await supabaseService
-      .from('landing_carousel_images')
-      // CRITICAL FIX: Use req.user.id for created_by
-      .insert({ image_url: filePath, created_by: user.id })
-      .select('id, image_url, sort_order')
-      .single();
-
-    if (dbError || !dbData) {
-      await supabaseService.storage.from('landing-carousel').remove([filePath]);
-      console.error(`Error inserting into DB:`, dbError);
-      throw new Error(`Falha ao registrar imagem no banco de dados: ${dbError?.message || 'Erro desconhecido'}`);
-    }
-    
-    // Get public URL for the newly uploaded image
-    const newLandingImage = {
-        id: dbData.id,
-        url: getPublicUrl('landing-carousel', dbData.image_url),
-        sortOrder: dbData.sort_order
-    };
-
-    res.status(200).json({ message: 'Imagem da landing page carregada com sucesso!', image: newLandingImage });
-
-  } catch (error) {
-    next(error);
-  }
-});
-
-
-// Admin endpoint to delete a landing carousel image
-router.delete('/landing-images/:id', authenticateToken, checkAdminOrDev, async (req, res, next) => {
-  const { id } = req.params;
-  // CRITICAL FIX: Não confiamos mais no imagePath do corpo da requisição.
-  // const { imagePath } = req.body; 
-
-  try {
-    // 1. Fetch the authoritative image path from the database
-    const { data: imageRecord, error: fetchError } = await supabaseService
-        .from('landing_carousel_images')
-        .select('image_url')
-        .eq('id', id)
-        .single();
-        
-    if (fetchError || !imageRecord || !imageRecord.image_url) {
-        return res.status(404).json({ error: "Registro de imagem da landing page não encontrado." });
-    }
-    
-    const imagePath = imageRecord.image_url;
-
-    // 2. Delete from Supabase Storage
-    const { error: storageError } = await supabaseService.storage
-      .from('landing-carousel')
-      .remove([imagePath]);
-
-    if (storageError) {
-      console.error(`Error deleting landing image from storage (${imagePath}):`, storageError);
-    }
-
-    // 3. Delete from Supabase Database
-    const { error: dbError } = await supabaseService
-      .from('landing_carousel_images')
-      .delete()
-      .eq('id', id);
-
-    if (dbError) {
-      console.error(`Error deleting landing image from DB (${id}):`, dbError);
-      throw new Error(dbError.message);
-    }
-
-    res.json({ message: 'Imagem da landing page deletada com sucesso.' });
-  } catch (error) {
-    next(error);
-  }
 });
 
 module.exports = router;
