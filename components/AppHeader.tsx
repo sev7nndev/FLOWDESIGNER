@@ -14,6 +14,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Admin', color: 'bg-red-600' },
     dev: { name: 'Dev', color: 'bg-cyan-600' },
+    owner: { name: 'Owner', color: 'bg-yellow-600' }, // Adicionado 'owner'
     client: { name: 'Client', color: 'bg-blue-600' },
     free: { name: 'Grátis', color: 'bg-gray-500' },
     pro: { name: 'Pro', color: 'bg-primary' },

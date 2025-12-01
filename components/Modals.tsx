@@ -112,6 +112,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Administrador', color: 'bg-red-600' },
     dev: { name: 'Desenvolvedor', color: 'bg-cyan-600' },
+    owner: { name: 'Proprietário', color: 'bg-yellow-600' }, // Adicionado 'owner'
     client: { name: 'Cliente', color: 'bg-blue-600' },
     free: { name: 'Grátis', color: 'bg-gray-500' },
     pro: { name: 'Pro', color: 'bg-primary' },

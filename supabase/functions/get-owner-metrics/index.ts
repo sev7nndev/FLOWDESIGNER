@@ -31,12 +31,10 @@ serve(async (req) => {
 
   try {
     // 2. Inicializa o cliente Supabase com Service Role Key (para acesso total)
+    // FIX: createClient expects only two arguments when using the service role key in Deno environment
     const supabaseService = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-      {
-        auth: { autoRefreshToken: false, persistSession: false },
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
     
     // 3. Obtém o usuário autenticado

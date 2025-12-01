@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from './useAuth';
-import { supabase } from '../services/supabase';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -26,8 +24,8 @@ const initialUsage: UsageData = {
   isUnlimited: false,
 };
 
-export const useGeneration = () => {
-  const { user, session } = useAuth();
+// NOTE: This hook is now designed to be used within App.tsx where user/session is managed.
+export const useGeneration = (user: { id: string, email: string } | null, session: { access_token: string } | null) => {
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -79,7 +77,7 @@ export const useGeneration = () => {
           const token = session?.access_token;
           if (!token) throw new Error('No session token available.');
 
-          const response = await axios.get(`${API_BASE_URL}/generation/status/${jobId}`, {
+          const response = await axios.get(`${API_BASE_URL}/generation/job-status/${jobId}`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -87,7 +85,7 @@ export const useGeneration = () => {
 
           const { status, imageUrl, error: jobError } = response.data;
 
-          if (status === 'COMPLETE' && imageUrl) {
+          if (status === 'COMPLETED' && imageUrl) {
             clearInterval(intervalId);
             setGeneratedImage({ url: imageUrl, prompt });
             setIsGenerating(false);
@@ -118,6 +116,9 @@ export const useGeneration = () => {
         setGenerationError('You must be logged in to generate images.');
         return;
       }
+      
+      // CRITICAL FIX: Ensure the correct endpoint is used for generation initiation
+      const GENERATE_ENDPOINT = `${API_BASE_URL}/generation/generate`;
 
       setIsGenerating(true);
       setGenerationError(null);
@@ -127,8 +128,8 @@ export const useGeneration = () => {
 
         // 1. Initiate generation job on the backend
         const response = await axios.post(
-          `${API_BASE_URL}/generation/generate`,
-          { businessInfo },
+          GENERATE_ENDPOINT,
+          { promptInfo: businessInfo }, // Sending promptInfo object as expected by backend
           {
             headers: {
               Authorization: `Bearer ${token}`,
