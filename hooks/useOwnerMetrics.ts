@@ -38,8 +38,13 @@ export const useOwnerMetrics = (user: User | null) => {
     const [error, setError] = useState<string | null>(null);
     const supabase = getSupabase();
 
+    // Extraindo propriedades estáveis para usar como dependências
+    const userId = user?.id;
+    const userRole = user?.role;
+
     const fetchMetrics = useCallback(async () => {
-        if (!user || user.role !== 'owner') {
+        // Usando as variáveis estáveis para a verificação
+        if (!userId || userRole !== 'owner') {
             setIsLoading(false);
             return;
         }
@@ -73,9 +78,10 @@ export const useOwnerMetrics = (user: User | null) => {
         } finally {
             setIsLoading(false);
         }
-    }, [user, supabase]);
+    }, [userId, userRole, supabase]); // Dependência agora é baseada em ID e Role, que são strings estáveis.
 
     useEffect(() => {
+        // Este useEffect só rodará quando fetchMetrics mudar, o que agora é raro.
         fetchMetrics();
     }, [fetchMetrics]);
 
