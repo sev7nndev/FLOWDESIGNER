@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from './Button';
 import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2, Edit3, Bot, Download } from 'lucide-react';
 import { TestimonialCard } from './TestimonialCard';
@@ -8,6 +9,7 @@ import { LandingImage } from '../types';
 import { HeroSection } from './Hero';
 import { PricingModal } from './PricingModal';
 import { PricingCard } from './PricingCard';
+import { useScrollDirection } from '../hooks/useScrollDirection';
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -25,8 +27,18 @@ const FALLBACK_FLYERS: FlyerData[] = [
     { bg: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=1000&auto-format&fit=crop", title: "SMART AUDIO", subtitle: "Fone Bluetooth Pro com cancelamento de ruído.", phone: "www.site.com", theme: "tech", badge: "50% OFF" },
 ];
 
+const sectionVariants = {
+  hidden: { opacity: 0, y: 50 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.6, ease: "easeOut" }
+  }
+};
+
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, landingImages, isLandingImagesLoading }) => {
   const [isModalOpen, setModalOpen] = useState(false);
+  const scrollDirection = useScrollDirection();
 
   const carouselItems: FlyerData[] = landingImages.length > 0 ? landingImages.map((img: LandingImage) => ({
     bg: img.url, title: "Design IA", subtitle: "Gerado por Inteligência Artificial", phone: "Flow Designer",
@@ -73,10 +85,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   return (
     <>
       <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden scroll-smooth">
-        <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
+        {/* Animated Aurora Background */}
+        <div className="absolute top-0 left-0 h-screen w-full overflow-hidden -z-10">
+          <div className="absolute -top-1/4 -left-1/4 h-[800px] w-[800px] bg-gradient-to-tr from-primary/30 to-secondary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow" />
+          <div className="absolute -bottom-1/4 -right-1/4 h-[800px] w-[800px] bg-gradient-to-bl from-accent/30 to-primary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow animation-delay-4000" />
+        </div>
         
-        <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-zinc-950/80 backdrop-blur-lg">
-          <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <motion.nav 
+          variants={{
+            visible: { y: 0, height: '4.5rem' },
+            hidden: { y: 0, height: '4rem' }
+          }}
+          animate={scrollDirection === 'down' ? 'hidden' : 'visible'}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          className="fixed top-0 w-full z-50 border-b border-white/5 bg-zinc-950/80 backdrop-blur-lg"
+        >
+          <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="bg-primary/20 p-1.5 rounded-lg border border-primary/20">
                  <Sparkles size={16} className="text-primary" />
@@ -92,12 +116,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               </Button>
             </div>
           </div>
-        </nav>
+        </motion.nav>
 
         <main>
           <HeroSection onGetStarted={() => setModalOpen(true)} />
 
-          <section className="py-10 border-y border-white/5 bg-black/30 overflow-hidden relative">
+          <motion.section 
+            initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={sectionVariants}
+            className="py-10 border-y border-white/5 bg-black/30 overflow-hidden relative"
+          >
             <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
             <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
             {isLandingImagesLoading ? (
@@ -109,10 +136,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 {marqueeContent.map((item: FlyerData, idx: number) => <FlyerMockup key={idx} {...item} />)}
               </div>
             )}
-          </section>
+          </motion.section>
 
-          {/* NOVA SEÇÃO "COMO FUNCIONA" */}
-          <section className="py-24 px-6 relative">
+          <motion.section 
+            initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
+            className="py-24 px-6 relative"
+          >
             <div className="absolute inset-0 bg-grid-pattern bg-center opacity-[0.05] [mask-image:radial-gradient(ellipse_at_center,white_20%,transparent_70%)]" />
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-64 w-full bg-primary/10 blur-3xl animate-glow pointer-events-none" />
             <div className="max-w-6xl mx-auto relative">
@@ -126,9 +155,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 <HowItWorksStep icon={<Download size={24} />} number="03" title="Baixe e Use" description="Receba sua arte em alta resolução, pronta para postar nas redes sociais, imprimir ou enviar para clientes." />
               </div>
             </div>
-          </section>
+          </motion.section>
 
-          <section className="py-24 px-6 bg-zinc-950/50 border-y border-white/5">
+          <motion.section 
+            initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
+            className="py-24 px-6 bg-zinc-950/50 border-y border-white/5"
+          >
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-16">
                 <span className="text-secondary text-xs font-bold uppercase tracking-widest">Recursos Poderosos</span>
@@ -141,9 +173,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 <FeatureCard icon={<CreditCard size={24} />} title="Custo Zero por Arte" description="Diferente de designers que cobram por peça, aqui você tem geração ilimitada no plano Pro." color="primary" />
               </div>
             </div>
-          </section>
+          </motion.section>
 
-          <section className="py-20 px-6 bg-zinc-900/30">
+          <motion.section 
+            initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
+            className="py-20 px-6 bg-zinc-900/30"
+          >
             <div className="max-w-6xl mx-auto">
               <div className="text-center mb-12">
                 <h3 className="text-3xl md:text-4xl font-bold text-white">Planos Flexíveis para o seu Sucesso</h3>
@@ -155,9 +190,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 <PricingCard name="Pro" price="R$ 49,99" period="/mês" description="Para agências e power users." buttonText="Assinar Pro" features={["50 Imagens Profissionais", "Qualidade Ultra 8K", "Geração Instantânea (Turbo)", "Sem marca d'água", "Prioridade no Suporte"]} highlight={true} badge="Melhor Custo-Benefício" onClick={onGetStarted} />
               </div>
             </div>
-          </section>
+          </motion.section>
 
-          <section className="py-20 px-0 overflow-hidden bg-zinc-950 border-t border-white/5">
+          <motion.section 
+            initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={sectionVariants}
+            className="py-20 px-0 overflow-hidden bg-zinc-950 border-t border-white/5"
+          >
             <div className="max-w-5xl mx-auto px-6 mb-12 text-center">
                <h3 className="text-3xl font-bold text-white">Quem usa, aprova</h3>
             </div>
@@ -174,9 +212,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                  ))}
               </div>
             </div>
-          </section>
+          </motion.section>
 
-          <section className="py-24 px-6 bg-zinc-950/50 border-t border-white/5">
+          <motion.section 
+            initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
+            className="py-24 px-6 bg-zinc-950/50 border-t border-white/5"
+          >
               <div className="max-w-4xl mx-auto text-center p-10 rounded-3xl bg-gradient-to-br from-zinc-900 to-zinc-950 border border-primary/20 shadow-2xl shadow-primary/10 relative overflow-hidden">
                   <div className="absolute -inset-20 bg-primary/10 blur-3xl rounded-full animate-pulse-slow -z-10" />
                   <Sparkles size={48} className="text-primary mx-auto mb-4" />
@@ -190,9 +231,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                       Quero Minhas Artes Agora <ChevronRight className="ml-2" />
                   </Button>
               </div>
-          </section>
+          </motion.section>
 
-          <section className="py-20 px-6 bg-zinc-900/30">
+          <motion.section 
+            initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
+            className="py-20 px-6 bg-zinc-900/30"
+          >
             <div className="max-w-3xl mx-auto">
               <div className="text-center mb-12">
                 <h3 className="text-2xl font-bold text-white">Perguntas Frequentes</h3>
@@ -203,7 +247,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 <Accordion title="Posso cancelar quando quiser?">Sim, não há contrato de fidelidade. Você pode cancelar a assinatura a qualquer momento no seu painel.</Accordion>
               </div>
             </div>
-          </section>
+          </motion.section>
 
           <footer className="border-t border-white/5 py-12 bg-zinc-950 text-center">
             <div className="flex items-center justify-center gap-2 mb-4">
