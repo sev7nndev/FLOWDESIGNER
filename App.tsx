@@ -4,7 +4,7 @@ import { getSupabase } from './services/supabaseClient';
 import { AppTitleHeader } from './components/AppTitleHeader';
 import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, MessageSquare } from 'lucide-react';
 import { useGeneration } from './hooks/useGeneration';
 import { ResultDisplay } from './components/ResultDisplay';
 import { SettingsModal } from './components/Modals';
@@ -13,8 +13,10 @@ import { GenerationForm } from './components/GenerationForm';
 import { AppHeader } from './components/AppHeader';
 import { useLandingImages } from './hooks/useLandingImages';
 import { DevPanelPage } from './pages/DevPanelPage';
-import { OwnerPanelPage } from './pages/OwnerPanelPage'; // Importando o novo painel
-import { Session } from '@supabase/supabase-js'; // Import Session type
+import { OwnerPanelPage } from './pages/OwnerPanelPage';
+import { SupportChat } from './components/SupportChat'; // Importando o novo componente
+import { Button } from './components/Button'; // Importando Button
+import { Session } from '@supabase/supabase-js';
 
 // Define a minimal structure for the authenticated user before profile is loaded
 interface AuthUser {
@@ -26,9 +28,10 @@ interface AuthUser {
 export const App: React.FC = () => {
   // Auth State
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'OWNER_PANEL'>('LANDING'); // Adicionando OWNER_PANEL
+  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'OWNER_PANEL'>('LANDING');
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showChat, setShowChat] = useState(false); // NOVO: Estado para o chat
   
   // Profile Hook
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
@@ -45,19 +48,18 @@ export const App: React.FC = () => {
       firstName: profile.firstName,
       lastName: profile.lastName,
       createdAt: authUser.createdAt,
-      role: profileRole, // Add role to user object
+      role: profileRole,
     };
-  }, [authUser, profile, profileRole]); // Dependencies for memoization
+  }, [authUser, profile, profileRole]);
 
   // Generation Logic Hook
   const { 
     form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage,
-    usage, isLoadingUsage // NOVOS: Quota e Status de Uso
+    usage, isLoadingUsage
   } = useGeneration(user);
   
   // Landing Images Hook (Used by LandingPage and DevPanel)
-  const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
-
+  const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(user); // Corrigido para usar 'user' em vez de 'profileRole'
 
   const fetchAuthUser = (supabaseUser: any) => {
     const newAuthUser: AuthUser = {
@@ -100,7 +102,6 @@ export const App: React.FC = () => {
         }
       });
 
-      // Corrigindo TS18048: subscription é garantido existir aqui.
       return () => subscription.unsubscribe();
     }
   }, []);
@@ -158,7 +159,6 @@ export const App: React.FC = () => {
   }
   
   if (view === 'DEV_PANEL') {
-    // Pass user directly, DevPanelPage will handle access check internally
     return <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
   }
   
@@ -179,7 +179,6 @@ export const App: React.FC = () => {
         <AppTitleHeader />
       </div>
 
-      {/* Margem negativa ajustada para o novo LampHeader mais simples */}
       <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 relative z-20 mt-[-2rem] md:mt-[-4rem] p-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
@@ -193,8 +192,8 @@ export const App: React.FC = () => {
                 handleLogoUpload={handleLogoUpload}
                 handleGenerate={handleGenerate}
                 loadExample={loadExample}
-                usage={usage} // PASSANDO O USO
-                isLoadingUsage={isLoadingUsage} // PASSANDO O STATUS DE CARREGAMENTO
+                usage={usage}
+                isLoadingUsage={isLoadingUsage}
             />
           </div>
 
@@ -211,6 +210,23 @@ export const App: React.FC = () => {
       </main>
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profileRole} />}
+      
+      {/* Botão Flutuante do Chat */}
+      {user && !showChat && (
+        <Button 
+            onClick={() => setShowChat(true)}
+            className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl shadow-primary/50 z-100"
+            icon={<MessageSquare size={24} />}
+            title="Abrir Chat de Suporte"
+        >
+            <span className="sr-only">Abrir Chat</span>
+        </Button>
+      )}
+      
+      {/* Modal/Painel do Chat */}
+      {showChat && user && (
+        <SupportChat user={user} onClose={() => setShowChat(false)} />
+      )}
     </div>
   );
 };
