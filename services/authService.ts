@@ -11,12 +11,20 @@ export const authService = {
     const supabase = getSupabase();
     
     if (!supabase) {
-      throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
+      // Este erro é lançado se SUPABASE_URL ou SUPABASE_ANON_KEY estiverem faltando no .env.local
+      throw new Error("Erro de configuração: O serviço de autenticação não está configurado corretamente.");
     }
     
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      throw new Error(error.message || 'Email ou senha inválidos.');
+      // Tratamento de erros específicos do Supabase
+      let errorMessage = error.message;
+      if (errorMessage.includes('Invalid login credentials')) {
+        errorMessage = 'Email ou senha inválidos.';
+      } else if (errorMessage.includes('Email not confirmed')) {
+        errorMessage = 'Confirme seu e-mail antes de fazer login.';
+      }
+      throw new Error(errorMessage);
     }
     if (!data.user) return null;
     
@@ -29,7 +37,7 @@ export const authService = {
     const supabase = getSupabase();
 
     if (!supabase) {
-      throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
+      throw new Error("Erro de configuração: O serviço de autenticação não está configurado corretamente.");
     }
 
     // SUPABASE REGISTER
@@ -39,7 +47,13 @@ export const authService = {
       options: { data: { first_name: firstName, last_name: lastName } }
     });
     
-    if (error) throw new Error(error.message);
+    if (error) {
+        let errorMessage = error.message;
+        if (errorMessage.includes('User already registered')) {
+            errorMessage = 'Este e-mail já está cadastrado. Tente fazer login.';
+        }
+        throw new Error(errorMessage);
+    }
     if (!data.user) throw new Error("Erro ao criar usuário. Verifique seu email.");
 
     // We return null here. App.tsx will handle fetching the profile/role 
@@ -55,7 +69,7 @@ export const authService = {
   loginWithGoogle: async (): Promise<void> => {
     const supabase = getSupabase();
     if (!supabase) {
-      throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
+      throw new Error("Erro de configuração: O serviço de autenticação não está configurado corretamente.");
     }
 
     const { error } = await supabase.auth.signInWithOAuth({
