@@ -89,7 +89,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden scroll-smooth">
         {/* Animated Aurora Background */}
         <div className="absolute -top-1/4 -left-1/4 h-[800px] w-[800px] bg-gradient-to-tr from-primary/30 to-secondary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow" />
-        <div className="absolute -bottom-1/4 -right-1/4 h-[800px] w-[800px] bg-gradient-to-bl from-accent/30 to-primary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow animation-delay-4000" />
+        {/* CORREÇÃO: Ajustando a posição do efeito de fundo inferior para não estender o scroll da página */}
+        <div className="absolute bottom-0 -right-1/4 h-[600px] w-[600px] bg-gradient-to-bl from-accent/30 to-primary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow animation-delay-4000 translate-y-1/2" />
         
         <motion.nav 
           variants={{
