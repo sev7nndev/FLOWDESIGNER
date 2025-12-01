@@ -26,7 +26,7 @@ export default {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'fade-in': 'fadeIn 0.8s ease-out forwards',
         'shimmer': 'shimmer 2s linear infinite',
-        'scroll': 'scroll 40s linear infinite', // Mantendo a animação 'scroll'
+        'scroll': 'scroll 40s linear infinite',
         'glow': 'glow 4s ease-in-out infinite',
       },
       keyframes: {
@@ -38,9 +38,9 @@ export default {
           '0%': { backgroundPosition: '0% 0%' },
           '100%': { backgroundPosition: '-200% 0%' },
         },
-        scroll: { // AJUSTANDO O KEYFRAME 'scroll'
+        scroll: { // AJUSTANDO O KEYFRAME 'scroll' para garantir a continuidade
           '0%': { transform: 'translateX(0)' },
-          '100%': { transform: 'translateX(-50%)' }, // CORRIGIDO para 50%
+          '100%': { transform: 'translateX(-50.1%)' }, // Pequeno ajuste para forçar a continuidade e eliminar o gap
         },
         glow: {
           '0%, 100%': { opacity: '0.3' },
