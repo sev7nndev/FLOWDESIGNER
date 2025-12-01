@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from './Button';
-import { HoverBorderGradient } from './HoverBorderGradient'; // Importando o novo componente
 import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2, Edit3, Bot, Download } from 'lucide-react';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
@@ -9,7 +8,6 @@ import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
 import { LandingImage } from '../types';
 import { HeroSection } from './Hero';
 import { PricingModal } from './PricingModal';
-import { PricingCard } from './PricingCard';
 import { useScrollDirection } from '../hooks/useScrollDirection';
 
 interface LandingPageProps {
@@ -33,7 +31,7 @@ const sectionVariants = {
   visible: { 
     opacity: 1, 
     y: 0,
-    transition: { duration: 0.6, ease: [0.42, 0, 0.58, 1] } // Fixed easing
+    transition: { duration: 0.6, ease: [0.42, 0, 0.58, 1] as [number, number, number, number] } // Fixed easing type
   }
 };
 
