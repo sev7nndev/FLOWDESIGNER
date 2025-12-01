@@ -21,11 +21,13 @@ const fetchOwnerMetrics = async () => {
         
         allClients.forEach(client => {
             // Aggregate Plan Counts
-            const role = client.role || 'other'; 
+            // CORREÇÃO: Converte o role para minúsculas para garantir contagem correta (case-insensitive)
+            const role = (client.role && client.role.toLowerCase()) || 'other'; 
             
             if (countsByPlan.hasOwnProperty(role)) {
                 countsByPlan[role]++;
             } else {
+                // Se for um role válido, mas não mapeado (ex: 'user'), conta como 'other'
                 countsByPlan.other++; 
             }
             
@@ -37,11 +39,9 @@ const fetchOwnerMetrics = async () => {
         
         const totalClients = allClients.length; 
 
-        // 3. Buscando emails usando o Admin API
+        // 3. Buscando emails usando o Admin API (mantido)
         const clientIds = allClients.map(c => c.id);
         
-        // Verificação de segurança: Se o supabaseService não estiver configurado corretamente, 
-        // a chamada ao Admin API pode falhar.
         if (!supabaseService || !supabaseService.auth || !supabaseService.auth.admin) {
              throw new Error("Supabase Service Client (Admin) is not properly initialized. Check SUPABASE_SERVICE_ROLE_KEY.");
         }
@@ -53,7 +53,6 @@ const fetchOwnerMetrics = async () => {
         
         if (authError) {
             console.error("Supabase Admin API Error:", authError);
-            // Se a chave de serviço estiver errada, este erro será lançado.
             throw new Error(`Failed to fetch user list from Supabase Admin API. Check SUPABASE_SERVICE_ROLE_KEY. Details: ${authError.message}`);
         }
         
@@ -88,9 +87,7 @@ const fetchOwnerMetrics = async () => {
             clients: clientList,
         };
     } catch (e) {
-        // Loga o erro fatal para o console do servidor
         console.error("FATAL ERROR in fetchOwnerMetrics:", e.message, e.stack);
-        // Garante que o erro seja relançado como um objeto Error padrão
         throw e instanceof Error ? e : new Error(`Internal Server Error during metrics fetch: ${e}`);
     }
 };
