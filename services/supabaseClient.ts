@@ -10,7 +10,8 @@ export const getSupabase = (): SupabaseClient | null => {
   if (supabaseInstance) return supabaseInstance;
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.error("Supabase environment variables are not configured.");
+    // Mensagem de erro mais clara para o console
+    console.error("Supabase environment variables are not configured. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
     return null;
   }
 
