@@ -1,5 +1,6 @@
 import { HoverBorderGradient } from "@/components/HoverBorderGradient";
 import { ScrollFadeIn } from "@/components/ScrollFadeIn";
+import Link from "next/link"; // Importando o componente Link
 
 export default function Home() {
   return (
@@ -17,9 +18,12 @@ export default function Home() {
             </p>
         </ScrollFadeIn>
         <ScrollFadeIn delay={0.4}>
-            <HoverBorderGradient className="text-lg font-semibold">
-                Começar Agora
-            </HoverBorderGradient>
+            {/* MUDANÇA AQUI: Envolvendo o botão em um Link para /signup */}
+            <Link href="/signup">
+                <HoverBorderGradient className="text-lg font-semibold">
+                    Começar Agora
+                </HoverBorderGradient>
+            </Link>
         </ScrollFadeIn>
       </section>
 
@@ -42,9 +46,12 @@ export default function Home() {
       {/* Seção de Chamada para Ação (CTA) */}
       <ScrollFadeIn className="w-full max-w-4xl py-28 border-t border-gray-800 mb-20 text-center">
         <h2 className="text-4xl font-bold mb-8">Pronto para Transformar Seu Projeto?</h2>
-        <HoverBorderGradient className="text-lg font-semibold">
-          Criar Minha Conta
-        </HoverBorderGradient>
+        {/* MUDANÇA AQUI: Envolvendo o botão em um Link para /signup */}
+        <Link href="/signup">
+            <HoverBorderGradient className="text-lg font-semibold">
+                Criar Minha Conta
+            </HoverBorderGradient>
+        </Link>
       </ScrollFadeIn>
     </main>
   );
