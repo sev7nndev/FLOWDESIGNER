@@ -2,22 +2,13 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Send, MessageSquare, Loader2, User as UserIcon } from 'lucide-react';
 import { Button } from './Button';
 import { getSupabase } from '../services/supabaseClient';
-import { User } from '../types';
+import { User, ChatMessage } from '../types'; // Importando ChatMessage
 
 interface Client {
     id: string;
     name: string;
     email: string;
     plan: string;
-}
-
-interface ChatMessage {
-    id: string;
-    created_at: string;
-    sender_id: string;
-    recipient_id: string;
-    content: string;
-    is_admin_message: boolean;
 }
 
 interface OwnerChatPanelProps {
@@ -78,12 +69,19 @@ export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner, clients }
                 event: 'INSERT', 
                 schema: 'public', 
                 table: 'chat_messages',
-                filter: `recipient_id=eq.${owner.id}` // Filtra mensagens destinadas ao owner
+                // Filtra mensagens destinadas ao owner OU enviadas pelo owner
+                filter: `or(recipient_id.eq.${owner.id},sender_id.eq.${owner.id})` 
             }, (payload: any) => {
                 const newMessage = payload.new as ChatMessage;
-                // Atualiza apenas se a mensagem for do cliente selecionado
-                if (selectedClient && (newMessage.sender_id === selectedClient.id || newMessage.recipient_id === selectedClient.id)) {
-                    setMessages((prev) => [...prev, newMessage]);
+                
+                // Atualiza apenas se a mensagem for relevante para a conversa selecionada
+                if (selectedClient) {
+                    const isRelevant = (newMessage.sender_id === selectedClient.id && newMessage.recipient_id === owner.id) || 
+                                     (newMessage.sender_id === owner.id && newMessage.recipient_id === selectedClient.id);
+                                     
+                    if (isRelevant) {
+                        setMessages((prev) => [...prev, newMessage]);
+                    }
                 }
             })
             .subscribe();
@@ -115,7 +113,8 @@ export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner, clients }
         if (error) {
             console.error("Error sending message:", error);
         } else if (data) {
-            setMessages((prev) => [...prev, data]);
+            // Adiciona a mensagem localmente para feedback imediato (o listener também pode pegar, mas isso é mais rápido)
+            setMessages((prev) => [...prev, data as ChatMessage]);
             setNewMessage('');
         }
         setIsSending(false);
@@ -165,10 +164,10 @@ export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner, clients }
                                 messages.map((msg) => (
                                     <div 
                                         key={msg.id} 
-                                        className={`flex ${msg.is_admin_message ? 'justify-end' : 'justify-start'}`}
+                                        className={`flex ${msg.sender_id === owner.id ? 'justify-end' : 'justify-start'}`}
                                     >
                                         <div className={`max-w-xs md:max-w-md p-3 rounded-xl text-sm ${
-                                            msg.is_admin_message 
+                                            msg.sender_id === owner.id 
                                                 ? 'bg-primary text-white rounded-br-none' 
                                                 : 'bg-zinc-700 text-white rounded-tl-none'
                                         }`}>
