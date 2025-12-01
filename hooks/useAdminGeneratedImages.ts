@@ -12,7 +12,7 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
     const supabase = getSupabase();
 
     const fetchAllImages = useCallback(async () => {
-        if (userRole !== 'admin' && userRole !== 'dev') {
+        if (userRole !== 'admin' && userRole !== 'dev' && userRole !== 'owner') {
             setIsLoading(false);
             return;
         }
@@ -57,7 +57,7 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
 
             const data = await response.json();
             
-            // O backend retorna o objeto completo, incluindo a URL pública (url)
+            // O backend agora retorna Signed URLs temporárias
             setImages(data.images);
 
         } catch (e: any) {
@@ -73,7 +73,7 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
     }, [fetchAllImages]);
     
     // Função para deletar uma imagem (usando o endpoint seguro do backend)
-    const deleteImage = useCallback(async (imageId: string, imageUrl: string) => {
+    const deleteImage = useCallback(async (imageId: string) => { // Removed imageUrl parameter
         if (userRole !== 'admin' && userRole !== 'dev') {
             throw new Error("Acesso negado.");
         }
@@ -82,23 +82,15 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error("Sessão não encontrada.");
 
-        // Extrai o path do storage a partir da URL pública
-        // Ex: '.../generated-arts/user-id/uuid.jpeg' -> 'user-id/uuid.jpeg'
-        const urlParts = imageUrl.split('/generated-arts/');
-        const imagePath = urlParts.length > 1 ? urlParts[1] : '';
-        
-        if (!imagePath) {
-            throw new Error("Caminho do arquivo inválido para exclusão.");
-        }
-
         try {
+            // A exclusão agora é feita apenas pelo ID, o backend busca o path internamente.
             const response = await fetch(`${BACKEND_URL}/admin/images/${imageId}`, {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${session.access_token}` 
                 },
-                body: JSON.stringify({ imagePath }) // Passa o path do storage
+                // Body is no longer needed
             });
 
             if (!response.ok) {
@@ -128,3 +120,5 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
         deleteImage
     };
 };
+
+export default useAdminGeneratedImages;

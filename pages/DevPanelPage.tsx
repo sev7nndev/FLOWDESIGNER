@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage } from '../types';
 import { useLandingImages } from '../hooks/useLandingImages';
-import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
-// import { api } from '../services/api'; // Removendo importação desnecessária
+import useAdminGeneratedImages from '../hooks/useAdminGeneratedImages'; // Importação corrigida
+import { api } from '../services/api'; // Importando api para deleteLandingImage
 
 interface DevPanelPageProps {
   user: User | null; // User can be null if profile is still loading or not authenticated
@@ -112,8 +112,8 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
         setDeletingId(image.id);
         setDeleteError(null);
         try {
-            // O hook useAdminGeneratedImages agora extrai o path do storage a partir da URL pública
-            await deleteImage(image.id, image.url); 
+            // FIX: Chamando deleteImage apenas com o ID, conforme a nova assinatura
+            await deleteImage(image.id); 
         } catch (e: any) {
             setDeleteError(e.message || "Falha ao deletar arte.");
         } finally {
@@ -144,6 +144,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {imagesToDisplay.map((img: GeneratedImage) => (
                     <div key={img.id} className="relative aspect-[3/4] rounded-lg overflow-hidden border border-white/10 group bg-black">
+                        {/* A URL agora é uma Signed URL temporária */}
                         <img src={img.url} alt="Arte Gerada" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                         
                         {/* Overlay de Ação */}
@@ -175,7 +176,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
 
 // --- Componente de Gerenciamento de Imagens da Landing Page ---
 const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
-    const { images, isLoading, error, uploadImage, deleteImage } = useLandingImages(user.role);
+    const { images, isLoading, error, uploadImage } = useLandingImages(user.role);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -183,21 +184,14 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
         setDeletingId(image.id);
         setDeleteError(null);
         try {
-            // O hook useLandingImages já extrai o path do storage a partir da URL pública
-            const urlParts = image.url.split('/landing-carousel/');
-            const path = urlParts.length > 1 ? urlParts[1] : '';
-            
-            if (!path) {
-                throw new Error("Caminho do arquivo inválido.");
-            }
-            
-            await deleteImage(image.id, path);
+            // FIX: Chamando a API diretamente com o ID, sem passar o path
+            await api.deleteLandingImage(image.id);
         } catch (e: any) {
             setDeleteError(e.message || "Falha ao deletar imagem.");
         } finally {
             setDeletingId(null);
         }
-    }, [deleteImage]);
+    }, []); // Dependência de deleteImage removida, pois agora usamos api.deleteLandingImage
 
     const handleUploadWrapper = useCallback(async (file: File) => {
         await uploadImage(file, user.id);
@@ -258,7 +252,7 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
 // --- Main Dev Panel Page ---
 export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, onLogout }) => {
     // Conditional rendering for access control
-    if (!user || (user.role !== 'admin' && user.role !== 'dev')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'dev' && user.role !== 'owner')) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-gray-100 p-4 text-center">
                 <ShieldOff size={64} className="text-red-500 mb-6 opacity-50" />

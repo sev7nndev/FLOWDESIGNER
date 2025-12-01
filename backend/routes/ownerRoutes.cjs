@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { fetchOwnerMetrics } = require('../services/ownerService');
-const { protect } = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware.cjs'); // Corrigido o caminho e nome do arquivo
 
 // Rota para buscar métricas do painel do proprietário
 router.get('/metrics', protect(['owner']), async (req, res) => {

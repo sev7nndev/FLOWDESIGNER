@@ -6,7 +6,7 @@ const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config
 const generationRoutes = require('./routes/generationRoutes');
 const ownerRoutes = require('./routes/ownerRoutes');
 // NOVO: Importando o middleware de autenticação
-const { authenticateToken } = require('./middleware/auth.cjs'); 
+const { authenticateToken } = require('./middleware/authMiddleware.cjs'); // Corrigido o caminho
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -32,7 +32,7 @@ app.use('/api/generation', generationRoutes);
 app.use('/api/owner', ownerRoutes);
 
 // --- Quota/Usage Endpoint (Requires Authentication) ---
-// CORREÇÃO: Adicionando authenticateToken
+// CRITICAL FIX: Adicionando authenticateToken
 app.get('/api/usage/:userId', authenticateToken, async (req, res) => {
     const { userId } = req.params;
     const user = req.user; // Obtido do middleware authenticateToken
@@ -44,11 +44,6 @@ app.get('/api/usage/:userId', authenticateToken, async (req, res) => {
 
     try {
         // 1. Get Role from profiles
-        // Usamos supabaseAnon aqui, mas como o token foi verificado no middleware,
-        // a requisição para o Supabase API precisa do token para passar pelo RLS.
-        // Como o backend não tem o token do usuário, precisamos usar o Service Key
-        // para buscar o perfil, ou refatorar o frontend para passar o token.
-        
         // ALTERNATIVA: Usar o Service Key para buscar o perfil (já que o usuário foi autenticado)
         const { supabaseService } = require('./config.cjs'); // Importa o service client
         
