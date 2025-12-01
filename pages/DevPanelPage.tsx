@@ -4,7 +4,7 @@ import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage } from '../types';
 import { useLandingImages } from '../hooks/useLandingImages';
 import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
-import { api } from '../services/api';
+// import { api } from '../services/api'; // Removendo importação desnecessária
 
 interface DevPanelPageProps {
   user: User | null; // User can be null if profile is still loading or not authenticated
@@ -104,61 +104,22 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
     const { allImages, isLoadingAllImages, errorAllImages, deleteImage } = useAdminGeneratedImages(userRole);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
-    const [imagesWithSignedUrls, setImagesWithSignedUrls] = useState<(GeneratedImage & { userId: string })[]>([]);
-    const [isSigning, setIsSigning] = useState(false);
-
-    // Função para gerar URLs assinadas para todas as imagens
-    const generateSignedUrls = useCallback(async (images: any[]) => {
-        if (images.length === 0) return [];
-        setIsSigning(true);
-        
-        const signedImages = await Promise.all(images.map(async (img: any) => {
-            try {
-                const signedUrl = await api.getDownloadUrl(img.image_url);
-                return {
-                    id: img.id,
-                    url: signedUrl,
-                    prompt: img.prompt,
-                    businessInfo: img.business_info,
-                    createdAt: new Date(img.created_at).getTime(),
-                    userId: img.user_id // Adicionando userId para referência
-                } as GeneratedImage & { userId: string };
-            } catch (e) {
-                console.warn(`Falha ao gerar URL assinada para ${img.id}`);
-                return null;
-            }
-        }));
-        
-        setIsSigning(false);
-        return signedImages.filter((img): img is GeneratedImage & { userId: string } => img !== null);
-    }, []);
-
-    useEffect(() => {
-        if (allImages.length > 0) {
-            generateSignedUrls(allImages).then(setImagesWithSignedUrls);
-        } else {
-            setImagesWithSignedUrls([]);
-        }
-    }, [allImages, generateSignedUrls]);
+    
+    // Não precisamos mais de imagesWithSignedUrls ou isSigning
+    const imagesToDisplay = allImages; 
 
     const handleDelete = useCallback(async (image: GeneratedImage) => {
         setDeletingId(image.id);
         setDeleteError(null);
         try {
-            const path = (allImages.find((img: GeneratedImage) => img.id === image.id) as any)?.image_url;
-            
-            if (!path) {
-                throw new Error("Caminho do arquivo não encontrado no cache.");
-            }
-            
-            await deleteImage(image.id, path);
-            setImagesWithSignedUrls((prev: (GeneratedImage & { userId: string })[]) => prev.filter((img: GeneratedImage & { userId: string }) => img.id !== image.id));
+            // O hook useAdminGeneratedImages agora extrai o path do storage a partir da URL pública
+            await deleteImage(image.id, image.url); 
         } catch (e: any) {
             setDeleteError(e.message || "Falha ao deletar arte.");
         } finally {
             setDeletingId(null);
         }
-    }, [allImages, deleteImage]);
+    }, [deleteImage]);
 
     return (
         <div className="space-y-4 bg-zinc-900/50 p-6 rounded-xl border border-white/10">
@@ -166,9 +127,9 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
                 <Users size={20} className="text-accent" /> Todas as Artes Geradas ({allImages.length})
             </h3>
             
-            {(isLoadingAllImages || isSigning) && (
+            {isLoadingAllImages && (
                 <div className="text-center py-10 text-gray-500 flex items-center justify-center gap-2">
-                    <Loader2 size={20} className="animate-spin mr-2" /> Carregando e assinando URLs...
+                    <Loader2 size={20} className="animate-spin mr-2" /> Carregando imagens...
                 </div>
             )}
             
@@ -181,7 +142,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
             )}
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {imagesWithSignedUrls.map((img: GeneratedImage & { userId: string }) => (
+                {imagesToDisplay.map((img: GeneratedImage) => (
                     <div key={img.id} className="relative aspect-[3/4] rounded-lg overflow-hidden border border-white/10 group bg-black">
                         <img src={img.url} alt="Arte Gerada" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                         
@@ -205,7 +166,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
                 ))}
             </div>
             
-            {allImages.length === 0 && !isLoadingAllImages && !errorAllImages && (
+            {imagesToDisplay.length === 0 && !isLoadingAllImages && !errorAllImages && (
                 <p className="text-center text-gray-500 py-10">Nenhuma arte gerada ainda.</p>
             )}
         </div>
@@ -222,6 +183,7 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
         setDeletingId(image.id);
         setDeleteError(null);
         try {
+            // O hook useLandingImages já extrai o path do storage a partir da URL pública
             const urlParts = image.url.split('/landing-carousel/');
             const path = urlParts.length > 1 ? urlParts[1] : '';
             

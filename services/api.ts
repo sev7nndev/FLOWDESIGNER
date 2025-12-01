@@ -85,16 +85,9 @@ export const api = {
       // precisamos buscar os metadados completos (prompt, businessInfo, createdAt)
       // para retornar o objeto GeneratedImage completo.
       
-      // Nota: Para simplificar, vamos assumir que o backend retorna a URL final, 
-      // e o frontend precisa buscar o histórico para obter os metadados completos.
-      // No entanto, para o fluxo de 'currentImage', vamos buscar o histórico e pegar o mais recente.
-      
       // Para evitar uma chamada extra de histórico aqui, vamos refatorar o backend para retornar o objeto 'image' completo
       // ou, mais simplesmente, confiar que o próximo loadHistory() no hook useGeneration
       // trará o resultado correto.
-      
-      // Para manter a compatibilidade com o GeneratedImage, vamos retornar um objeto mínimo
-      // e confiar que o useGeneration fará o loadHistory logo em seguida.
       
       // Melhoria: O backend deve retornar o ID da imagem gerada para que possamos buscá-la.
       // Como o backend não retorna o ID da imagem, vamos forçar o loadHistory no hook.
@@ -104,10 +97,11 @@ export const api = {
       
       // O backend agora retorna a URL pública (já assinada se necessário)
       const supabaseAnonClient = getSupabase();
+      
+      // Buscamos o registro mais recente que corresponde à URL gerada
       const { data: imageRecord, error: fetchError } = await supabaseAnonClient!
         .from('images')
-        .select('*')
-        .eq('image_url', finalImageUrl.split('/generated-arts/')[1]) // Busca pelo path
+        .select('id, prompt, business_info, created_at, image_url')
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -117,7 +111,7 @@ export const api = {
           throw new Error("Arte gerada, mas falha ao carregar metadados.");
       }
       
-      // O backend agora retorna a URL pública (já assinada se necessário)
+      // Re-obtemos a URL pública (o backend retorna a URL completa, mas para consistência)
       const { data: { publicUrl } } = supabaseAnonClient!.storage
           .from('generated-arts')
           .getPublicUrl(imageRecord.image_url);
@@ -140,62 +134,42 @@ export const api = {
     const supabase = getSupabase();
     if (!supabase) return [];
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return [];
 
-    const { data, error } = await supabase
-      .from('images')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error || !data) return [];
-
-    // Generate public URLs for all images
-    const historyWithUrls = data.map((row: any) => {
-        const { data: { publicUrl } } = supabase.storage
-            .from('generated-arts')
-            .getPublicUrl(row.image_url);
-            
-        return {
-            id: row.id,
-            url: publicUrl,
-            prompt: row.prompt,
-            businessInfo: row.business_info,
-            createdAt: new Date(row.created_at).getTime()
-        };
+    // Chamada ao novo endpoint /api/history
+    const response = await fetch(`${BACKEND_URL}/history`, {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${session.access_token}` 
+        }
     });
-
-    return historyWithUrls;
+    
+    if (!response.ok) {
+        console.error("Failed to fetch history from backend:", response.status);
+        return [];
+    }
+    
+    const history = await response.json();
+    return history;
   },
   
   getLandingImages: async (): Promise<LandingImage[]> => {
-    const supabase = getSupabase();
-    if (!supabase) return [];
-
-    const { data, error } = await supabase
-      .from('landing_carousel_images')
-      .select('id, image_url, sort_order')
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: false });
-
-    if (error || !data) {
-        console.error("Error fetching landing images:", error);
-        return [];
-    }
-
-    const imagesWithUrls: LandingImage[] = data.map(row => {
-        const { data: { publicUrl } } = supabase.storage
-            .from('landing-carousel')
-            .getPublicUrl(row.image_url);
-            
-        return {
-            id: row.id,
-            url: publicUrl,
-            sortOrder: row.sort_order
-        };
+    // Chamada ao novo endpoint /api/landing-images
+    const response = await fetch(`${BACKEND_URL}/landing-images`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+        }
     });
 
-    return imagesWithUrls;
+    if (!response.ok) {
+        console.error("Failed to fetch landing images from backend:", response.status);
+        return [];
+    }
+    
+    const images = await response.json();
+    return images;
   },
   
   uploadLandingImage: async (file: File, userId: string): Promise<LandingImage> => {
@@ -263,11 +237,4 @@ export const api = {
         throw error;
     }
   },
-
-  // Removido getDownloadUrl, pois o bucket 'generated-arts' agora é público (ou o backend retorna a URL pública)
-  // e o acesso é feito diretamente via URL pública do Supabase Storage.
-  // Se o bucket for privado, o backend deve retornar a URL assinada.
-  // Assumindo que o bucket 'generated-arts' é público para simplificar o acesso após a geração.
-  // Se for privado, o backend deve retornar a URL assinada.
-  // Como o backend agora retorna a URL final, não precisamos mais do getDownloadUrl.
 };

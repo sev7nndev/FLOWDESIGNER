@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from './Button';
-import { MovingBorderButton } from './MovingBorderButton';
+import { HoverBorderGradient } from './HoverBorderGradient'; // Importando o novo componente
 import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2, Edit3, Bot, Download } from 'lucide-react';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
@@ -46,6 +46,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
     theme: (['mechanic', 'food', 'law', 'tech'] as const)[Math.floor(Math.random() * 4)], badge: "NOVO", price: undefined
   })) : FALLBACK_FLYERS;
   
+  // Duplicamos o conteúdo para garantir a transição suave
   const marqueeContent = [...carouselItems, ...carouselItems];
 
   const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string, color: 'primary' | 'secondary' | 'accent' }> = ({ icon, title, description, color }) => {
@@ -87,10 +88,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
     <>
       <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden scroll-smooth">
         {/* Animated Aurora Background */}
-        <div className="absolute top-0 left-0 h-screen w-full overflow-hidden -z-10">
-          <div className="absolute -top-1/4 -left-1/4 h-[800px] w-[800px] bg-gradient-to-tr from-primary/30 to-secondary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow" />
-          <div className="absolute -bottom-1/4 -right-1/4 h-[800px] w-[800px] bg-gradient-to-bl from-accent/30 to-primary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow animation-delay-4000" />
-        </div>
+        <div className="absolute -top-1/4 -left-1/4 h-[800px] w-[800px] bg-gradient-to-tr from-primary/30 to-secondary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow" />
+        <div className="absolute -bottom-1/4 -right-1/4 h-[800px] w-[800px] bg-gradient-to-bl from-accent/30 to-primary/30 rounded-full blur-3xl opacity-20 animate-pulse-slow animation-delay-4000" />
         
         <motion.nav 
           variants={{
@@ -178,23 +177,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
           <motion.section 
             initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={sectionVariants}
-            className="py-20 px-6 bg-zinc-900/30"
-          >
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-12">
-                <h3 className="text-3xl md:text-4xl font-bold text-white">Planos Flexíveis para o seu Sucesso</h3>
-                <p className="text-gray-400 mt-3">Escolha o plano ideal e comece a criar. Cancele quando quiser.</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-end">
-                <PricingCard name="Free" price="R$ 0" description="Para testar a tecnologia." buttonText="Criar Conta Grátis" features={["3 Gerações Gratuitas", "Qualidade Padrão", "Marca d'água", "Suporte Comunitário"]} onClick={onGetStarted} />
-                <PricingCard name="Start" price="R$ 29,99" period="/mês" description="Ideal para autônomos." buttonText="Assinar Start" features={["20 Imagens Profissionais", "Qualidade 4K", "Sem marca d'água", "Uso Comercial Liberado", "Suporte por Email"]} onClick={onGetStarted} />
-                <PricingCard name="Pro" price="R$ 49,99" period="/mês" description="Para agências e power users." buttonText="Assinar Pro" features={["50 Imagens Profissionais", "Qualidade Ultra 8K", "Geração Instantânea (Turbo)", "Sem marca d'água", "Prioridade no Suporte"]} highlight={true} badge="Melhor Custo-Benefício" onClick={onGetStarted} />
-              </div>
-            </div>
-          </motion.section>
-
-          <motion.section 
-            initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={sectionVariants}
             className="py-20 px-0 overflow-hidden bg-zinc-950 border-t border-white/5"
           >
             <div className="max-w-5xl mx-auto px-6 mb-12 text-center">
@@ -203,8 +185,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <div className="relative w-full">
               <div className="absolute inset-y-0 left-0 w-12 md:w-32 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
               <div className="absolute inset-y-0 right-0 w-12 md:w-32 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
-              <div className="flex w-max animate-scroll gap-6 px-6 hover:[animation-play-state:paused]">
-                 {[...Array(2)].map((_: undefined, i: number) => (
+              <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-6 px-6">
+                 {[...Array(2)].map((_: undefined, i: number) => ( // Duplicação 2x
                    <React.Fragment key={i}>
                       <div className="w-[300px] md:w-[400px] flex-shrink-0"><TestimonialCard name="Carlos Mendes" role="Dono de Oficina" text="Eu gastava 300 reais por semana com designer. Agora faço os posts da oficina em 5 minutos tomando café. A qualidade impressiona." stars={5} image="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop" /></div>
                       <div className="w-[300px] md:w-[400px] flex-shrink-0"><TestimonialCard name="Dra. Julia Santos" role="Esteticista" text="Minha clínica precisava de uma identidade mais premium. O Flow Designer capturou exatamente o estilo 'clean' que eu queria. Recomendo!" stars={5} image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop" /></div>
@@ -228,15 +210,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                   <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
                       Comece a gerar artes de alta conversão em segundos com a inteligência artificial do Flow Designer.
                   </p>
-                  <MovingBorderButton 
+                  <HoverBorderGradient 
                     onClick={() => setModalOpen(true)} 
-                    className="text-lg font-semibold"
-                    containerClassName="h-14 px-10"
-                    borderRadius="1.75rem"
-                    duration={3000}
+                    className="text-lg font-semibold px-6 py-3"
+                    containerClassName="h-14 px-10 rounded-full"
+                    duration={3}
                   >
                       Quero Minhas Artes Agora <ChevronRight className="ml-2" />
-                  </MovingBorderButton>
+                  </HoverBorderGradient>
               </div>
           </motion.section>
 

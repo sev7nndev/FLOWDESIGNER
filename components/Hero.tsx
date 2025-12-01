@@ -1,5 +1,5 @@
 import React from 'react';
-import { MovingBorderButton } from './MovingBorderButton';
+import { HoverBorderGradient } from './HoverBorderGradient'; // Importando o novo componente
 import { ChevronRight } from 'lucide-react';
 
 interface HeroSectionProps {
@@ -21,15 +21,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
           Sua agência de design particular. Gere flyers, posts e banners de nível de estúdio em segundos, sem precisar de um designer.
         </p>
         <div className="mt-8">
-          <MovingBorderButton 
+          <HoverBorderGradient 
             onClick={onGetStarted} 
-            className="text-lg font-semibold"
-            containerClassName="h-14 px-8"
-            borderRadius="1.75rem"
-            duration={3000}
+            className="text-lg font-semibold px-6 py-3" // Ajustando o padding interno
+            containerClassName="h-14 px-10 rounded-full"
+            duration={3} 
           >
             Começar Agora <ChevronRight className="ml-2" />
-          </MovingBorderButton>
+          </HoverBorderGradient>
         </div>
       </div>
     </div>
