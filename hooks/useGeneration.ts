@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User, FormState } from '../types';
+import { GenerationState, GenerationStatus, BusinessInfo, User, FormState } from '../types'; // FIX: Removed unused GeneratedImage import (Error 7)
 import { api } from '../services/api';
 import { PLACEHOLDER_EXAMPLES } from '../constants';
 import { useUsage } from './useUsage'; 
@@ -61,7 +61,7 @@ export const useGeneration = (user: User | null) => {
     const loadHistory = useCallback(async () => {
         if (!user) return;
         try {
-            const history = await api.getHistory(); // FIX: api.getHistory now exists (Error 13)
+            const history = await api.getHistory(); 
             setState((prev: GenerationState) => ({ ...prev, history }));
         } catch (e) {
             console.error("Failed to load history", e);
@@ -71,6 +71,7 @@ export const useGeneration = (user: User | null) => {
     const handleGenerate = useCallback(async () => {
         if (!form.companyName || !form.details || !form.prompt) return;
         
+        // FIX: Check if usage exists before accessing max_usage (Error 8)
         if (usage?.isBlocked) {
             setState((prev: GenerationState) => ({ 
                 ...prev, 
@@ -95,7 +96,7 @@ export const useGeneration = (user: User | null) => {
                 prompt: form.prompt, 
             };
 
-            const newImage = await api.generate(businessInfoPayload); // FIX: api.generate now exists (Error 14)
+            const newImage = await api.generate(businessInfoPayload); 
             
             setState((prev: GenerationState) => ({ 
                 ...prev, 

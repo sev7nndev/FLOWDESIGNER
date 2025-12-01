@@ -1,16 +1,16 @@
 import React from 'react';
 
 interface HowItWorksStepProps {
-    icon: React.ReactNode; // Required
+    icon: React.ReactNode; 
     number: string;
     title: string;
     description: string;
-    stepNumber: number; // Required
-    isRight: boolean; // Required
+    stepNumber: number; 
+    isRight: boolean; 
 }
 
-// FIX: Destructure all props and use isRight for layout
-export const HowItWorksStep: React.FC<HowItWorksStepProps> = ({ icon, number, title, description, stepNumber, isRight }) => (
+// FIX: Removed stepNumber from destructuring as it's not used in the component body (Error 1)
+export const HowItWorksStep: React.FC<HowItWorksStepProps> = ({ icon, number, title, description, isRight }) => ( 
     <div className={`relative p-6 bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden transition-all hover:border-primary/20 hover:-translate-y-1 group ${isRight ? 'md:ml-auto md:w-[calc(50%-1rem)]' : 'md:mr-auto md:w-[calc(50%-1rem)]'}`}>
         <div className="absolute top-0 left-0 h-full w-full bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
         <div className="relative">

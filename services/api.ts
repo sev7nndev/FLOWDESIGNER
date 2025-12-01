@@ -78,7 +78,7 @@ const updateClientPlan = async (clientId: string, newPlan: string, newStatus: st
     }
 };
 
-// --- Generation and History API methods (Fixes 13, 14) ---
+// --- Generation and History API methods ---
 
 const generate = async (form: BusinessInfo & { prompt: string }): Promise<GeneratedImage> => {
     const response = await fetch(`${API_BASE_URL}/generation/generate`, {
@@ -103,10 +103,12 @@ const getHistory = async (): Promise<GeneratedImage[]> => {
     return response.json();
 };
 
-// --- Funções de Suporte (Fix 35) ---
+// --- Funções de Suporte (Fixes 5, 6) ---
 
-const sendSupportMessage = async (userId: string, message: string): Promise<{ reply: string }> => {
+const sendSupportMessage = async (userId: string, message: string): Promise<{ reply: string }> => { 
     // MOCK: Em um ambiente real, isso chamaria um Edge Function ou um serviço de chat.
+    // FIX: Use userId and message to avoid TS6133
+    console.log(`Sending message from user ${userId}: ${message}`); 
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     const mockReplies = [

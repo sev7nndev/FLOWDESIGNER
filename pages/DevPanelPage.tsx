@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react'; // FIX: Removed unused useEffect and useRef imports (Errors 12, 13)
 import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage } from '../types';
@@ -172,8 +172,8 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
 
 // --- Componente de Gerenciamento de Imagens da Landing Page ---
 const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
-    // FIX: Destructuring isUploading (Error 38)
-    const { images, isLoading, error, isUploading, uploadImage, deleteImage } = useLandingImages(user); 
+    // FIX: Removed unused isUploading from destructuring (Error 14)
+    const { images, isLoading, error, uploadImage, deleteImage } = useLandingImages(user); 
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -181,7 +181,6 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
         setDeletingId(image.id);
         setDeleteError(null);
         try {
-            // FIX: image.image_path is now available on LandingImage type (Error 39)
             const path = image.image_path; 
             
             if (!path) {
