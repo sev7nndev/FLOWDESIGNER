@@ -6,7 +6,22 @@ const generationRoutes = require('./routes/generationRoutes'); // Import the new
 const ownerRoutes = require('./routes/ownerRoutes'); // NOVO: Importando rotas do proprietário
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+
+// --- Port Configuration ---
+// Helper to parse command-line arguments for the port, making it compatible with the Dyad environment.
+const getPort = () => {
+    const args = process.argv.slice(2);
+    const portIndex = args.indexOf('--port');
+    if (portIndex !== -1 && args[portIndex + 1]) {
+        const port = parseInt(args[portIndex + 1], 10);
+        if (!isNaN(port)) {
+            return port;
+        }
+    }
+    return process.env.PORT || 3001;
+};
+const PORT = getPort();
+
 
 // Middleware
 app.use(cors({
