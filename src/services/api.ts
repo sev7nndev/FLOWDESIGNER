@@ -1,4 +1,5 @@
-import { User, GenerationFormState, GeneratedImage, UsageData } from '../types'; 
+import { GeneratedImage, UsageData } from '../types'; 
+import { getSupabase } from './supabaseClient'; // Importando getSupabase
 
 // URL base para todas as chamadas de API.
 export const API_BASE_URL = '/api'; // Usando proxy do Vite
@@ -11,27 +12,33 @@ interface GeneratePayload {
 }
 
 const generateFlow = async (payload: GeneratePayload): Promise<GeneratedImage> => {
-    // MOCK: Simula uma chamada de API para o backend
-    await new Promise(resolve => setTimeout(resolve, 2500));
+    const supabase = getSupabase();
+    const { data: { session } } = await supabase.auth.getSession();
 
-    // Simula a resposta de sucesso
-    const mockImage: GeneratedImage = {
-        id: Date.now().toString(),
-        url: 'https://via.placeholder.com/800x450?text=Generated+Flow+Design',
-        prompt: payload.businessInfo,
-        negativePrompt: 'low quality, blurry',
-        style: 'flowchart',
-        aspectRatio: '16:9',
-        createdAt: Date.now(),
-        userId: 'mock-user-id',
-    };
+    if (!session) {
+        throw new Error("Usuário não autenticado. Faça login novamente.");
+    }
 
-    return mockImage;
+    const response = await fetch(`${API_BASE_URL}/generation/flow`, {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`, // Enviando o token
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido ao gerar fluxo.' }));
+        throw new Error(errorData.error || `Falha na geração: Status ${response.status}`);
+    }
+    
+    return response.json();
 };
 
 // --- Funções de Uso (Mock) ---
 
-const getUsage = async (userId: string): Promise<UsageData> => {
+const getUsage = async (_userId: string): Promise<UsageData> => { 
     // MOCK: Simula a busca de dados de uso
     await new Promise(resolve => setTimeout(resolve, 500));
     
