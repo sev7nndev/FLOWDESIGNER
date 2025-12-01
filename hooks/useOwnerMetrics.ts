@@ -60,7 +60,14 @@ export const useOwnerMetrics = (user: User | null) => {
             });
 
             if (!response.ok) {
-                const errorBody = await response.json();
+                let errorBody = { error: `Erro do servidor: Status ${response.status}` };
+                try {
+                    // Tenta analisar o corpo da resposta como JSON
+                    errorBody = await response.json();
+                } catch (e) {
+                    // Se falhar (ex: Unexpected end of JSON input), usa a mensagem padrão
+                    console.warn("Falha ao analisar JSON de erro do backend:", e);
+                }
                 throw new Error(errorBody.error || `Erro do servidor: Status ${response.status}`);
             }
 

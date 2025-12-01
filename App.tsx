@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { User, UserRole } from './types';
 import { getSupabase } from './services/supabaseClient';
 import { AppTitleHeader } from './components/AppTitleHeader';
@@ -36,14 +36,18 @@ export const App: React.FC = () => {
   // Combined User State (passed to hooks/components)
   const profileRole = (profile?.role || 'free') as UserRole;
   
-  const user: User | null = authUser && profile ? {
-    id: authUser.id,
-    email: authUser.email,
-    firstName: profile.firstName,
-    lastName: profile.lastName,
-    createdAt: authUser.createdAt,
-    role: profileRole, // Add role to user object
-  } : null;
+  const user: User | null = useMemo(() => {
+    if (!authUser || !profile) return null;
+    
+    return {
+      id: authUser.id,
+      email: authUser.email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      createdAt: authUser.createdAt,
+      role: profileRole, // Add role to user object
+    };
+  }, [authUser, profile, profileRole]); // Dependencies for memoization
 
   // Generation Logic Hook
   const { 
