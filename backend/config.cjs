@@ -11,6 +11,11 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY; // Used for server-side operations
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
+// --- Mercado Pago Configuration ---
+const MP_CLIENT_ID = process.env.MP_CLIENT_ID;
+const MP_CLIENT_SECRET = process.env.MP_CLIENT_SECRET;
+const MP_REDIRECT_URI = process.env.MP_REDIRECT_URI;
+
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_KEY || !GEMINI_API_KEY) {
     console.error("FATAL ERROR: Missing one or more environment variables. Check your .env.local file.");
     // Não saímos do processo aqui, apenas logamos o erro, pois o servidor Express precisa iniciar para o frontend funcionar.
@@ -45,4 +50,7 @@ module.exports = {
     FREE_LIMIT,
     STARTER_LIMIT,
     PRO_LIMIT,
+    MP_CLIENT_ID,
+    MP_CLIENT_SECRET,
+    MP_REDIRECT_URI,
 };

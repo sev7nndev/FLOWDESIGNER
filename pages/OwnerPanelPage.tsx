@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { User } from '../types';
-import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star, LogOut, ShieldOff } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star, LogOut, ShieldOff, CreditCard, Link2, Link2Off } from 'lucide-react';
 import { Button } from '../components/Button';
 import { useOwnerMetrics } from '../hooks/useOwnerMetrics';
 import { MetricCard } from '../components/MetricCard';
 import { OwnerChatPanel } from '../components/OwnerChatPanel';
+import { getSupabase } from '../services/supabaseClient';
+import { toast } from 'sonner';
 
 interface OwnerPanelPageProps {
   user: User | null;
@@ -75,11 +77,105 @@ const ClientTable: React.FC<ClientTableProps> = ({ clients, isLoading }) => {
     );
 };
 
+// --- Componente de Pagamentos ---
+const PaymentsPanel: React.FC<{ user: User, status: string, onRefresh: () => void }> = ({ user, status, onRefresh }) => {
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleConnect = async () => {
+        setIsLoading(true);
+        const supabase = getSupabase();
+        if (!supabase) return;
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        try {
+            const response = await fetch('/api/owner/mp-auth-url', {
+                headers: { 'Authorization': `Bearer ${session.access_token}` }
+            });
+            const data = await response.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                toast.error("Não foi possível obter a URL de autorização.");
+            }
+        } catch (error) {
+            toast.error("Erro ao conectar com o Mercado Pago.");
+            console.error(error);
+        }
+        setIsLoading(false);
+    };
+
+    const handleDisconnect = async () => {
+        if (!window.confirm("Tem certeza que deseja desconectar sua conta do Mercado Pago? Seus clientes não poderão mais assinar.")) {
+            return;
+        }
+        setIsLoading(true);
+        const supabase = getSupabase();
+        if (!supabase) return;
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        try {
+            const response = await fetch('/api/owner/mp-disconnect', {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${session.access_token}` }
+            });
+            if (response.ok) {
+                toast.success("Conta do Mercado Pago desconectada.");
+                onRefresh();
+            } else {
+                throw new Error("Falha ao desconectar.");
+            }
+        } catch (error) {
+            toast.error("Erro ao desconectar a conta.");
+            console.error(error);
+        }
+        setIsLoading(false);
+    };
+
+    return (
+        <div className="max-w-2xl mx-auto bg-zinc-900/50 p-8 rounded-2xl border border-white/10 shadow-xl">
+            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+                <CreditCard size={24} className="text-primary" />
+                Conexão com Mercado Pago
+            </h2>
+            <p className="text-gray-400 text-sm mb-8">Conecte sua conta para receber pagamentos de assinaturas dos seus clientes diretamente.</p>
+
+            {status === 'connected' ? (
+                <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <CheckCircle size={20} className="text-green-400" />
+                        <div>
+                            <p className="font-semibold text-white">Conta Conectada</p>
+                            <p className="text-xs text-gray-400">Você está pronto para receber pagamentos.</p>
+                        </div>
+                    </div>
+                    <Button variant="danger" onClick={handleDisconnect} isLoading={isLoading} icon={<Link2Off size={16} />}>
+                        Desconectar
+                    </Button>
+                </div>
+            ) : (
+                <div className="p-6 bg-zinc-800 border border-white/10 rounded-xl flex items-center justify-between">
+                     <div>
+                        <p className="font-semibold text-white">Nenhuma conta conectada</p>
+                        <p className="text-xs text-gray-400">Conecte-se para começar a vender.</p>
+                    </div>
+                    <Button onClick={handleConnect} isLoading={isLoading} icon={<Link2 size={16} />}>
+                        Conectar Mercado Pago
+                    </Button>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 // --- Main Owner Panel Page ---
 export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToApp, onLogout }) => {
     const { metrics, isLoadingMetrics, errorMetrics, refreshMetrics } = useOwnerMetrics(user);
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'clients' | 'chat'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'clients' | 'chat' | 'payments'>('dashboard');
 
     // Conditional rendering for access control
     if (!user || user.role !== 'owner') {
@@ -139,6 +235,12 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
                         className={`px-6 py-3 text-sm font-medium transition-colors ${activeTab === 'chat' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-white'}`}
                     >
                         Chat
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('payments')}
+                        className={`px-6 py-3 text-sm font-medium transition-colors ${activeTab === 'payments' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Pagamentos
                     </button>
                 </div>
 
@@ -219,9 +321,12 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
                         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                             <MessageSquare size={24} className="text-primary" /> Chat com Clientes
                         </h2>
-                        {/* O componente OwnerChatPanel precisa ser implementado para funcionar */}
                         <OwnerChatPanel owner={user} clients={metrics.clients} />
                     </div>
+                )}
+
+                {!isLoadingMetrics && activeTab === 'payments' && (
+                    <PaymentsPanel user={user} status={metrics.mpConnectionStatus} onRefresh={refreshMetrics} />
                 )}
             </div>
         </div>

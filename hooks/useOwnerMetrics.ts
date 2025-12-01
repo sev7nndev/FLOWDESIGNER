@@ -24,12 +24,14 @@ interface OwnerMetrics {
         cancelled: number;
     };
     clients: ClientData[];
+    mpConnectionStatus: 'connected' | 'disconnected' | 'loading';
 }
 
 const INITIAL_METRICS: OwnerMetrics = {
     planCounts: { free: 0, starter: 0, pro: 0 },
     statusCounts: { on: 0, paused: 0, cancelled: 0 },
     clients: [],
+    mpConnectionStatus: 'loading',
 };
 
 export const useOwnerMetrics = (user: User | null) => {
