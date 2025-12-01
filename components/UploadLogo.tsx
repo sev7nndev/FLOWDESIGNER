@@ -1,6 +1,6 @@
 import React, { useCallback, useRef } from 'react';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
-import { Button } from '@/ui/Button'; // Corrigido
+import { Button } from '@/components/ui/Button'; // Corrigido para o padrão
 
 interface UploadLogoProps {
     onLogoUpload: (file: File | null) => void;

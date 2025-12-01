@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check } from 'lucide-react';
-import { Button } from './Button';
+import { Button } from './ui/Button'; // Corrigido
 
 interface PricingCardProps {
   name: string;

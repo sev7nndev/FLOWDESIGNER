@@ -1,11 +1,11 @@
 import React from 'react';
 import { GenerationFormState, GenerationStatus, UsageData } from '../types';
 import { UploadLogo } from "@/components/UploadLogo";
-import { Button } from "@/ui/Button"; // Corrigido para @/ui/Button
-import { Input } from "@/ui/Input"; // Corrigido para @/ui/Input
-import { Textarea } from "@/ui/Textarea"; // Corrigido para @/ui/Textarea
+import { Button } from "@/components/ui/Button"; // Revertido para o padrão
+import { Input } from "@/components/ui/Input"; // Revertido para o padrão
+import { Textarea } from "@/components/ui/Textarea"; // Revertido para o padrão
 import { Sparkles, Loader2, Zap, Info } from 'lucide-react';
-import { Tooltip } from "@/ui/Tooltip"; // Corrigido para @/ui/Tooltip
+import { Tooltip } from "@/components/ui/Tooltip"; // Revertido para o padrão
 
 interface GenerationFormProps {
     form: GenerationFormState;

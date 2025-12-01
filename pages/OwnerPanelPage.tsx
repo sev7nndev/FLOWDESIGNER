@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star } from 'lucide-react';
-import { Button } from '../components/Button';
+import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star, ShieldOff, LogOut } from 'lucide-react';
+import { Button } from '../components/ui/Button'; // Corrigido
 import { useOwnerMetrics } from '../hooks/useOwnerMetrics';
 import { MetricCard } from '../components/MetricCard';
 import { OwnerChatPanel } from '../components/OwnerChatPanel';
