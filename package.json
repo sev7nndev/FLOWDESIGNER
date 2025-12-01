@@ -7,7 +7,7 @@
     "install:frontend": "cd frontend && npm install",
     "install:backend": "cd backend && npm install",
     "install:all": "npm run install:frontend && npm run install:backend",
-    "frontend": "vite",
+    "frontend": "cd frontend && npm run dev",
     "backend": "node backend/server.cjs",
     "dev": "concurrently \"npm run frontend\" \"npm run dev:backend\"",
     "dev:backend": "node backend/server.cjs",
@@ -23,12 +23,12 @@
   "author": "Your Name",
   "license": "ISC",
   "dependencies": {
+    "@google/generative-ai": "^0.15.0",
+    "@supabase/supabase-js": "^2.86.0",
     "concurrently": "^8.2.2",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
     "cors": "^2.8.5",
-    "@supabase/supabase-js": "^2.44.4",
-    "@google/generative-ai": "^0.15.0"
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
   },
   "devDependencies": {}
 }

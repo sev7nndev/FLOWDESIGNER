@@ -20,6 +20,7 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // Usando a 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 console.log(`DEBUG: SUPABASE_URL is set: ${!!SUPABASE_URL}`);
+console.log(`DEBUG: SUPABASE_ANON_KEY is set: ${!!SUPABASE_ANON_KEY}`); // Log adicionado
 console.log(`DEBUG: SUPABASE_SERVICE_KEY is set: ${!!SUPABASE_SERVICE_KEY}`);
 console.log(`DEBUG: GEMINI_API_KEY is set: ${!!GEMINI_API_KEY}`);
 
