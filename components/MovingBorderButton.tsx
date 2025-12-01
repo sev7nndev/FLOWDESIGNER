@@ -86,9 +86,16 @@ export const MovingBorder = ({
   const progress = useMotionValue<number>(0);
 
   useAnimationFrame((time) => {
-    const length = pathRef.current?.getTotalLength();
-    // Adicionado verificação para garantir que o comprimento é válido
-    if (length && length > 0) { 
+    let length = 0;
+    try {
+      // Tenta obter o comprimento do caminho. Se o elemento não estiver pronto, pode lançar um erro.
+      length = pathRef.current?.getTotalLength() || 0;
+    } catch (e) {
+      // Se getTotalLength falhar (caminho vazio), ignoramos este frame.
+      return; 
+    }
+    
+    if (length > 0) { 
       const pxPerMillisecond = length / duration;
       progress.set((time * pxPerMillisecond) % length);
     }
