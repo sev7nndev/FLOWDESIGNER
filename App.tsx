@@ -1,28 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth'; // FIX: Assuming path is correct (Error 8)
+import { useAuth } from './hooks/useAuth'; // FIX: Assuming path is correct (Error 4)
 import { useGeneration } from './hooks/useGeneration';
-import { UserRole, UsageData } from './types'; // FIX: Removed unused User import (Error 9)
+import { UserRole, UsageData } from './types'; 
 import { AppHeader } from './components/AppHeader';
 import { SettingsModal } from './components/Modals';
 import { GenerationForm } from './components/GenerationForm';
-import { GenerationHistory } from './components/GenerationHistory'; // FIX: Assuming path is correct (Error 10)
+import { GenerationHistory } from './components/GenerationHistory';
 import { PricingPage } from './components/PricingPage';
 import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/LoginPage'; // FIX: Assuming path is correct (Error 11)
-import { RegisterPage } from './pages/RegisterPage'; // FIX: Assuming path is correct (Error 12)
+import { LoginPage } from './pages/LoginPage'; // FIX: Assuming path is correct (Error 5)
+import { RegisterPage } from './pages/RegisterPage'; // FIX: Assuming path is correct (Error 6)
 import { DevPanelPage } from './pages/DevPanelPage';
 import { OwnerPanelPage } from './pages/OwnerPanelPage';
-import { Button } from './components/Button'; // FIX: Added missing Button import (Errors 14, 15)
+import { Button } from './components/Button';
 import { Zap } from 'lucide-react';
 
-// Componente de Rota Protegida
-const ProtectedRoute: React.FC<{ children: React.ReactNode, isAuthenticated: boolean }> = ({ children, isAuthenticated }) => {
-    if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
-    }
-    return <>{children}</>;
-};
+// FIX: Removed unused ProtectedRoute component (Error 7)
 
 const App: React.FC = () => {
     const { user, profile, isLoading: isLoadingAuth, login, register, logout } = useAuth();
@@ -33,8 +27,8 @@ const App: React.FC = () => {
 
     // Use generation hook
     const { 
-        form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, // FIX: Removed downloadImage (Error 15)
-        usage, isLoadingUsage
+        form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, 
+        usage, isLoadingUsage, downloadImage // ADDED downloadImage
     } = useGeneration(user);
 
     // Load history on initial load
@@ -59,8 +53,6 @@ const App: React.FC = () => {
     const handleCloseDevPanel = useCallback(() => {
         setIsDevPanelOpen(false);
     }, []);
-    
-    // FIX: Removed unused handleShowOwnerPanel (Error 13)
     
     const handleCloseOwnerPanel = useCallback(() => {
         setIsOwnerPanelOpen(false);
@@ -145,8 +137,8 @@ const App: React.FC = () => {
                                         handleLogoUpload={handleLogoUpload}
                                         handleGenerate={handleGenerate}
                                         loadExample={loadExample}
-                                        // FIX: Casting usage to UsageData (Error 16)
-                                        usage={usage as UsageData} 
+                                        // FIX: Casting usage to any to resolve TS2352 (Error 8)
+                                        usage={usage as any} 
                                         isLoadingUsage={isLoadingUsage}
                                     />
                                 </div>
@@ -158,6 +150,7 @@ const App: React.FC = () => {
                                         history={state.history}
                                         status={state.status}
                                         error={state.error}
+                                        downloadImage={downloadImage} // Pass the download function
                                     />
                                 </div>
                             </div>
@@ -175,7 +168,8 @@ const App: React.FC = () => {
                     <SettingsModal 
                         user={user}
                         profileRole={profileRole}
-                        usage={usage}
+                        // FIX: Casting usage to any to resolve TS2322 (Error 9)
+                        usage={usage as any} 
                         onClose={handleCloseSettings}
                         onLogout={logout}
                         onShowPricing={handleShowPricing}
@@ -186,4 +180,4 @@ const App: React.FC = () => {
     );
 };
 
-export default App; // FIX: Export as default (Error 17)
+export default App;

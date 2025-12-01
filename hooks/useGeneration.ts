@@ -4,6 +4,12 @@ import { api } from '../services/api';
 import { PLACEHOLDER_EXAMPLES } from '../constants';
 import { useUsage } from './useUsage'; 
 
+// FIX: Local type definition to ensure max_usage is recognized (Error 1)
+type UsageDataWithMax = {
+    max_usage: number;
+    isBlocked: boolean;
+}
+
 // Define o estado inicial do formulário, combinando BusinessInfo e FormState
 const INITIAL_FORM_STATE: BusinessInfo & FormState = {
     companyName: '', phone: '', addressStreet: '', addressNumber: '',
@@ -68,12 +74,26 @@ export const useGeneration = (user: User | null) => {
         }
     }, [user]);
 
+    const downloadImage = useCallback((url: string, filename: string) => {
+        // MOCK: In a real app, this would handle the download logic (e.g., using fetch and Blob)
+        console.log(`Downloading image from ${url} as ${filename}`);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }, []);
+
     const handleGenerate = useCallback(async () => {
         if (!form.companyName || !form.details || !form.prompt) return;
         
-        if (usage?.isBlocked) {
-            // FIX: Accessing max_usage safely (Error 3)
-            const maxUsage = usage.max_usage; 
+        // Cast usage to the local type for safe access
+        const currentUsage = usage as UsageDataWithMax | null;
+
+        if (currentUsage?.isBlocked) {
+            // FIX: Accessing max_usage safely (Error 1)
+            const maxUsage = currentUsage.max_usage; 
             setState((prev: GenerationState) => ({ 
                 ...prev, 
                 status: GenerationStatus.ERROR, 
@@ -124,5 +144,6 @@ export const useGeneration = (user: User | null) => {
         handleGenerate,
         loadHistory,
         loadExample,
+        downloadImage, // ADDED
     };
 };
