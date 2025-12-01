@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from './Button';
+import { MovingBorderButton } from './MovingBorderButton';
 import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2, Edit3, Bot, Download } from 'lucide-react';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
@@ -227,9 +228,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                   <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
                       Comece a gerar artes de alta conversão em segundos com a inteligência artificial do Flow Designer.
                   </p>
-                  <Button onClick={() => setModalOpen(true)} className="h-14 px-10 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20">
+                  <MovingBorderButton 
+                    onClick={() => setModalOpen(true)} 
+                    className="text-lg font-semibold"
+                    containerClassName="h-14 px-10"
+                    borderRadius="1.75rem"
+                    duration={3000}
+                  >
                       Quero Minhas Artes Agora <ChevronRight className="ml-2" />
-                  </Button>
+                  </MovingBorderButton>
               </div>
           </motion.section>
 
