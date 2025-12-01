@@ -4,7 +4,7 @@ import { getSupabase } from './services/supabaseClient';
 import { AppTitleHeader } from './components/AppTitleHeader';
 import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
-import { Sparkles, MessageSquare } from 'lucide-react';
+import { Sparkles, MessageSquare, DollarSign } from 'lucide-react'; // Importando DollarSign
 import { useGeneration } from './hooks/useGeneration';
 import { ResultDisplay } from './components/ResultDisplay';
 import { SettingsModal } from './components/Modals';
@@ -14,9 +14,10 @@ import { AppHeader } from './components/AppHeader';
 import { useLandingImages } from './hooks/useLandingImages';
 import { DevPanelPage } from './pages/DevPanelPage';
 import { OwnerPanelPage } from './pages/OwnerPanelPage';
-import { SupportChat } from './components/SupportChat'; // Importando o novo componente
-import { Button } from './components/Button'; // Importando Button
+import { SupportChat } from './components/SupportChat';
+import { Button } from './components/Button';
 import { Session } from '@supabase/supabase-js';
+import { PricingPage } from './components/PricingPage'; // Importando a nova página
 
 // Define a minimal structure for the authenticated user before profile is loaded
 interface AuthUser {
@@ -28,10 +29,10 @@ interface AuthUser {
 export const App: React.FC = () => {
   // Auth State
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'OWNER_PANEL'>('LANDING');
+  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'OWNER_PANEL' | 'PRICING'>('LANDING'); // NOVO: 'PRICING'
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showChat, setShowChat] = useState(false); // NOVO: Estado para o chat
+  const [showChat, setShowChat] = useState(false);
   
   // Profile Hook
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
@@ -59,7 +60,7 @@ export const App: React.FC = () => {
   } = useGeneration(user);
   
   // Landing Images Hook (Used by LandingPage and DevPanel)
-  const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(user); // Corrigido para usar 'user' em vez de 'profileRole'
+  const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(user);
 
   const fetchAuthUser = (supabaseUser: any) => {
     const newAuthUser: AuthUser = {
@@ -115,7 +116,7 @@ export const App: React.FC = () => {
           setView('OWNER_PANEL');
       } else if ((user.role === 'admin' || user.role === 'dev') && view !== 'DEV_PANEL') {
           setView('DEV_PANEL');
-      } else if (view !== 'APP' && user.role !== 'owner' && user.role !== 'admin' && user.role !== 'dev') {
+      } else if (view !== 'APP' && user.role !== 'owner' && user.role !== 'admin' && user.role !== 'dev' && view !== 'PRICING') {
           setView('APP');
       }
     }
@@ -162,6 +163,10 @@ export const App: React.FC = () => {
     return <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
   }
   
+  if (view === 'PRICING' && user) {
+      return <PricingPage user={user} onBackToApp={() => setView('APP')} />;
+  }
+  
   // MAIN APP UI (Protected)
   return (
     <div className="min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
@@ -173,7 +178,19 @@ export const App: React.FC = () => {
         onLogout={handleLogout} 
         onShowSettings={() => setShowSettings(true)} 
         onShowDevPanel={() => setView('DEV_PANEL')}
-      />
+      >
+        {/* Botão de Preços (visível para todos os usuários autenticados) */}
+        {user && user.role !== 'owner' && user.role !== 'admin' && user.role !== 'dev' && (
+            <Button 
+                variant="secondary" 
+                onClick={() => setView('PRICING')} 
+                className="h-10 px-4 text-sm"
+                icon={<DollarSign size={16} />}
+            >
+                Preços
+            </Button>
+        )}
+      </AppHeader>
 
       <div className="relative z-10 -mt-8 md:-mt-10">
         <AppTitleHeader />
