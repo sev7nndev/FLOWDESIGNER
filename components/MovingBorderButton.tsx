@@ -44,8 +44,8 @@ export function MovingBorderButton({
         className="absolute inset-0"
         style={{ borderRadius: `calc(${borderRadius} * 0.96)` }}
       >
-        {/* Removendo rx/ry daqui para que o MovingBorder use 100% do caminho retangular */}
-        <MovingBorder duration={duration}> 
+        {/* Passando borderRadius como rx e ry para sincronizar o caminho do SVG com o CSS */}
+        <MovingBorder duration={duration} rx={borderRadius} ry={borderRadius}> 
           <div
             className={cn(
               // Mantendo o tamanho ajustado para um efeito mais fino
@@ -74,7 +74,8 @@ export function MovingBorderButton({
 export const MovingBorder = ({
   children,
   duration = 4000,
-  // Removendo rx e ry das props, pois não são usados no rect abaixo
+  rx,
+  ry,
   ...otherProps
 }: {
   children: React.ReactNode;
@@ -134,7 +135,8 @@ export const MovingBorder = ({
           stroke="transparent" 
           width="100%"
           height="100%"
-          // Removendo rx e ry para usar o caminho retangular completo
+          rx={rx} // Aplicando o raio de borda
+          ry={ry} // Aplicando o raio de borda
           ref={pathRef}
         />
       </svg>
