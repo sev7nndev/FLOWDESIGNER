@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { GeneratedImage, User, UserRole } from '../types';
-import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download } from 'lucide-react';
+import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download, CreditCard } from 'lucide-react';
 import { Button } from './Button';
+import { api } from '../services/api'; // Importando a API
 
 // --- Generic Modal Wrapper ---
 interface ModalWrapperProps {
@@ -83,6 +84,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [isLoading, setIsLoading] = useState(false);
+  const [isBillingLoading, setIsBillingLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   useEffect(() => {
@@ -107,6 +109,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
       setStatusMessage({ type: 'error', message: 'Falha ao salvar. Tente novamente.' });
     }
     setIsLoading(false);
+  };
+  
+  const handleManageSubscription = async () => {
+    setIsBillingLoading(true);
+    setStatusMessage(null);
+    try {
+        const redirectUrl = await api.createBillingPortalSession();
+        // Redireciona o usuário para o portal de faturamento
+        window.location.href = redirectUrl;
+    } catch (e: any) {
+        console.error("Billing portal error:", e);
+        setStatusMessage({ type: 'error', message: e.message || 'Falha ao acessar o portal de faturamento.' });
+    } finally {
+        setIsBillingLoading(false);
+    }
   };
   
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
@@ -139,6 +156,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
                     {currentRole.name}
                 </span>
             </div>
+            
+            {/* Botão de Gerenciamento de Assinatura */}
+            {(profileRole === 'starter' || profileRole === 'pro') && (
+                <div className="pt-4 border-t border-white/5">
+                    <Button 
+                        onClick={handleManageSubscription} 
+                        isLoading={isBillingLoading} 
+                        variant="secondary" 
+                        className="w-full h-10 text-sm"
+                        icon={<CreditCard size={16} />}
+                    >
+                        Gerenciar Assinatura
+                    </Button>
+                </div>
+            )}
             
             {profileRole === 'free' && (
                 <div className="pt-4 border-t border-white/5 text-sm text-gray-400 flex items-start gap-2">

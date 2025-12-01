@@ -1,8 +1,5 @@
-import { LandingImage, User, Flow, Node, Edge, FlowExecution, FlowLog } from './types'; // Assumindo que types está aqui
-import { API_BASE_URL } from './config'; // Assumindo que config está aqui
-
-// --- Funções de Autenticação e Usuário (Placeholder) ---
-// ... (Outras funções de API como login, register, fetchUser, etc.)
+import { LandingImage } from '../types'; // Removendo imports não utilizados
+import { API_BASE_URL } from './config'; 
 
 // --- Funções de Gerenciamento de Imagens da Landing Page ---
 
@@ -78,6 +75,29 @@ const getLandingImages = async (): Promise<LandingImage[]> => {
     return response.json();
 };
 
+/**
+ * Cria uma sessão do portal de faturamento e retorna a URL de redirecionamento.
+ * @returns A URL para o portal de faturamento.
+ */
+const createBillingPortalSession = async (): Promise<string> => {
+    const response = await fetch(`${API_BASE_URL}/owner/billing-portal`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // O token de autenticação deve ser adicionado pelo interceptor ou contexto
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido ao iniciar sessão de faturamento.' }));
+        throw new Error(errorData.error || `Falha ao iniciar sessão de faturamento: Status ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.redirectUrl;
+};
+
+
 // --- Exportação Principal ---
 
 export const api = {
@@ -87,4 +107,7 @@ export const api = {
     getLandingImages,
     uploadLandingImage,
     deleteLandingImage,
+    
+    // Funções de Faturamento
+    createBillingPortalSession,
 };

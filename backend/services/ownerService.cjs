@@ -104,6 +104,32 @@ const fetchOwnerMetrics = async () => {
     };
 };
 
+/**
+ * MOCK: Simula a criação de uma sessão do portal de faturamento.
+ * Em um ambiente real, isso chamaria a API do Stripe.
+ * @param {string} userId - O ID do usuário.
+ * @returns {Promise<string>} A URL de redirecionamento do portal de faturamento.
+ */
+const createBillingPortalSession = async (userId) => {
+    // 1. Busca o stripe_customer_id do perfil (Mock: assume que existe)
+    const { data: profileData, error: profileError } = await supabaseService
+        .from('profiles')
+        .select('stripe_customer_id')
+        .eq('id', userId)
+        .single();
+
+    if (profileError || !profileData || !profileData.stripe_customer_id) {
+        // Se não tiver ID do Stripe, assume que é um novo cliente ou plano FREE
+        // Redireciona para a página de preços para iniciar a assinatura
+        return 'https://mock-billing-portal.com/pricing'; 
+    }
+    
+    // Mock: Retorna uma URL de portal de faturamento simulada
+    return `https://mock-billing-portal.com/session/${profileData.stripe_customer_id}`;
+};
+
+
 module.exports = {
     fetchOwnerMetrics,
+    createBillingPortalSession, // Exportando a nova função
 };
