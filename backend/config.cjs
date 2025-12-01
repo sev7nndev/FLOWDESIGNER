@@ -1,7 +1,8 @@
 // backend/config.cjs
 const { createClient } = require('@supabase/supabase-js');
-// CORREÇÃO CRÍTICA: Garantir que o .env.local seja carregado corretamente
-require('dotenv').config({ path: '../.env.local' }); 
+const path = require('path'); // Importando path
+// CORREÇÃO CRÍTICA: Garantir que o .env.local seja carregado corretamente usando path.resolve
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') }); 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // --- Supabase Configuration ---
