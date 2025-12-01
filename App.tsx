@@ -5,7 +5,7 @@ import { AppTitleHeader } from './components/AppTitleHeader';
 import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
 import { Sparkles } from 'lucide-react';
-import { useGeneration } from './hooks/useGeneration';
+import { useGeneration } from './src/hooks/useGeneration'; // CORREÇÃO: Importando do caminho correto
 import { ResultDisplay } from './components/ResultDisplay';
 import { SettingsModal } from './components/Modals';
 import { useProfile } from './hooks/useProfile';
