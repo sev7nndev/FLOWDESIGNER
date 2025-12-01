@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { GenerationState, GenerationStatus } from '../types'; // FIX: Removed unused GeneratedImage (Error 4)
+import React from 'react'; // FIX: Removed unused useRef import (Error 4)
+import { GenerationState, GenerationStatus } from '../types'; 
 import { ImageResult } from './ImageResult';
 import { History, Sparkles, Loader2 } from 'lucide-react';
 
@@ -16,8 +16,6 @@ const ResultDisplayComponent: React.FC<ResultDisplayProps> = ({
     downloadImage, 
     setShowGallery 
 }) => { 
-    // FIX: Removed unused resultRef (Error 5)
-
     // Placeholder logic based on context
     const isLoading = state.status === GenerationStatus.GENERATING;
     const hasResult = state.currentImage !== null;
