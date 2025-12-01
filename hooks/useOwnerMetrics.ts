@@ -13,10 +13,12 @@ interface ClientData {
 }
 
 interface OwnerMetrics {
+    totalClients: number; // NOVO: Contagem total
     planCounts: {
         free: number;
         starter: number;
         pro: number;
+        other: number; // NOVO: Para capturar roles não mapeadas
     };
     statusCounts: {
         on: number;
@@ -27,7 +29,8 @@ interface OwnerMetrics {
 }
 
 const INITIAL_METRICS: OwnerMetrics = {
-    planCounts: { free: 0, starter: 0, pro: 0 },
+    totalClients: 0, // NOVO
+    planCounts: { free: 0, starter: 0, pro: 0, other: 0 }, // NOVO
     statusCounts: { on: 0, paused: 0, cancelled: 0 },
     clients: [],
 };
@@ -65,22 +68,18 @@ export const useOwnerMetrics = (user: User | null) => {
             if (!response.ok) {
                 let errorText = `Erro do servidor: Status ${response.status}`;
                 try {
-                    // Tenta ler o corpo JSON do erro
                     const errorBody = await response.json();
                     errorText = errorBody.error || errorText;
                 } catch (e) {
-                    // Se falhar, o corpo estava vazio ou não era JSON
                     errorText += ". Resposta do servidor vazia ou inválida.";
                 }
                 throw new Error(errorText);
             }
 
-            // Tenta ler o corpo JSON da resposta OK
             const data: OwnerMetrics = await response.json();
             setMetrics(data);
 
         } catch (e: any) {
-            // Captura o erro de parsing JSON (Unexpected end of JSON input)
             if (e.message.includes('JSON')) {
                  setError("Falha ao carregar métricas. O servidor retornou uma resposta incompleta ou inválida. Verifique o log do backend.");
             } else {
