@@ -47,7 +47,7 @@ export function MovingBorderButton({
         <MovingBorder duration={duration} rx="30%" ry="30%">
           <div
             className={cn(
-              // Reduzindo o tamanho de h-10 w-10 para h-6 w-6 para um efeito mais fino
+              // Mantendo o tamanho ajustado para um efeito mais fino
               "h-6 w-6 opacity-[0.8] bg-[radial-gradient(theme(colors.primary)_40%,transparent_60%)]",
               borderClassName
             )}
@@ -104,11 +104,23 @@ export const MovingBorder = ({
 
   const x = useTransform(
     progress,
-    (val) => pathRef.current?.getPointAtLength(val).x
+    (val) => {
+      try {
+        return pathRef.current?.getPointAtLength(val).x;
+      } catch (e) {
+        return 0;
+      }
+    }
   );
   const y = useTransform(
     progress,
-    (val) => pathRef.current?.getPointAtLength(val).y
+    (val) => {
+      try {
+        return pathRef.current?.getPointAtLength(val).y;
+      } catch (e) {
+        return 0;
+      }
+    }
   );
 
   const transform = useMotionTemplate`translateX(${x}px) translateY(${y}px) translateX(-50%) translateY(-50%)`;
