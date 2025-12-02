@@ -6,7 +6,6 @@ const { supabaseAnon } = require('../config');
 // Rota para buscar configurações globais
 router.get('/:key', async (req, res) => {
   const { key } = req.params;
-
   try {
     const { data, error } = await supabaseAnon
       .from('app_config')

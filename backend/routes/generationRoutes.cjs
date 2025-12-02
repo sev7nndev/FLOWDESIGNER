@@ -47,10 +47,8 @@ router.get('/support-recipient', authMiddleware, async (req, res) => {
       if (ownerError || !ownerUser) {
         return res.status(404).json({ error: 'Nenhum destinatário de suporte encontrado.' });
       }
-
       return res.status(200).json({ recipientId: ownerUser.id });
     }
-
     return res.status(200).json({ recipientId: supportUser.id });
   } catch (error) {
     console.error("Error fetching support recipient:", error);

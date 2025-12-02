@@ -4,7 +4,6 @@ const { supabaseService } = require('../config');
 const roleMiddleware = (allowedRoles) => {
   return async (req, res, next) => {
     const userId = req.user.id; // Assumindo que o authMiddleware já rodou
-
     if (!userId) {
       return res.status(401).json({ error: 'Usuário não autenticado.' });
     }
