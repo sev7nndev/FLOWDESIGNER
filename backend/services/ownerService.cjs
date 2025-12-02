@@ -10,8 +10,18 @@ const CLIENT_ROLES = ['free', 'starter', 'pro'];
  * @returns {Promise<object>} Métricas do sistema.
  */
 async function fetchOwnerMetrics(ownerId) {
-  let planCounts = { free: 0, starter: 0, pro: 0 };
-  let statusCounts = { on: 0, paused: 0, cancelled: 0 };
+  let planCounts = {
+    free: 0,
+    starter: 0,
+    pro: 0
+  };
+  
+  let statusCounts = {
+    on: 0,
+    paused: 0,
+    cancelled: 0
+  };
+  
   let mpConnectionStatus = 'disconnected';
   let clientList = [];
 
@@ -21,9 +31,9 @@ async function fetchOwnerMetrics(ownerId) {
       .from('profiles_with_email') // Usando a VIEW
       .select('role, status')
       .in('role', CLIENT_ROLES);
-
+      
     if (profilesError) throw profilesError;
-
+    
     profiles.forEach(profile => {
       if (planCounts.hasOwnProperty(profile.role)) {
         planCounts[profile.role]++;
@@ -43,11 +53,11 @@ async function fetchOwnerMetrics(ownerId) {
       .select('value')
       .eq('key', 'mp_access_token')
       .single();
-
+      
     if (settingsError && settingsError.code !== 'PGRST116') { // PGRST116 = No rows found
       throw settingsError;
     }
-
+    
     if (settings && settings.value) {
       mpConnectionStatus = 'connected';
     }
@@ -62,9 +72,9 @@ async function fetchOwnerMetrics(ownerId) {
       .select('id, first_name, last_name, email, role, status')
       .in('role', CLIENT_ROLES)
       .order('updated_at', { ascending: false });
-
+      
     if (clientsError) throw clientsError;
-
+    
     clientList = clients.map(client => ({
       id: client.id,
       name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
@@ -93,11 +103,13 @@ async function getMercadoPagoAuthUrl(ownerId) {
   // TODO: Implementar lógica real de geração da URL de autenticação
   // Esta é uma simulação. Deve-se usar as credenciais do MP e o ownerId para gerar a URL.
   const redirectUri = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/owner-panel`;
+  
   // Substituir pelas credenciais reais do aplicativo Mercado Pago
   const clientId = process.env.MP_CLIENT_ID;
   if (!clientId) {
     throw new Error("MP_CLIENT_ID não configurado.");
   }
+  
   const authUrl = `https://auth.mercadopago.com/authorization?client_id=${clientId}&response_type=code&platform_id=mp&redirect_uri=${redirectUri}&state=${ownerId}`;
   return authUrl;
 }
@@ -111,7 +123,7 @@ async function disconnectMercadoPago(ownerId) {
     .from('app_config') // Usando app_config
     .delete()
     .eq('key', 'mp_access_token');
-
+    
   if (error) throw error;
 }
 
@@ -129,7 +141,7 @@ async function getOwnerChatHistory(ownerId) {
       .from('profiles_with_email')
       .select('id, first_name, last_name, email')
       .in('role', CLIENT_ROLES);
-
+      
     if (error) throw error;
     clients = data;
   } catch (e) {
