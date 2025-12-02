@@ -6,6 +6,7 @@ const generationRoutes = require('./routes/generationRoutes'); // Import the new
 const ownerRoutes = require('./routes/ownerRoutes'); // Importando rotas do proprietário
 const adminRoutes = require('./routes/adminRoutes'); // Importando rotas do Admin
 const publicRoutes = require('./routes/publicRoutes'); // NOVO: Importando rotas públicas
+const planRoutes = require('./routes/planRoutes.cjs'); // NOVO: Importando rotas de planos
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -33,6 +34,8 @@ app.use('/api/owner', ownerRoutes);
 app.use('/api/admin', adminRoutes);
 // NOVO: Rotas Públicas (Montadas)
 app.use('/api', publicRoutes);
+// NOVO: Rotas de Planos
+app.use('/api/plans', planRoutes);
 
 
 // --- Quota/Usage Endpoint (Public, but requires user ID/token for data retrieval) ---
