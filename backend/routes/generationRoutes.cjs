@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { generateImageWithQuotaCheck } = require('../services/generationService');
-const { supabaseService } = require('../config');
 
 // Generate image endpoint
 router.post('/generate', authenticateToken, async (req, res) => {
@@ -34,6 +33,8 @@ router.post('/generate', authenticateToken, async (req, res) => {
 router.get('/support-recipient', authenticateToken, async (req, res) => {
   try {
     // Find an admin or dev user to be the support recipient
+    const { supabaseService } = require('../config');
+    
     const { data: supportUser, error } = await supabaseService
       .from('profiles')
       .select('id')

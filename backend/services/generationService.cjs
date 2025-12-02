@@ -43,27 +43,21 @@ const generateImageWithQuotaCheck = async (userId, promptInfo) => {
 
   // 3. Check current usage (only if not unlimited)
   if (!isUnlimited) {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
-    const { count: imagesGenerated, error: countError } = await supabaseService
-      .from('image_generations')
-      .select('*', { count: 'exact', head: true })
+    const { data: usageData, error: usageError } = await supabaseService
+      .from('user_usage')
+      .select('current_usage')
       .eq('user_id', userId)
-      .gte('created_at', startOfMonth.toISOString());
+      .single();
 
-    if (countError) {
-      console.error('Usage count error:', countError);
-      throw new Error('Erro ao verificar seu uso de imagens.');
-    }
+    const currentUsage = usageData?.current_usage || 0;
 
-    if (imagesGenerated >= quotaLimit) {
+    if (currentUsage >= quotaLimit) {
       const error = new Error(`Você atingiu seu limite de ${quotaLimit} imagens este mês. Faça upgrade para continuar gerando!`);
       error.code = 'QUOTA_EXCEEDED';
       throw error;
     }
 
-    console.log(`User ${userId} has used ${imagesGenerated}/${quotaLimit} images`);
+    console.log(`User ${userId} has used ${currentUsage}/${quotaLimit} images`);
   }
 
   // 4. Generate detailed prompt
@@ -89,9 +83,9 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
   `.trim();
 
   try {
-    console.log('🤖 Calling Gemini API...');
+    console.log('🤖 Calling Google AI Studio API...');
     
-    // 5. Generate image with Gemini
+    // 5. Generate image with Google AI Studio
     const result = await imageModel.generateContent([
       {
         text: detailedPrompt
@@ -136,12 +130,7 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
 
     console.log('✅ Image uploaded to storage:', fileName);
 
-    // 7. Get public URL
-    const { data: { publicUrl } } = supabaseService.storage
-      .from('generated-arts')
-      .getPublicUrl(fileName);
-
-    // 8. Register generation in database
+    // 7. Register generation in database
     const { error: genError } = await supabaseService
       .from('image_generations')
       .insert({
@@ -151,6 +140,18 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
     if (genError) {
       console.error('Generation registration error:', genError);
       // Don't throw error here, image was generated successfully
+    }
+
+    // 8. Update user usage count (only if not unlimited)
+    if (!isUnlimited) {
+      const { error: usageError } = await supabaseService.rpc('increment_user_usage', {
+        user_id_input: userId
+      });
+
+      if (usageError) {
+        console.error('Usage update error:', usageError);
+        // Don't throw error here, image was generated successfully
+      }
     }
 
     // 9. Save image record
@@ -172,6 +173,11 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
 
     console.log('✅ Image generation completed successfully');
 
+    // 10. Get public URL
+    const { data: { publicUrl } } = supabaseService.storage
+      .from('generated-arts')
+      .getPublicUrl(fileName);
+
     return {
       id: imageDataRecord?.id || `temp-${Date.now()}`,
       url: publicUrl,
@@ -181,7 +187,7 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
     };
 
   } catch (geminiError) {
-    console.error('❌ Gemini API error:', geminiError);
+    console.error('❌ Google AI Studio API error:', geminiError);
     
     if (geminiError.message.includes('quota')) {
       throw new Error('Cota da API Gemini excedida. Tente novamente mais tarde.');
