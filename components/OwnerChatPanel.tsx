@@ -20,14 +20,19 @@ interface ChatListItemProps {
 const ChatListItem: React.FC<ChatListItemProps> = ({ thread, isActive, onClick }) => {
   const lastMessageTime = useMemo(() => {
     const date = new Date(thread.lastMessage.timestamp);
-    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }, [thread.lastMessage.timestamp]);
 
   return (
-    <div
+    <div 
       className={`flex items-center p-4 cursor-pointer transition-colors border-b border-white/5 ${
-        isActive ? 'bg-primary/20 border-l-4 border-primary' : 'hover:bg-white/5'
-      }`}
+        isActive 
+          ? 'bg-primary/20 border-l-4 border-primary' 
+          : 'hover:bg-white/5'
+      }`} 
       onClick={onClick}
     >
       <div className="relative mr-4">
@@ -41,7 +46,8 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ thread, isActive, onClick }
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-white truncate">{thread.name}</p>
         <p className="text-xs text-gray-400 truncate">
-          {thread.lastMessage.sender === 'owner' ? 'Você: ' : ''} {thread.lastMessage.text}
+          {thread.lastMessage.sender === 'owner' ? 'Você: ' : ''}
+          {thread.lastMessage.text}
         </p>
       </div>
       <div className="text-xs text-gray-500 ml-2 flex flex-col items-end">
@@ -69,11 +75,13 @@ const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName }
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() === '') return;
-
+    
     // Simulação de envio (em um app real, isso chamaria uma API/WebSocket)
     console.log(`Enviando para ${thread.name}: ${message}`);
+    
     // Limpar input
     setMessage('');
+    
     // Em um app real, você atualizaria o estado do chat com a nova mensagem
     // Por enquanto, apenas logamos.
   };
@@ -84,21 +92,19 @@ const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName }
       <div className="p-4 border-b border-white/10 flex items-center">
         <h3 className="text-lg font-bold text-white">{thread.name}</h3>
       </div>
-
+      
       {/* Área de Mensagens */}
       <div className="flex-1 p-4 overflow-y-auto space-y-4 custom-scrollbar">
         {thread.messages.map((msg) => (
-          <div
-            key={msg.id}
+          <div 
+            key={msg.id} 
             className={`flex ${msg.sender === 'owner' ? 'justify-end' : 'justify-start'}`}
           >
-            <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-xl ${
-                msg.sender === 'owner'
-                  ? 'bg-primary text-white rounded-br-none'
-                  : 'bg-zinc-700 text-white rounded-tl-none'
-              }`}
-            >
+            <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-xl ${
+              msg.sender === 'owner' 
+                ? 'bg-primary text-white rounded-br-none' 
+                : 'bg-zinc-700 text-white rounded-tl-none'
+            }`}>
               <p className="text-sm">{msg.text}</p>
               <span className="block text-right text-[10px] mt-1 opacity-70">
                 {new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
@@ -110,7 +116,7 @@ const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName }
           </div>
         ))}
       </div>
-
+      
       {/* Input de Mensagem */}
       <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 flex gap-3">
         <Input
@@ -132,7 +138,7 @@ const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName }
 export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner }) => {
   const { chatHistory, isLoading, error, refreshHistory } = useOwnerChat();
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
-
+  
   const activeThread = useMemo(() => {
     return chatHistory.find(thread => thread.id === activeThreadId);
   }, [chatHistory, activeThreadId]);
@@ -194,7 +200,7 @@ export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner }) => {
           ))}
         </div>
       </div>
-
+      
       {/* Janela de Chat Ativa */}
       <div className={`flex-1 ${activeThreadId ? 'block' : 'hidden md:block'}`}>
         {activeThread ? (

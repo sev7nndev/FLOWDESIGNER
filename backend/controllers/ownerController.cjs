@@ -6,18 +6,21 @@ const getOwnerMetrics = async (req, res) => {
     // Assumindo que req.user.id é populado corretamente pelo middleware
     const ownerId = req.user.id;
     const metrics = await ownerService.fetchOwnerMetrics(ownerId);
-
+    
     // Verificação de segurança para garantir que o serviço retornou um objeto
     if (!metrics || typeof metrics !== 'object') {
       console.warn("Owner service returned invalid data structure.");
       return res.status(500).json({ error: "Internal server error: Invalid metrics structure." });
     }
-
+    
     return res.status(200).json(metrics);
   } catch (error) {
     console.error("Error in getOwnerMetrics controller:", error.message, error.stack);
     // FIX CRÍTICO: Sempre enviar uma resposta JSON em caso de erro para evitar corpo vazio.
-    return res.status(500).json({ error: "Failed to load data from server. Check backend logs for details.", details: error.message });
+    return res.status(500).json({ 
+      error: "Failed to load data from server. Check backend logs for details.",
+      details: error.message 
+    });
   }
 };
 

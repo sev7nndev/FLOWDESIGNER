@@ -38,14 +38,14 @@ export const useOwnerChat = (): UseOwnerChatResult => {
   const fetchChatHistory = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
+    
     const supabase = getSupabase();
     if (!supabase) {
       setError("Supabase client not initialized.");
       setIsLoading(false);
       return;
     }
-
+    
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       setError("User not authenticated.");
@@ -59,12 +59,12 @@ export const useOwnerChat = (): UseOwnerChatResult => {
           'Authorization': `Bearer ${session.access_token}`,
         },
       });
-
+      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch chat history.');
       }
-
+      
       const data: ChatThread[] = await response.json();
       setChatHistory(data);
     } catch (e) {
