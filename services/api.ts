@@ -4,6 +4,24 @@ import { getSupabase } from "./supabaseClient";
 // URL do seu Backend Node.js local (ou deployado)
 const BACKEND_URL = "/api"; 
 
+// Função auxiliar para analisar a resposta de erro
+const parseErrorResponse = async (response: Response) => {
+    let errorText = `O servidor retornou um erro inesperado (Status: ${response.status}).`;
+    try {
+        const err = await response.json();
+        // Verifica se o erro é de quota bloqueada
+        if (err.quotaStatus === 'BLOCKED') {
+            throw new Error(err.error || "Você atingiu o limite de gerações.");
+        }
+        errorText = err.error || errorText;
+    } catch (e) {
+        // Se falhar ao analisar JSON, usamos a mensagem padrão
+        console.error("Falha ao analisar a resposta de erro como JSON.", { status: response.status, statusText: response.statusText });
+    }
+    throw new Error(errorText);
+};
+
+
 export const api = {
   generate: async (businessInfo: BusinessInfo): Promise<GeneratedImage> => {
     const supabase = getSupabase();
@@ -25,19 +43,7 @@ export const api = {
       });
 
       if (!response.ok) {
-        try {
-          const err = await response.json();
-          
-          // Verifica se o erro é de quota bloqueada
-          if (err.quotaStatus === 'BLOCKED') {
-              throw new Error(err.error || "Você atingiu o limite de gerações.");
-          }
-          
-          throw new Error(err.error || "Erro no servidor");
-        } catch (e) {
-          console.error("Falha ao analisar a resposta de erro como JSON.", { status: response.status, statusText: response.statusText });
-          throw new Error(`O servidor retornou um erro inesperado (Status: ${response.status}). Verifique se o backend está rodando corretamente.`);
-        }
+        await parseErrorResponse(response); // Usa a função auxiliar
       }
 
       const data = await response.json();
@@ -129,7 +135,15 @@ export const api = {
     });
     
     if (!response.ok) {
-        console.error("Failed to fetch history from backend:", response.status);
+        // Tratamento robusto de erro
+        let errorText = `Falha ao buscar histórico: Status ${response.status}`;
+        try {
+            const err = await response.json();
+            errorText = err.error || errorText;
+        } catch (e) {
+            console.error("Falha ao analisar JSON de erro do histórico.");
+        }
+        console.error(errorText);
         return [];
     }
     
@@ -236,8 +250,15 @@ export const api = {
     });
 
     if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || `Falha ao buscar contato de suporte: Status ${response.status}`);
+        // Tratamento robusto de erro para evitar falha de JSON
+        let errorText = `Falha ao buscar contato de suporte: Status ${response.status}`;
+        try {
+            const err = await response.json();
+            errorText = err.error || errorText;
+        } catch (e) {
+            console.error("Falha ao analisar JSON de erro do destinatário de suporte.");
+        }
+        throw new Error(errorText);
     }
     
     const data = await response.json();
