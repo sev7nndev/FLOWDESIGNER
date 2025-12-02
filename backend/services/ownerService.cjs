@@ -29,12 +29,12 @@ const safeFetchCount = async (query) => {
  * @returns {Promise<{planCounts: object, statusCounts: object}>}
  */
 const fetchOwnerMetrics = async (ownerId) => {
-    // Roles a serem excluídas das métricas de clientes
-    const EXCLUDED_ROLES = ['admin', 'dev', 'owner'];
-    // FIX: Use uma string simples separada por vírgulas para o operador 'in' do PostgREST.
-    const EXCLUDED_ROLES_CSV = EXCLUDED_ROLES.join(','); 
+    // Roles que representam clientes (incluindo free, starter e pro)
+    const CLIENT_ROLES = ['free', 'starter', 'pro'];
+    const CLIENT_ROLES_CSV = CLIENT_ROLES.join(','); 
 
     // --- 1. Contagem de usuários por plano (role) ---
+    // Esta seção já estava correta, contando cada plano explicitamente.
     const countsByPlan = { free: 0, starter: 0, pro: 0 };
     
     countsByPlan.free = await safeFetchCount(supabaseService.from('profiles').eq('role', 'free'));
@@ -44,10 +44,10 @@ const fetchOwnerMetrics = async (ownerId) => {
     // --- 2. Contagem de usuários por status ---
     const countsByStatus = { on: 0, paused: 0, cancelled: 0 };
     
-    // Aplicando FIX: Usando EXCLUDED_ROLES_CSV
-    countsByStatus.on = await safeFetchCount(supabaseService.from('profiles').eq('status', 'on').not('role', 'in', EXCLUDED_ROLES_CSV));
-    countsByStatus.paused = await safeFetchCount(supabaseService.from('profiles').eq('status', 'paused').not('role', 'in', EXCLUDED_ROLES_CSV));
-    countsByStatus.cancelled = await safeFetchCount(supabaseService.from('profiles').eq('status', 'cancelled').not('role', 'in', EXCLUDED_ROLES_CSV));
+    // FIX: Usar o operador 'in' com a lista positiva de CLIENT_ROLES para garantir que 'free' seja incluído.
+    countsByStatus.on = await safeFetchCount(supabaseService.from('profiles').eq('status', 'on').in('role', CLIENT_ROLES_CSV));
+    countsByStatus.paused = await safeFetchCount(supabaseService.from('profiles').eq('status', 'paused').in('role', CLIENT_ROLES_CSV));
+    countsByStatus.cancelled = await safeFetchCount(supabaseService.from('profiles').eq('status', 'cancelled').in('role', CLIENT_ROLES_CSV));
     
     // 3. Lista de Clientes (Nome, Email, Plano, Status)
     let clientList = [];
@@ -57,7 +57,7 @@ const fetchOwnerMetrics = async (ownerId) => {
             .from('profiles')
             // Usando 'auth_user:id(email)' que é a sintaxe que funcionou no Edge Function, mas renomeando para 'auth_user'
             .select('id, first_name, last_name, role, status, auth_user:id(email)') 
-            .not('role', 'in', EXCLUDED_ROLES_CSV) // Aplicando FIX: Usando EXCLUDED_ROLES_CSV
+            .in('role', CLIENT_ROLES_CSV) // FIX: Usando a lista positiva de CLIENT_ROLES
             .order('updated_at', { ascending: false });
             
         if (clientsError) throw clientsError;
