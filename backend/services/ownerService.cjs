@@ -12,40 +12,65 @@ const oauth = new OAuth(client);
 const fetchOwnerMetrics = async (ownerId) => {
     // Roles a serem excluídas das métricas de clientes
     const EXCLUDED_ROLES = ['admin', 'dev', 'owner'];
+    const EXCLUDED_ROLES_STRING = `(${EXCLUDED_ROLES.map(r => `'${r}'`).join(',')})`;
 
-    // 1. Contagem de usuários por plano (role)
-    const { data: planCounts, error: planError } = await supabaseService
-        .from('profiles')
-        .select('role, count', { count: 'exact', head: false }) // Usando count para agrupar
-        .not('role', 'in', `(${EXCLUDED_ROLES.map(r => `'${r}'`).join(',')})`); // Filtro de exclusão
-
-    if (planError) throw planError;
+    // --- 1. Contagem de usuários por plano (role) ---
+    // Corrigido para usar contagens explícitas com head: true para garantir que o count seja retornado corretamente.
+    const countsByPlan = { free: 0, starter: 0, pro: 0 };
     
-    // Processa o resultado da contagem por role
-    const countsByPlan = (planCounts || []).reduce((acc, item) => {
-        if(item.role) acc[item.role] = item.count;
-        return acc;
-    }, { free: 0, starter: 0, pro: 0 });
-
-    // 2. Contagem de usuários por status
-    const { data: statusCounts, error: statusError } = await supabaseService
+    // Fetch count for 'free'
+    const { count: freeCount } = await supabaseService
         .from('profiles')
-        .select('status, count', { count: 'exact', head: false }) // Usando count para agrupar
-        .not('role', 'in', `(${EXCLUDED_ROLES.map(r => `'${r}'`).join(',')})`); // Filtro de exclusão
-        
-    if (statusError) throw statusError;
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'free');
+    countsByPlan.free = freeCount || 0;
+
+    // Fetch count for 'starter'
+    const { count: starterCount } = await supabaseService
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'starter');
+    countsByPlan.starter = starterCount || 0;
+
+    // Fetch count for 'pro'
+    const { count: proCount } = await supabaseService
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'pro');
+    countsByPlan.pro = proCount || 0;
     
-    // Processa o resultado da contagem por status
-    const countsByStatus = (statusCounts || []).reduce((acc, item) => {
-        if(item.status) acc[item.status] = item.count;
-        return acc;
-    }, { on: 0, paused: 0, cancelled: 0 });
+    // --- 2. Contagem de usuários por status ---
+    const countsByStatus = { on: 0, paused: 0, cancelled: 0 };
+    
+    // Fetch count for 'on' status (Active Clients)
+    const { count: onCount } = await supabaseService
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'on')
+        .not('role', 'in', EXCLUDED_ROLES_STRING);
+    countsByStatus.on = onCount || 0;
+
+    // Fetch count for 'paused' status (Paused Clients)
+    const { count: pausedCount } = await supabaseService
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'paused')
+        .not('role', 'in', EXCLUDED_ROLES_STRING);
+    countsByStatus.paused = pausedCount || 0;
+
+    // Fetch count for 'cancelled' status (Cancelled Clients)
+    const { count: cancelledCount } = await supabaseService
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'cancelled')
+        .not('role', 'in', EXCLUDED_ROLES_STRING);
+    countsByStatus.cancelled = cancelledCount || 0;
     
     // 3. Lista de Clientes (Nome, Email, Plano, Status)
     const { data: clients, error: clientsError } = await supabaseService
         .from('profiles')
         .select('id, first_name, last_name, role, status, user:id(email)')
-        .not('role', 'in', `(${EXCLUDED_ROLES.map(r => `'${r}'`).join(',')})`)
+        .not('role', 'in', EXCLUDED_ROLES_STRING)
         .order('updated_at', { ascending: false });
         
     if (clientsError) throw clientsError;
