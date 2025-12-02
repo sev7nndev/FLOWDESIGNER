@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middleware/authMiddleware');
+const { authenticateToken } = require('../middleware/auth');
 const { generateImageWithQuotaCheck } = require('../services/generationService');
 const { supabaseService } = require('../config');
 
-router.post('/generate', authMiddleware, async (req, res) => {
+// Generate image endpoint
+router.post('/generate', authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { promptInfo } = req.body;
 
@@ -16,16 +17,21 @@ router.post('/generate', authMiddleware, async (req, res) => {
     const generatedImage = await generateImageWithQuotaCheck(userId, promptInfo);
     res.status(201).json(generatedImage);
   } catch (error) {
+    console.error("Image generation error:", error);
+    
     if (error.code === 'QUOTA_EXCEEDED') {
       return res.status(403).json({ error: error.message });
     }
-    console.error("Image generation error:", error);
-    res.status(500).json({ error: 'Ocorreu um erro inesperado ao gerar a imagem.' });
+    
+    res.status(500).json({ 
+      error: 'Ocorreu um erro inesperado ao gerar a imagem.',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
-// Support recipient endpoint
-router.get('/support-recipient', authMiddleware, async (req, res) => {
+// Get support recipient endpoint
+router.get('/support-recipient', authenticateToken, async (req, res) => {
   try {
     // Find an admin or dev user to be the support recipient
     const { data: supportUser, error } = await supabaseService

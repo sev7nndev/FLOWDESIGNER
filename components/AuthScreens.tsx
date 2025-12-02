@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from './Button';
-import { Sparkles, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Sparkles, ArrowLeft, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../services/authService';
 import { GoogleIcon } from './GoogleIcon';
 import { User } from '../types';
-import { getSupabase } from '../services/supabaseClient';
-import { useNavigate } from 'react-router-dom';
 
 interface AuthScreensProps {
   onSuccess: (user: User | null) => void;
@@ -18,18 +16,51 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
+
+  const validateForm = () => {
+    if (!formData.email || !formData.password) {
+      setError('Email e senha são obrigatórios');
+      return false;
+    }
+
+    if (!isLogin) {
+      if (!formData.firstName) {
+        setError('Primeiro nome é obrigatório');
+        return false;
+      }
+      
+      if (formData.password.length < 6) {
+        setError('A senha deve ter pelo menos 6 caracteres');
+        return false;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        setError('As senhas não coincidem');
+        return false;
+      }
+    }
+
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -38,22 +69,27 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
         // The auth state change will be handled by the parent component
         onSuccess(null);
       } else {
-        if (!formData.firstName) {
-          throw new Error("Primeiro nome é obrigatório");
-        }
-        
         await authService.register(formData.firstName, formData.lastName, formData.email, formData.password);
-        setSuccessMessage('Cadastro realizado! Verifique seu e-mail para confirmar sua conta e poder fazer o login.');
+        setSuccessMessage('Cadastro realizado! Você já pode fazer login.');
+        // Switch to login view after successful registration
+        setTimeout(() => {
+          setIsLogin(true);
+          setSuccessMessage('');
+        }, 2000);
       }
     } catch (err: any) {
+      console.error('Auth error:', err);
       let errorMessage = err.message || 'Ocorreu um erro desconhecido.';
       
-      if (errorMessage.includes('you can only request this after')) {
-        errorMessage = 'Muitas tentativas. Por favor, aguarde um minuto e tente novamente.';
+      // Handle specific error messages
+      if (errorMessage.includes('Invalid login credentials')) {
+        errorMessage = 'Email ou senha inválidos.';
       } else if (errorMessage.includes('User already registered')) {
         errorMessage = 'Este e-mail já está cadastrado. Tente fazer login.';
-      } else if (errorMessage.includes('Invalid login credentials')) {
-        errorMessage = 'Email ou senha inválidos.';
+      } else if (errorMessage.includes('Email rate limit exceeded')) {
+        errorMessage = 'Muitas tentativas. Aguarde um minuto e tente novamente.';
+      } else if (errorMessage.includes('Password should be at least')) {
+        errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
       }
       
       setError(errorMessage);
@@ -67,8 +103,10 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
     setIsGoogleLoading(true);
     try {
       await authService.loginWithGoogle();
+      // The redirect will handle the rest
     } catch (err: any) {
-      setError(err.message || 'Ocorreu um erro desconhecido.');
+      console.error('Google auth error:', err);
+      setError(err.message || 'Erro ao fazer login com Google.');
       setIsGoogleLoading(false);
     }
   };
@@ -80,11 +118,8 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] pointer-events-none" />
         <div className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative z-10 animate-fade-in text-center">
           <CheckCircle2 size={48} className="text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white">Quase lá!</h2>
+          <h2 className="text-2xl font-bold text-white">Sucesso!</h2>
           <p className="text-gray-400 mt-4">{successMessage}</p>
-          <Button onClick={() => setIsLogin(true)} variant="secondary" className="w-full h-12 rounded-lg mt-8">
-            Ir para o Login
-          </Button>
         </div>
       </div>
     );
@@ -96,7 +131,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] pointer-events-none" />
       
       <div className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative z-10 animate-fade-in">
-        <button onClick={onBack} className="absolute top-8 left-8 text-gray-500 hover:text-white">
+        <button onClick={onBack} className="absolute top-8 left-8 text-gray-500 hover:text-white transition-colors">
           <ArrowLeft size={20} />
         </button>
 
@@ -118,20 +153,20 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
                 <input 
                   type="text" 
                   required 
-                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors"
                   placeholder="Seu nome"
                   value={formData.firstName}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, firstName: e.target.value})}
+                  onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Sobrenome (Opcional)</label>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Sobrenome</label>
                 <input 
                   type="text" 
-                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors"
                   placeholder="Seu sobrenome"
                   value={formData.lastName}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, lastName: e.target.value})}
+                  onChange={(e) => setFormData({...formData, lastName: e.target.value})}
                 />
               </div>
             </div>
@@ -142,26 +177,53 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
             <input 
               type="email" 
               required 
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
+              className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors"
               placeholder="seu@email.com"
               value={formData.email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, email: e.target.value})}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
             />
           </div>
           
           <div>
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Senha</label>
-            <input 
-              type="password" 
-              required 
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, password: e.target.value})}
-            />
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                required 
+                className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors pr-12"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
-          {error && <p className="text-red-400 text-xs text-center">{error}</p>}
+          {!isLogin && (
+            <div>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Confirmar Senha</label>
+              <input 
+                type="password" 
+                required 
+                className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors"
+                placeholder="••••••••"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+              />
+            </div>
+          )}
+
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
 
           <Button type="submit" isLoading={isLoading} className="w-full h-12 rounded-lg">
             {isLogin ? 'Entrar' : 'Cadastrar'}
@@ -191,7 +253,19 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
 
         <div className="mt-6 text-center">
           <button 
-            onClick={() => { setIsLogin(!isLogin); setError(''); setSuccessMessage(''); }}
+            type="button"
+            onClick={() => { 
+              setIsLogin(!isLogin); 
+              setError(''); 
+              setSuccessMessage(''); 
+              setFormData({
+                firstName: '',
+                lastName: '',
+                email: '',
+                password: '',
+                confirmPassword: ''
+              });
+            }}
             className="text-sm text-gray-400 hover:text-white transition-colors"
           >
             {isLogin ? 'Não tem conta? Crie uma agora.' : 'Já tem conta? Faça login.'}

@@ -14,15 +14,29 @@ const paymentRoutes = require('./routes/paymentRoutes.cjs');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
-  methods: ['GET', 'POST', 'DELETE'],
+// CORS configuration
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://your-production-domain.com' // Add your production domain
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // Increase limit for base64 images
 
+// Health check endpoint
 app.get('/', (req, res) => {
-  res.status(200).json({ message: 'Flow Designer Backend is running.' });
+  res.status(200).json({ 
+    message: 'Flow Designer Backend is running.',
+    timestamp: new Date().toISOString(),
+    version: '2.0.0'
+  });
 });
 
 // API Routes
@@ -36,18 +50,26 @@ app.use('/api/config', configRoutes);
 app.use('/api/dev', devRoutes);
 app.use('/api/payments', paymentRoutes);
 
-// Quota/Usage Endpoint
+// Usage endpoint
 app.get('/api/usage/:userId', async (req, res) => {
   const { userId } = req.params;
+  
   try {
+    // Get user profile
     const { data: profileData, error: profileError } = await supabaseAnon
       .from('profiles')
       .select('role')
       .eq('id', userId)
       .single();
 
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
     const role = profileData?.role || 'free';
 
+    // Get current usage
     const { data: usageData, error: usageError } = await supabaseAnon
       .from('user_usage')
       .select('current_usage')
@@ -56,8 +78,10 @@ app.get('/api/usage/:userId', async (req, res) => {
 
     const current_usage = usageData?.current_usage || 0;
 
+    // Determine limits
     let limit = 0;
     let isUnlimited = false;
+    
     switch (role) {
       case 'owner':
       case 'dev':
@@ -81,24 +105,35 @@ app.get('/api/usage/:userId', async (req, res) => {
       current: current_usage,
       limit,
       isUnlimited,
+      usagePercentage: isUnlimited ? 0 : Math.min((current_usage / limit) * 100, 100),
+      isBlocked: !isUnlimited && current_usage >= limit
     });
   } catch (error) {
-    console.error('Error fetching usage data:', error);
-    res.status(200).json({
-      role: 'free',
-      current: 0,
-      limit: FREE_LIMIT,
-      isUnlimited: false,
-    });
+    console.error('Usage endpoint error:', error);
+    res.status(500).json({ error: 'Erro ao buscar dados de uso.' });
   }
 });
 
-// Error handling middleware
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({ error: 'Endpoint não encontrado.' });
+});
+
+// Global error handler
 app.use((error, req, res, next) => {
   console.error('Unhandled error:', error);
-  res.status(500).json({ error: 'Internal server error' });
+  
+  if (error.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'JSON inválido no corpo da requisição.' });
+  }
+  
+  res.status(500).json({ 
+    error: 'Erro interno do servidor.',
+    details: process.env.NODE_ENV === 'development' ? error.message : undefined
+  });
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
 });

@@ -1,20 +1,18 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
-    // As variáveis devem ser lidas do ambiente de build (Vite/React)
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY;
 
-    let supabase: SupabaseClient | null = null;
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables. Please check your .env file.');
+}
 
-    export const getSupabase = () => {
-      if (!supabaseUrl || !supabaseAnonKey) {
-        // Esta é a condição que provavelmente está sendo atingida
-        console.error("Supabase environment variables are missing. Check your .env file and VITE_ prefix.");
-        return null; 
-      }
-      
-      if (!supabase) {
-        supabase = createClient(supabaseUrl, supabaseAnonKey);
-      }
-      return supabase;
-    };
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
+
+export const getSupabase = () => supabase;

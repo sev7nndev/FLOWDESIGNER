@@ -1,139 +1,152 @@
 import { useState, useCallback, useEffect } from 'react';
-import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User } from '../types';
-import { api } from '../services/api';
-import { PLACEHOLDER_EXAMPLES } from '../constants';
-import { useUsage } from './useUsage'; // Corrigido o caminho de importação
-import { toast } from 'sonner';
+import { BusinessInfo, GenerationState, GenerationStatus, User } from '../types';
+import { useUsage } from './useUsage';
+import { supabase } from '../services/supabaseClient';
+import { getBackendUrl } from '../utils/api';
 
-const INITIAL_FORM: BusinessInfo = {
-  companyName: '',
-  phone: '',
-  addressStreet: '',
-  addressNumber: '',
-  addressNeighborhood: '',
-  addressCity: '',
-  details: '',
-  logo: ''
-};
-
-const INITIAL_STATE: GenerationState = {
+const initialState: GenerationState = {
   status: GenerationStatus.IDLE,
-  currentImage: null,
-  history: [],
+  result: null,
+  error: null,
+  history: []
 };
-
-const MAX_LOGO_BASE64_LENGTH = 40000;
-const MAX_LOGO_KB = Math.round(MAX_LOGO_BASE64_LENGTH / 1.33 / 1024);
 
 export const useGeneration = (user: User | null) => {
-  const [form, setForm] = useState<BusinessInfo>(INITIAL_FORM);
-  const [state, setState] = useState<GenerationState>(INITIAL_STATE);
-  const { usage, isLoadingUsage, refreshUsage } = useUsage(user?.id); // Efeito para mostrar o aviso de "perto do limite"
+  const [form, setForm] = useState<BusinessInfo>({
+    companyName: '',
+    phone: '',
+    addressStreet: '',
+    addressNumber: '',
+    addressNeighborhood: '',
+    addressCity: '',
+    details: '',
+    logo: null
+  });
 
-  useEffect(() => {
-    if (usage?.isNearLimit) {
-      toast.warning('Você está perto de atingir seu limite de gerações.', {
-        description: `Uso: ${usage.currentUsage}/${usage.maxQuota}. Considere fazer um upgrade para não interromper seu trabalho.`,
-        duration: 10000,
-      });
-    }
-  }, [usage?.isNearLimit, usage?.currentUsage, usage?.maxQuota]);
+  const [state, setState] = useState<GenerationState>(initialState);
+  const { usage, isLoading: isLoadingUsage, refreshUsage } = useUsage(user?.id);
 
   const handleInputChange = useCallback((field: keyof BusinessInfo, value: string) => {
-    setForm((prev: BusinessInfo) => ({
-      ...prev,
-      [field]: value
-    }));
+    setForm(prev => ({ ...prev, [field]: value }));
   }, []);
 
   const handleLogoUpload = useCallback((file: File) => {
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        if (base64String.length > MAX_LOGO_BASE64_LENGTH) {
-          toast.error(`O logo é muito grande. O tamanho máximo permitido é de ${MAX_LOGO_KB}KB.`);
-          setForm((prev: BusinessInfo) => ({
-            ...prev,
-            logo: ''
-          })); // Clear logo if too large
-        } else {
-          setForm((prev: BusinessInfo) => ({
-            ...prev,
-            logo: base64String
-          }));
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+    setForm(prev => ({ ...prev, logo: file }));
   }, []);
 
+  const handleGenerate = useCallback(async () => {
+    if (!user) {
+      setState(prev => ({ ...prev, error: 'Você precisa estar logado para gerar imagens.' }));
+      return;
+    }
+
+    if (!form.companyName || !form.details) {
+      setState(prev => ({ ...prev, error: 'Preencha o nome da empresa e os detalhes do serviço.' }));
+      return;
+    }
+
+    setState(prev => ({ ...prev, status: GenerationStatus.GENERATING, error: null }));
+
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado.');
+      }
+
+      const response = await fetch(`${getBackendUrl()}/api/generation/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ promptInfo: form })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao gerar imagem.');
+      }
+
+      setState(prev => ({
+        ...prev,
+        status: GenerationStatus.SUCCESS,
+        result: data,
+        history: [data, ...prev.history]
+      }));
+
+      // Refresh usage after successful generation
+      refreshUsage();
+    } catch (error: any) {
+      console.error('Generation error:', error);
+      setState(prev => ({
+        ...prev,
+        status: GenerationStatus.ERROR,
+        error: error.message || 'Ocorreu um erro ao gerar a imagem.'
+      }));
+    }
+  }, [user, form, refreshUsage]);
+
   const loadExample = useCallback(() => {
-    const example = PLACEHOLDER_EXAMPLES[Math.floor(Math.random() * PLACEHOLDER_EXAMPLES.length)];
-    setForm(example);
+    setForm({
+      companyName: 'Calors Automóveis',
+      phone: '(21) 99999-9999',
+      addressStreet: 'Av. Principal',
+      addressNumber: '123',
+      addressNeighborhood: 'Centro',
+      addressCity: 'Rio de Janeiro',
+      details: 'Especialista em lanternagem, pintura e funilaria. Promoção de alinhamento e balanceamento por R$ 80. Trabalhamos com seguros e consórcios.',
+      logo: null
+    });
   }, []);
 
   const loadHistory = useCallback(async () => {
     if (!user) return;
+
     try {
-      const history = await api.getHistory();
-      setState((prev: GenerationState) => ({
-        ...prev,
-        history
-      }));
-    } catch (e) {
-      console.error("Failed to load history", e);
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      if (!token) return;
+
+      const response = await fetch(`${getBackendUrl()}/api/history`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const history = await response.json();
+        setState(prev => ({ ...prev, history }));
+      }
+    } catch (error) {
+      console.error('Error loading history:', error);
     }
   }, [user]);
 
-  const handleGenerate = useCallback(async () => {
-    if (!form.companyName || !form.details) return;
-
-    if (usage?.isBlocked) {
-      setState((prev: GenerationState) => ({
-        ...prev,
-        status: GenerationStatus.ERROR,
-        error: `Você atingiu o limite de ${usage.maxQuota} gerações. Faça upgrade para continuar.`
-      }));
-      return;
-    }
-
-    setState((prev: GenerationState) => ({
-      ...prev,
-      status: GenerationStatus.GENERATING,
-      error: undefined
-    }));
-
+  const downloadImage = useCallback(async (imageUrl: string, filename: string = 'flow-design.png') => {
     try {
-      const newImage = await api.generate(form);
-      await refreshUsage();
-      await loadHistory();
-      
-      setState((prev: GenerationState) => ({
-        status: GenerationStatus.SUCCESS,
-        currentImage: newImage,
-        history: [newImage, ...prev.history.filter((img: GeneratedImage) => img.id !== newImage.id)]
-      }));
-      
-      toast.success("Sua arte foi gerada com sucesso!");
-    } catch (err: any) {
-      console.error(err);
-      setState((prev: GenerationState) => ({
-        ...prev,
-        status: GenerationStatus.ERROR,
-        error: err.message || "Erro ao gerar arte. Verifique se o Backend está rodando."
-      }));
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading image:', error);
     }
-  }, [form, usage, refreshUsage, loadHistory]);
-
-  const downloadImage = useCallback((image: GeneratedImage) => {
-    const link = document.createElement('a');
-    link.href = image.url;
-    link.download = `flow-${image.id.slice(0,4)}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   }, []);
+
+  // Load history on mount
+  useEffect(() => {
+    if (user) {
+      loadHistory();
+    }
+  }, [user, loadHistory]);
 
   return {
     form,
@@ -144,8 +157,6 @@ export const useGeneration = (user: User | null) => {
     loadExample,
     loadHistory,
     downloadImage,
-    setForm,
-    setState,
     usage,
     isLoadingUsage
   };
