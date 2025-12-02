@@ -66,9 +66,21 @@ router.post('/create-preference', async (req, res) => {
       initPoint: response.body.init_point
     });
   } catch (error) {
-    console.error('Payment preference error:', error);
+    console.error('Payment preference error (Detailed):', error); // Log detalhado
+    
+    let errorMessage = 'Erro ao criar preferência de pagamento.';
+    
+    // Tenta extrair a mensagem de erro do Mercado Pago, se disponível
+    if (error.message && error.message.includes('MP_ACCESS_TOKEN')) {
+        errorMessage = error.message;
+    } else if (error.cause && error.cause.length > 0 && error.cause[0].message) {
+        errorMessage = `Erro MP: ${error.cause[0].message}`;
+    } else if (error.message) {
+        errorMessage = error.message;
+    }
+    
     // Retorna um erro JSON claro para o frontend
-    res.status(500).json({ error: error.message || 'Erro ao criar preferência de pagamento.' });
+    res.status(500).json({ error: errorMessage });
   }
 });
 
