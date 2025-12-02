@@ -5,29 +5,19 @@ const ownerController = require('../controllers/ownerController');
 
 // Middleware to check if user is owner
 const checkOwnerRole = async (req, res, next) => {
-  const { supabaseService } = require('../config');
   const user = req.user;
   
-  if (!user) {
-    return res.status(401).json({ error: 'Não autenticado.' });
+  if (!user || !user.profile) {
+    return res.status(401).json({ error: 'Não autenticado ou perfil não carregado.' });
   }
 
-  try {
-    const { data: profile, error } = await supabaseService
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (error || !profile || profile.role !== 'owner') {
-      return res.status(403).json({ error: 'Acesso negado. Apenas proprietários podem acessar.' });
-    }
-
-    next();
-  } catch (error) {
-    console.error('Error checking owner role:', error);
-    return res.status(500).json({ error: 'Erro ao verificar permissões.' });
+  const { role } = user.profile;
+  
+  if (role !== 'owner') {
+    return res.status(403).json({ error: 'Acesso negado. Apenas proprietários podem acessar.' });
   }
+
+  next();
 };
 
 // Metrics endpoint
