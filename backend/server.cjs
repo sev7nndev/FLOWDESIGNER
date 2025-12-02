@@ -7,7 +7,8 @@ const ownerRoutes = require('./routes/ownerRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const publicRoutes = require('./routes/publicRoutes');
 const planRoutes = require('./routes/planRoutes.cjs');
-const historyRoutes = require('./routes/historyRoutes.cjs'); // NOVO: Importando rota de histórico
+const historyRoutes = require('./routes/historyRoutes.cjs');
+const configRoutes = require('./routes/configRoutes.cjs'); // NOVO: Importando rotas de configuração
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,7 +30,8 @@ app.use('/api/owner', ownerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', publicRoutes);
 app.use('/api/plans', planRoutes);
-app.use('/api/history', historyRoutes); // NOVO: Registrando rota de histórico
+app.use('/api/history', historyRoutes);
+app.use('/api/config', configRoutes); // NOVO: Registrando rotas de configuração
 
 // --- Quota/Usage Endpoint ---
 app.get('/api/usage/:userId', async (req, res) => {

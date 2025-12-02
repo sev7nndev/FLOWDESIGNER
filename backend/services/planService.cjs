@@ -6,20 +6,20 @@ const { supabaseAnon } = require('../config');
  * @returns {Promise<Array>} Lista de planos.
  */
 const getActivePlans = async () => {
-    const { data, error } = await supabaseAnon
-        .from('plans')
-        .select('id, name, price, image_quota')
-        .eq('is_active', true)
-        .order('price', { ascending: true });
+  const { data, error } = await supabaseAnon
+    .from('plans')
+    .select('id, name, price, image_quota')
+    .eq('is_active', true)
+    .order('price', { ascending: true });
 
-    if (error) {
-        console.error("Error fetching active plans:", error);
-        throw new Error("Não foi possível carregar os planos.");
-    }
+  if (error) {
+    console.error("Error fetching active plans:", error);
+    throw new Error("Não foi possível carregar os planos.");
+  }
 
-    return data;
+  return data;
 };
 
 module.exports = {
-    getActivePlans,
+  getActivePlans,
 };

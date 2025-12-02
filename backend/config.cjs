@@ -1,7 +1,8 @@
 // backend/config.cjs
 const { createClient } = require('@supabase/supabase-js');
 // CORREÇÃO CRÍTICA: Garantir que o .env.local seja carregado corretamente
-require('dotenv').config({ path: '../.env.local' }); 
+require('dotenv').config({ path: '../.env.local' });
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // --- Supabase Configuration ---
@@ -17,8 +18,8 @@ const MP_CLIENT_SECRET = process.env.MP_CLIENT_SECRET;
 const MP_REDIRECT_URI = process.env.MP_REDIRECT_URI;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_KEY || !GEMINI_API_KEY) {
-    console.error("FATAL ERROR: Missing one or more environment variables. Check your .env.local file.");
-    // Não saímos do processo aqui, apenas logamos o erro, pois o servidor Express precisa iniciar para o frontend funcionar.
+  console.error("FATAL ERROR: Missing one or more environment variables. Check your .env.local file.");
+  // Não saímos do processo aqui, apenas logamos o erro, pois o servidor Express precisa iniciar para o frontend funcionar.
 }
 
 // Client for public/client-side operations (e.g., checking job status without auth)
@@ -26,9 +27,9 @@ const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Client for server-side operations (e.g., updating database, storage uploads)
 const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-    auth: {
-        persistSession: false, // Important for server-side
-    }
+  auth: {
+    persistSession: false, // Important for server-side
+  }
 });
 
 // --- Gemini Configuration ---
@@ -36,21 +37,20 @@ const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 const imageModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-002" });
 
-
 // --- Quota Configuration ---
 const FREE_LIMIT = 5;
 const STARTER_LIMIT = 20;
-const PRO_LIMIT = 50; 
+const PRO_LIMIT = 50;
 
 module.exports = {
-    supabaseAnon,
-    supabaseService,
-    imageModel, // Exportando o modelo inicializado
-    GEMINI_API_KEY,
-    FREE_LIMIT,
-    STARTER_LIMIT,
-    PRO_LIMIT,
-    MP_CLIENT_ID,
-    MP_CLIENT_SECRET,
-    MP_REDIRECT_URI,
+  supabaseAnon,
+  supabaseService,
+  imageModel, // Exportando o modelo inicializado
+  GEMINI_API_KEY,
+  FREE_LIMIT,
+  STARTER_LIMIT,
+  PRO_LIMIT,
+  MP_CLIENT_ID,
+  MP_CLIENT_SECRET,
+  MP_REDIRECT_URI,
 };
