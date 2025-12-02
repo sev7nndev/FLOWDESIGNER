@@ -99,8 +99,8 @@ router.post('/landing-images/upload', authenticateToken, checkAdminOrDev, async 
 
     const contentType = matches[1];
     const buffer = Buffer.from(matches[2], 'base64');
-
     const MAX_LANDING_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
     if (buffer.length > MAX_LANDING_IMAGE_SIZE_BYTES) {
       return res.status(400).json({ error: `O arquivo é muito grande. O tamanho máximo permitido é de ${MAX_LANDING_IMAGE_SIZE_BYTES / (1024 * 1024)}MB.` });
     }

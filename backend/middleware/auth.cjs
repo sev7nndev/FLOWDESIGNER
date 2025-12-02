@@ -25,7 +25,6 @@ const authenticateToken = async (req, res, next) => {
       email: user.email,
       token: token // Optional: if you need the raw token later
     };
-
     next();
   } catch (e) {
     console.error("Error during token authentication:", e.message);
@@ -50,7 +49,6 @@ const checkAdminOrDev = async (req, res, next) => {
     if (error || !profile || !['admin', 'dev'].includes(profile.role)) {
       return res.status(403).json({ error: 'Acesso negado. Apenas administradores e desenvolvedores podem realizar esta ação.' });
     }
-
     next();
   } catch (e) {
     console.error("Error checking admin/dev role:", e.message);

@@ -1,8 +1,9 @@
 // backend/routes/publicRoutes.cjs
 const express = require('express');
 const router = express.Router();
-const { supabaseAnon } = require('../config'); // Helper para obter URL pública
+const { supabaseAnon } = require('../config');
 
+// Helper para obter URL pública
 const getPublicUrl = (bucketName, path) => {
   const { data: { publicUrl } } = supabaseAnon.storage
     .from(bucketName)
