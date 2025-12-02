@@ -50,22 +50,31 @@ const fetchOwnerMetrics = async (ownerId) => {
     // 3. Lista de Clientes (Nome, Email, Plano, Status)
     let clientList = [];
     try {
+        // Usando a sintaxe de join padrão para a tabela auth.users (que é referenciada pelo 'id' do profiles)
+        // O nome da relação é 'auth_users' se a FK for para auth.users.
+        // No entanto, como a FK é na coluna 'id' que é a PK, o PostgREST pode usar o nome da coluna.
+        // Vamos tentar a sintaxe mais robusta que funciona com a coluna 'id' referenciando auth.users.
         const { data: clients, error: clientsError } = await supabaseService
             .from('profiles')
-            .select('id, first_name, last_name, role, status, user:id(email)')
+            // Usando 'auth_user:id(email)' que é a sintaxe que funcionou no Edge Function, mas renomeando para 'auth_user'
+            .select('id, first_name, last_name, role, status, auth_user:id(email)') 
             .not('role', 'in', EXCLUDED_ROLES_STRING)
             .order('updated_at', { ascending: false });
             
         if (clientsError) throw clientsError;
         
-        clientList = clients.map(client => ({
-            id: client.id,
-            name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
-            // CORREÇÃO: Acessando o email corretamente do join (o join retorna um array de 1 elemento)
-            email: (client.user && Array.isArray(client.user) ? client.user[0]?.email : client.user?.email) || 'N/A', 
-            plan: client.role,
-            status: client.status,
-        }));
+        clientList = clients.map(client => {
+            // Acessando o email através da relação 'auth_user'
+            const email = (client.auth_user && Array.isArray(client.auth_user) ? client.auth_user[0]?.email : client.auth_user?.email) || 'N/A';
+            
+            return {
+                id: client.id,
+                name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
+                email: email, 
+                plan: client.role,
+                status: client.status,
+            };
+        });
     } catch (e) {
         console.error("Error fetching client list:", e.message);
         // clientList remains empty array
