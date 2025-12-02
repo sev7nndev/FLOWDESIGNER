@@ -10,16 +10,19 @@ const oauth = new OAuth(client);
  * @returns {Promise<{planCounts: object, statusCounts: object}>}
  */
 const fetchOwnerMetrics = async (ownerId) => {
+    // Roles a serem excluídas das métricas de clientes
+    const EXCLUDED_ROLES = ['admin', 'dev', 'owner'];
+
     // 1. Contagem de usuários por plano (role)
     const { data: planCounts, error: planError } = await supabaseService
         .from('profiles')
-        .select('role, count')
-        .not('role', 'in', '("admin", "dev", "owner")') // Exclui roles de gestão
-        .rollup();
+        .select('role, count', { count: 'exact', head: false }) // Usando count para agrupar
+        .not('role', 'in', `(${EXCLUDED_ROLES.map(r => `'${r}'`).join(',')})`); // Filtro de exclusão
 
     if (planError) throw planError;
     
-    const countsByPlan = planCounts.reduce((acc, item) => {
+    // Processa o resultado da contagem por role
+    const countsByPlan = (planCounts || []).reduce((acc, item) => {
         if(item.role) acc[item.role] = item.count;
         return acc;
     }, { free: 0, starter: 0, pro: 0 });
@@ -27,13 +30,13 @@ const fetchOwnerMetrics = async (ownerId) => {
     // 2. Contagem de usuários por status
     const { data: statusCounts, error: statusError } = await supabaseService
         .from('profiles')
-        .select('status, count')
-        .not('role', 'in', '("admin", "dev", "owner")')
-        .rollup();
+        .select('status, count', { count: 'exact', head: false }) // Usando count para agrupar
+        .not('role', 'in', `(${EXCLUDED_ROLES.map(r => `'${r}'`).join(',')})`); // Filtro de exclusão
         
     if (statusError) throw statusError;
     
-    const countsByStatus = statusCounts.reduce((acc, item) => {
+    // Processa o resultado da contagem por status
+    const countsByStatus = (statusCounts || []).reduce((acc, item) => {
         if(item.status) acc[item.status] = item.count;
         return acc;
     }, { on: 0, paused: 0, cancelled: 0 });
@@ -42,7 +45,7 @@ const fetchOwnerMetrics = async (ownerId) => {
     const { data: clients, error: clientsError } = await supabaseService
         .from('profiles')
         .select('id, first_name, last_name, role, status, user:id(email)')
-        .not('role', 'in', '("admin", "dev", "owner")')
+        .not('role', 'in', `(${EXCLUDED_ROLES.map(r => `'${r}'`).join(',')})`)
         .order('updated_at', { ascending: false });
         
     if (clientsError) throw clientsError;
@@ -50,7 +53,8 @@ const fetchOwnerMetrics = async (ownerId) => {
     const clientList = clients.map(client => ({
         id: client.id,
         name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
-        email: client.user?.email || 'N/A',
+        // CORREÇÃO: Acessando o email corretamente do join (o join retorna um array de 1 elemento)
+        email: (client.user && Array.isArray(client.user) ? client.user[0]?.email : client.user?.email) || 'N/A', 
         plan: client.role,
         status: client.status,
     }));
