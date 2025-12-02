@@ -1,5 +1,4 @@
 const { supabaseService } = require('../config');
-const axios = require('axios');
 
 const CLIENT_ROLES = ['free', 'starter', 'pro'];
 
@@ -12,7 +11,18 @@ async function fetchOwnerMetrics(ownerId) {
   let clientList = [];
 
   try {
-    // Fetch profiles with counts
+    // Verify user is owner
+    const { data: ownerProfile, error: ownerError } = await supabaseService
+      .from('profiles')
+      .select('role')
+      .eq('id', ownerId)
+      .single();
+
+    if (ownerError || !ownerProfile || ownerProfile.role !== 'owner') {
+      throw new Error('Acesso negado. Apenas proprietários podem acessar estas métricas.');
+    }
+
+    // Fetch profiles with counts using service role
     console.log('📊 Fetching profile counts...');
     const { data: profiles, error: profilesError } = await supabaseService
       .from('profiles')
@@ -60,10 +70,10 @@ async function fetchOwnerMetrics(ownerId) {
   }
 
   try {
-    // Fetch client list
+    // Fetch client list with full details
     console.log('👥 Fetching client list...');
     const { data: clients, error: clientsError } = await supabaseService
-      .from('profiles')
+      .from('profiles_with_email') // Use the existing view
       .select('id, first_name, last_name, email, role, status')
       .in('role', CLIENT_ROLES)
       .order('updated_at', { ascending: false });
@@ -97,7 +107,7 @@ async function fetchOwnerMetrics(ownerId) {
   return result;
 }
 
-async function getMercadoPagoAuthUrl(ownerId) {
+function getMercadoPagoAuthUrl(ownerId) {
   const redirectUri = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/owner-panel`;
   const clientId = process.env.MP_CLIENT_ID;
   
@@ -122,6 +132,17 @@ async function getOwnerChatHistory(ownerId) {
   try {
     console.log('💬 Fetching owner chat history for:', ownerId);
     
+    // Verify user is owner
+    const { data: ownerProfile, error: ownerError } = await supabaseService
+      .from('profiles')
+      .select('role')
+      .eq('id', ownerId)
+      .single();
+
+    if (ownerError || !ownerProfile || ownerProfile.role !== 'owner') {
+      throw new Error('Acesso negado. Apenas proprietários podem acessar o histórico de chat.');
+    }
+
     // Fetch all clients
     const { data: clients, error: clientsError } = await supabaseService
       .from('profiles')
