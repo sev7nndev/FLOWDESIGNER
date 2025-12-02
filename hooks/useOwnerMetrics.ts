@@ -65,8 +65,26 @@ export const useOwnerMetrics = (user: User | null) => {
             });
 
             if (!response.ok) {
-                const errorBody = await response.json();
-                throw new Error(errorBody.error || `Erro do servidor: Status ${response.status}`);
+                let errorBody = { error: `Erro do servidor: Status ${response.status}` };
+                
+                // Tenta analisar o corpo da resposta como JSON, mas de forma defensiva
+                try {
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        errorBody = await response.json();
+                    } else {
+                        // Se não for JSON, tenta ler como texto (pode ser vazio)
+                        const text = await response.text();
+                        if (text) {
+                            errorBody.error = `Erro do servidor: Status ${response.status}. Resposta: ${text.substring(0, 100)}...`;
+                        }
+                    }
+                } catch (e) {
+                    // Falha na análise de JSON (Unexpected end of JSON input)
+                    console.warn("Falha ao analisar JSON de erro do backend:", e);
+                }
+                
+                throw new Error(errorBody.error || `Erro desconhecido: Status ${response.status}`);
             }
 
             const data: OwnerMetrics = await response.json();
@@ -78,7 +96,7 @@ export const useOwnerMetrics = (user: User | null) => {
         } finally {
             setIsLoading(false);
         }
-    }, [user?.id, user?.role, supabase]); // Depende apenas do ID e da Role, não do objeto 'user' completo
+    }, [user?.id, user?.role, supabase]);
 
     useEffect(() => {
         fetchMetrics();
