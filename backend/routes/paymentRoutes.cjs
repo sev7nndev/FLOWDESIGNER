@@ -25,8 +25,13 @@ router.post('/create-preference', async (req, res) => {
     if (plan.price <= 0) {
         return res.status(400).json({ error: 'Não é possível criar preferência de pagamento para planos gratuitos.' });
     }
+    
+    // 2. Verificar se o Mercado Pago está configurado
+    if (!mercadopago.configurations.access_token) {
+        throw new Error("MP_ACCESS_TOKEN não configurado no servidor. Verifique o .env.local.");
+    }
 
-    // 2. Criar a preferência de pagamento
+    // 3. Criar a preferência de pagamento
     const preference = {
       items: [{
         title: `Plano ${plan.name} - Flow Designer`,
@@ -54,14 +59,15 @@ router.post('/create-preference', async (req, res) => {
 
     const response = await mercadopago.preferences.create(preference);
     
-    // 3. Retorna o init_point (URL de checkout do Mercado Pago)
+    // 4. Retorna o init_point (URL de checkout do Mercado Pago)
     res.status(200).json({
       preferenceId: response.body.id,
       initPoint: response.body.init_point
     });
   } catch (error) {
     console.error('Payment preference error:', error);
-    res.status(500).json({ error: 'Erro ao criar preferência de pagamento. Verifique se o MP_ACCESS_TOKEN está configurado.' });
+    // Retorna um erro JSON claro para o frontend
+    res.status(500).json({ error: error.message || 'Erro ao criar preferência de pagamento.' });
   }
 });
 
