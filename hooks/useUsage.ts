@@ -2,72 +2,89 @@ import { useState, useCallback, useEffect } from 'react';
 import { getSupabase } from '../services/supabaseClient';
 
 export interface UsageData {
-    currentUsage: number;
-    maxQuota: number;
-    planId: string;
-    isBlocked: boolean;
+  currentUsage: number;
+  maxQuota: number;
+  planId: string;
+  isBlocked: boolean;
+  isNearLimit: boolean;
+  usagePercentage: number;
 }
 
 export const useUsage = (userId: string | undefined) => {
-    const [usage, setUsage] = useState<UsageData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const supabase = getSupabase();
+  const [usage, setUsage] = useState<UsageData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const supabase = getSupabase();
 
-    const fetchUsage = useCallback(async () => {
-        if (!userId || !supabase) {
-            setUsage(null);
-            setIsLoading(false);
-            return;
+  const fetchUsage = useCallback(async () => {
+    if (!userId || !supabase) {
+      setUsage(null);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // RLS garante que o usuário só possa ler seus próprios dados.
+      const { data, error } = await supabase
+        .from('user_usage')
+        .select(`
+          current_usage,
+          plan_id,
+          plan_settings (
+            max_images_per_month
+          )
+        `)
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        // Se não encontrar, pode ser um usuário recém-criado antes do trigger rodar
+        if (error.code === 'PGRST116') {
+          setUsage({
+            currentUsage: 0,
+            maxQuota: 3, // Default free limit
+            planId: 'free',
+            isBlocked: false,
+            isNearLimit: false,
+            usagePercentage: 0
+          });
+          setIsLoading(false);
+          return;
         }
+        throw error;
+      }
 
-        setIsLoading(true);
+      const maxQuota = (data.plan_settings as any)?.max_images_per_month || 0;
+      const currentUsage = data.current_usage || 0;
+      const planId = data.plan_id;
+      
+      const usagePercentage = maxQuota > 0 ? (currentUsage / maxQuota) * 100 : 0;
+      const isBlocked = maxQuota > 0 && currentUsage >= maxQuota;
+      const isNearLimit = !isBlocked && maxQuota > 0 && usagePercentage >= 80;
 
-        try {
-            // 1. Busca o uso atual e o ID do plano
-            const { data: usageData, error: usageError } = await supabase
-                .from('user_usage')
-                .select('current_usage, plan_id')
-                .eq('user_id', userId)
-                .single();
+      setUsage({
+        currentUsage,
+        maxQuota,
+        planId,
+        isBlocked,
+        isNearLimit,
+        usagePercentage
+      });
+    } catch (e) {
+      console.error("Failed to fetch usage:", e);
+      setUsage(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId, supabase]);
 
-            if (usageError || !usageData) {
-                // Se não encontrar, pode ser um usuário recém-criado antes do trigger rodar
-                setUsage({ currentUsage: 0, maxQuota: 3, planId: 'free', isBlocked: false });
-                setIsLoading(false);
-                return;
-            }
-            
-            // 2. Busca o limite máximo do plano
-            const { data: planData } = await supabase
-                .from('plan_settings')
-                .select('max_images_per_month')
-                .eq('id', usageData.plan_id)
-                .single();
-                
-            const maxQuota = planData?.max_images_per_month || 0;
-            const currentUsage = usageData.current_usage || 0;
-            const planId = usageData.plan_id;
-            
-            const isBlocked = currentUsage >= maxQuota && planId !== 'admin' && planId !== 'dev';
+  useEffect(() => {
+    fetchUsage();
+  }, [fetchUsage]);
 
-            setUsage({
-                currentUsage,
-                maxQuota,
-                planId,
-                isBlocked
-            });
-
-        } catch (e) {
-            console.error("Failed to fetch usage:", e);
-            setUsage(null);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [userId, supabase]);
-
-    useEffect(() => {
-        fetchUsage();
-    }, [fetchUsage]);
-
-    return { usage, isLoadingUsage: isLoading, refreshUsage: fetchUsage };
+  return {
+    usage,
+    isLoadingUsage: isLoading,
+    refreshUsage: fetchUsage
+  };
 };

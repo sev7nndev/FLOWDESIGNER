@@ -41,8 +41,7 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ thread, isActive, onClick }
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-white truncate">{thread.name}</p>
         <p className="text-xs text-gray-400 truncate">
-          {thread.lastMessage.sender === 'owner' ? 'Você: ' : ''}
-          {thread.lastMessage.text}
+          {thread.lastMessage.sender === 'owner' ? 'Você: ' : ''} {thread.lastMessage.text}
         </p>
       </div>
       <div className="text-xs text-gray-500 ml-2 flex flex-col items-end">
@@ -65,7 +64,7 @@ interface ActiveChatWindowProps {
 
 const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName }) => {
   const [message, setMessage] = useState('');
-  
+
   // Função mock para envio de mensagem
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,10 +72,8 @@ const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName }
 
     // Simulação de envio (em um app real, isso chamaria uma API/WebSocket)
     console.log(`Enviando para ${thread.name}: ${message}`);
-    
     // Limpar input
     setMessage('');
-    
     // Em um app real, você atualizaria o estado do chat com a nova mensagem
     // Por enquanto, apenas logamos.
   };
@@ -91,18 +88,23 @@ const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName }
       {/* Área de Mensagens */}
       <div className="flex-1 p-4 overflow-y-auto space-y-4 custom-scrollbar">
         {thread.messages.map((msg) => (
-          <div 
-            key={msg.id} 
+          <div
+            key={msg.id}
             className={`flex ${msg.sender === 'owner' ? 'justify-end' : 'justify-start'}`}
           >
-            <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-xl ${
-              msg.sender === 'owner' 
-                ? 'bg-primary text-white rounded-br-none' 
-                : 'bg-zinc-700 text-white rounded-tl-none'
-            }`}>
+            <div
+              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-xl ${
+                msg.sender === 'owner'
+                  ? 'bg-primary text-white rounded-br-none'
+                  : 'bg-zinc-700 text-white rounded-tl-none'
+              }`}
+            >
               <p className="text-sm">{msg.text}</p>
               <span className="block text-right text-[10px] mt-1 opacity-70">
-                {new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                {new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </span>
             </div>
           </div>
@@ -155,7 +157,9 @@ export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner }) => {
     return (
       <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg">
         Erro ao carregar o chat: {error}
-        <Button onClick={refreshHistory} variant="secondary" className="ml-4">Tentar Novamente</Button>
+        <Button onClick={refreshHistory} variant="secondary" className="ml-4">
+          Tentar Novamente
+        </Button>
       </div>
     );
   }
@@ -175,7 +179,8 @@ export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner }) => {
       <div className={`w-full md:w-80 flex-shrink-0 bg-zinc-900/50 ${activeThreadId && 'hidden md:block'}`}>
         <div className="p-4 border-b border-white/10">
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
-            <MessageSquare size={20} className="text-primary" /> Clientes ({chatHistory.length})
+            <MessageSquare size={20} className="text-primary" />
+            Clientes ({chatHistory.length})
           </h3>
         </div>
         <div className="overflow-y-auto h-[calc(100%-65px)] custom-scrollbar">

@@ -38,6 +38,7 @@ export const useOwnerChat = (): UseOwnerChatResult => {
   const fetchChatHistory = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+
     const supabase = getSupabase();
     if (!supabase) {
       setError("Supabase client not initialized.");

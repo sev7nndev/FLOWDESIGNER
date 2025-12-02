@@ -1,124 +1,152 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User } from '../types';
 import { api } from '../services/api';
 import { PLACEHOLDER_EXAMPLES } from '../constants';
 import { useUsage } from './useUsage'; // Importando o novo hook de uso
+import { toast } from 'sonner';
 
 const INITIAL_FORM: BusinessInfo = {
-    companyName: '', phone: '', addressStreet: '', addressNumber: '',
-    addressNeighborhood: '', addressCity: '', details: '', logo: ''
+  companyName: '',
+  phone: '',
+  addressStreet: '',
+  addressNumber: '',
+  addressNeighborhood: '',
+  addressCity: '',
+  details: '',
+  logo: ''
 };
 
 const INITIAL_STATE: GenerationState = {
-    status: GenerationStatus.IDLE,
-    currentImage: null,
-    history: [],
+  status: GenerationStatus.IDLE,
+  currentImage: null,
+  history: [],
 };
 
-// Max Base64 length for logo (approx 30KB original file size)
-const MAX_LOGO_BASE64_LENGTH = 40000; 
-const MAX_LOGO_KB = Math.round(MAX_LOGO_BASE64_LENGTH / 1.33 / 1024); // Approx 30KB
+const MAX_LOGO_BASE64_LENGTH = 40000;
+const MAX_LOGO_KB = Math.round(MAX_LOGO_BASE64_LENGTH / 1.33 / 1024);
 
 export const useGeneration = (user: User | null) => {
-    const [form, setForm] = useState<BusinessInfo>(INITIAL_FORM);
-    const [state, setState] = useState<GenerationState>(INITIAL_STATE);
-    const { usage, isLoadingUsage, refreshUsage } = useUsage(user?.id); // Usando o novo hook
+  const [form, setForm] = useState<BusinessInfo>(INITIAL_FORM);
+  const [state, setState] = useState<GenerationState>(INITIAL_STATE);
+  const { usage, isLoadingUsage, refreshUsage } = useUsage(user?.id); // Efeito para mostrar o aviso de "perto do limite"
 
-    const handleInputChange = useCallback((field: keyof BusinessInfo, value: string) => {
-        setForm((prev: BusinessInfo) => ({ ...prev, [field]: value }));
-    }, []);
+  useEffect(() => {
+    if (usage?.isNearLimit) {
+      toast.warning('Você está perto de atingir seu limite de gerações.', {
+        description: `Uso: ${usage.currentUsage}/${usage.maxQuota}. Considere fazer um upgrade para não interromper seu trabalho.`,
+        duration: 10000,
+      });
+    }
+  }, [usage?.isNearLimit, usage?.currentUsage, usage?.maxQuota]);
 
-    const handleLogoUpload = useCallback((file: File) => {
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64String = reader.result as string;
-                if (base64String.length > MAX_LOGO_BASE64_LENGTH) {
-                    alert(`O logo é muito grande. O tamanho máximo permitido é de ${MAX_LOGO_KB}KB.`);
-                    setForm((prev: BusinessInfo) => ({ ...prev, logo: '' })); // Clear logo if too large
-                } else {
-                    setForm((prev: BusinessInfo) => ({ ...prev, logo: base64String }));
-                }
-            };
-            reader.readAsDataURL(file);
+  const handleInputChange = useCallback((field: keyof BusinessInfo, value: string) => {
+    setForm((prev: BusinessInfo) => ({
+      ...prev,
+      [field]: value
+    }));
+  }, []);
+
+  const handleLogoUpload = useCallback((file: File) => {
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        if (base64String.length > MAX_LOGO_BASE64_LENGTH) {
+          toast.error(`O logo é muito grande. O tamanho máximo permitido é de ${MAX_LOGO_KB}KB.`);
+          setForm((prev: BusinessInfo) => ({
+            ...prev,
+            logo: ''
+          })); // Clear logo if too large
+        } else {
+          setForm((prev: BusinessInfo) => ({
+            ...prev,
+            logo: base64String
+          }));
         }
-    }, []);
+      };
+      reader.readAsDataURL(file);
+    }
+  }, []);
 
-    const loadExample = useCallback(() => {
-        const example = PLACEHOLDER_EXAMPLES[Math.floor(Math.random() * PLACEHOLDER_EXAMPLES.length)];
-        setForm(example);
-    }, []);
+  const loadExample = useCallback(() => {
+    const example = PLACEHOLDER_EXAMPLES[Math.floor(Math.random() * PLACEHOLDER_EXAMPLES.length)];
+    setForm(example);
+  }, []);
 
-    const loadHistory = useCallback(async () => {
-        if (!user) return;
-        try {
-            const history = await api.getHistory();
-            setState((prev: GenerationState) => ({ ...prev, history }));
-        } catch (e) {
-            console.error("Failed to load history", e);
-        }
-    }, [user]);
+  const loadHistory = useCallback(async () => {
+    if (!user) return;
+    try {
+      const history = await api.getHistory();
+      setState((prev: GenerationState) => ({
+        ...prev,
+        history
+      }));
+    } catch (e) {
+      console.error("Failed to load history", e);
+    }
+  }, [user]);
 
-    const handleGenerate = useCallback(async () => {
-        if (!form.companyName || !form.details) return;
-        
-        // Verifica a quota localmente (embora o backend também verifique)
-        if (usage?.isBlocked) {
-            setState((prev: GenerationState) => ({ 
-                ...prev, 
-                status: GenerationStatus.ERROR, 
-                error: `Você atingiu o limite de ${usage.maxQuota} gerações. Faça upgrade para continuar.` 
-            }));
-            return;
-        }
+  const handleGenerate = useCallback(async () => {
+    if (!form.companyName || !form.details) return;
 
-        setState((prev: GenerationState) => ({ ...prev, status: GenerationStatus.GENERATING, error: undefined }));
+    if (usage?.isBlocked) {
+      setState((prev: GenerationState) => ({
+        ...prev,
+        status: GenerationStatus.ERROR,
+        error: `Você atingiu o limite de ${usage.maxQuota} gerações. Faça upgrade para continuar.`
+      }));
+      return;
+    }
 
-        try {
-            const newImage = await api.generate(form);
-            
-            // Após o sucesso, atualiza o uso e o histórico
-            await refreshUsage();
-            await loadHistory(); // Recarrega o histórico para obter o registro completo
-            
-            // Encontra a imagem recém-gerada no histórico (a mais recente)
-            setState((prev: GenerationState) => ({
-                status: GenerationStatus.SUCCESS,
-                currentImage: newImage,
-                history: [newImage, ...prev.history.filter(img => img.id !== newImage.id)] // Garante que a nova imagem esteja no topo
-            }));
+    setState((prev: GenerationState) => ({
+      ...prev,
+      status: GenerationStatus.GENERATING,
+      error: undefined
+    }));
 
-        } catch (err: any) {
-            console.error(err);
-            setState((prev: GenerationState) => ({ 
-                ...prev, 
-                status: GenerationStatus.ERROR, 
-                error: err.message || "Erro ao gerar arte. Verifique se o Backend está rodando." 
-            }));
-        }
-    }, [form, usage, refreshUsage, loadHistory]);
+    try {
+      const newImage = await api.generate(form);
+      await refreshUsage();
+      await loadHistory();
+      
+      setState((prev: GenerationState) => ({
+        status: GenerationStatus.SUCCESS,
+        currentImage: newImage,
+        history: [newImage, ...prev.history.filter((img: GeneratedImage) => img.id !== newImage.id)]
+      }));
+      
+      toast.success("Sua arte foi gerada com sucesso!");
+    } catch (err: any) {
+      console.error(err);
+      setState((prev: GenerationState) => ({
+        ...prev,
+        status: GenerationStatus.ERROR,
+        error: err.message || "Erro ao gerar arte. Verifique se o Backend está rodando."
+      }));
+    }
+  }, [form, usage, refreshUsage, loadHistory]);
 
-    const downloadImage = useCallback((image: GeneratedImage) => {
-        const link = document.createElement('a');
-        link.href = image.url;
-        link.download = `flow-${image.id.slice(0,4)}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }, []);
+  const downloadImage = useCallback((image: GeneratedImage) => {
+    const link = document.createElement('a');
+    link.href = image.url;
+    link.download = `flow-${image.id.slice(0,4)}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
 
-    return {
-        form,
-        state,
-        handleInputChange,
-        handleLogoUpload,
-        handleGenerate,
-        loadExample,
-        loadHistory,
-        downloadImage,
-        setForm,
-        setState,
-        usage, // Expondo o uso
-        isLoadingUsage
-    };
+  return {
+    form,
+    state,
+    handleInputChange,
+    handleLogoUpload,
+    handleGenerate,
+    loadExample,
+    loadHistory,
+    downloadImage,
+    setForm,
+    setState,
+    usage,
+    isLoadingUsage
+  };
 };
