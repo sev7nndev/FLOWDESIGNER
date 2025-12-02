@@ -1,3 +1,4 @@
+void' para a função onPlanSelect.">
 import React, { memo, useState } from 'react';
 import { BusinessInfo, GenerationStatus } from '../types';
 import { Button } from './Button';
@@ -42,7 +43,7 @@ interface GenerationFormProps {
     usage: UsageData | null;
     isLoadingUsage: boolean;
     // Adicionando a prop onPlanSelect
-    onPlanSelect: (planId: string) 
+    onPlanSelect: (planId: string) => void; 
 }
 
 const GenerationFormComponent: React.FC<GenerationFormProps> = ({
@@ -207,7 +208,7 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
         <PricingModal 
             isOpen={isPricingModalOpen} 
             onClose={() => setIsPricingModalOpen(false)}
-            onPlanSelect={onPlanSelect} // CORREÇÃO A1: Passando a função real
+            onPlanSelect={onPlanSelect}
         />
         </>
     );
