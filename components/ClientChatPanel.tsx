@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Send, Loader2, MessageSquare, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Send, Loader2, MessageSquare, ArrowLeft, AlertTriangle, LogOut } from 'lucide-react';
 import { Button } from './Button';
 import { getSupabase } from '../services/supabaseClient';
 import { User, ChatMessage } from '../types';
@@ -9,9 +9,10 @@ import { toast } from 'sonner';
 interface ClientChatPanelProps {
     user: User;
     onBack: () => void;
+    onLogout: () => void; // Adicionando prop de logout
 }
 
-export const ClientChatPanel: React.FC<ClientChatPanelProps> = ({ user, onBack }) => {
+export const ClientChatPanel: React.FC<ClientChatPanelProps> = ({ user, onBack, onLogout }) => {
     const [recipientId, setRecipientId] = useState<string | null>(null);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -121,13 +122,14 @@ export const ClientChatPanel: React.FC<ClientChatPanelProps> = ({ user, onBack }
             toast.error("Falha ao enviar mensagem.");
         } else if (data) {
             // A mensagem será adicionada via listener em tempo real, mas adicionamos aqui para feedback imediato
-            setMessages((prev) => [...prev, data]);
+            // NOTE: Removendo a adição manual aqui para evitar duplicação se o listener for rápido.
             setNewMessage('');
         }
         setIsSending(false);
     };
     
     const supportName = "Suporte Flow Designer";
+    const isChatReady = recipientId && !isLoading;
 
     return (
         <div className="min-h-screen bg-zinc-950 text-gray-100 pt-20 pb-16 relative">
@@ -147,6 +149,9 @@ export const ClientChatPanel: React.FC<ClientChatPanelProps> = ({ user, onBack }
                             <p className="text-xs text-gray-400">Conversando com {supportName}</p>
                         </div>
                     </div>
+                    <Button variant="danger" onClick={onLogout} className="h-8 px-3 text-xs" icon={<LogOut size={14} />}>
+                        Sair
+                    </Button>
                 </div>
 
                 {/* Área de Mensagens */}
@@ -194,9 +199,14 @@ export const ClientChatPanel: React.FC<ClientChatPanelProps> = ({ user, onBack }
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Digite sua mensagem para o suporte..."
                         className="flex-grow bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary outline-none text-sm"
-                        disabled={isSending || !recipientId}
+                        disabled={isSending || !isChatReady} // Desabilita se estiver enviando ou se o chat não estiver pronto
                     />
-                    <Button type="submit" isLoading={isSending} disabled={!newMessage.trim() || isSending || !recipientId} className="h-10 px-4">
+                    <Button 
+                        type="submit" 
+                        isLoading={isSending} 
+                        disabled={!newMessage.trim() || isSending || !isChatReady} 
+                        className="h-10 px-4"
+                    >
                         <Send size={16} />
                     </Button>
                 </form>

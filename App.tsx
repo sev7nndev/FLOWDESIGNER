@@ -5,7 +5,7 @@ import { AppTitleHeader } from './components/AppTitleHeader';
 import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
 import { Sparkles } from 'lucide-react';
-import { useGeneration } from './src/hooks/useGeneration'; // CORREÇÃO: Importando do caminho correto
+import { useGeneration } from './hooks/useGeneration'; // CORREÇÃO: Importando do caminho correto
 import { ResultDisplay } from './components/ResultDisplay';
 import { SettingsModal } from './components/Modals';
 import { useProfile } from './hooks/useProfile';
@@ -156,7 +156,7 @@ export const App: React.FC = () => {
       return <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
     case 'CHAT':
       if (!user) return <MainApp />; // Fallback if user somehow lands here unauthenticated
-      return <ClientChatPanel user={user} onBack={() => setView('APP')} />;
+      return <ClientChatPanel user={user} onBack={() => setView('APP')} onLogout={handleLogout} />; // Passando onLogout
     case 'APP':
     default:
       return <MainApp />;
