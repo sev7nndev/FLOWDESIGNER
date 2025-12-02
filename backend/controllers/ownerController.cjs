@@ -42,16 +42,17 @@ const handleMercadoPagoCallback = async (req, res) => {
   const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
   
   if (!code || !state) {
-    return res.redirect(`${FRONTEND_URL}?mp_status=error&message=${encodeURIComponent("Missing authorization code or state.")}`);
+    return res.redirect(`${FRONTEND_URL}/owner-panel?mp_status=error&message=${encodeURIComponent("Missing authorization code or state.")}`);
   }
 
   try {
+    // O state é o ownerId
     await ownerService.handleMercadoPagoCallback(code, state);
-    // Redirect back to the main app URL
-    res.redirect(`${FRONTEND_URL}?mp_status=success`);
+    // Redireciona de volta para o painel do owner com status de sucesso
+    res.redirect(`${FRONTEND_URL}/owner-panel?mp_status=success`);
   } catch (error) {
     console.error("Error handling MP callback:", error);
-    res.redirect(`${FRONTEND_URL}?mp_status=error&message=${encodeURIComponent(error.message)}`);
+    res.redirect(`${FRONTEND_URL}/owner-panel?mp_status=error&message=${encodeURIComponent(error.message)}`);
   }
 };
 

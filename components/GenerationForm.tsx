@@ -41,10 +41,12 @@ interface GenerationFormProps {
     loadExample: () => void;
     usage: UsageData | null;
     isLoadingUsage: boolean;
+    // Adicionando a prop onPlanSelect
+    onPlanSelect: (planId: string) 
 }
 
 const GenerationFormComponent: React.FC<GenerationFormProps> = ({
-    form, status, error, handleInputChange, handleLogoUpload, handleGenerate, loadExample, usage, isLoadingUsage
+    form, status, error, handleInputChange, handleLogoUpload, handleGenerate, loadExample, usage, isLoadingUsage, onPlanSelect
 }) => {
     const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
     const isGenerating = status === GenerationStatus.GENERATING;
@@ -205,7 +207,7 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
         <PricingModal 
             isOpen={isPricingModalOpen} 
             onClose={() => setIsPricingModalOpen(false)}
-            onPlanSelect={() => alert('Integração com pagamento pendente.')} 
+            onPlanSelect={onPlanSelect} // CORREÇÃO A1: Passando a função real
         />
         </>
     );

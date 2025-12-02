@@ -1,5 +1,6 @@
 const { supabaseService } = require('../config');
-const fetch = require('node-fetch'); // Need to ensure node-fetch is available if not using global fetch
+const fetch = require('node-fetch'); 
+const mercadopago = require('mercadopago'); // Importar mercadopago
 
 const CLIENT_ROLES = ['free', 'starter', 'pro'];
 
@@ -109,28 +110,31 @@ async function fetchOwnerMetrics(ownerId) {
 }
 
 function getMercadoPagoAuthUrl(ownerId) {
-  const redirectUri = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/owner-panel`;
+  // CORREÇÃO B3: Redirecionar para o endpoint de callback do backend
+  const redirectUri = `${process.env.BACKEND_URL}/api/owner/mp-callback`;
   const clientId = process.env.MP_CLIENT_ID;
   
   if (!clientId) {
     throw new Error("MP_CLIENT_ID não configurado.");
   }
   
-  // State must be URL encoded if it contains special characters, but ownerId (UUID) is safe.
+  // State deve ser o ownerId para sabermos quem está se conectando
   const authUrl = `https://auth.mercadopago.com/authorization?client_id=${clientId}&response_type=code&platform_id=mp&redirect_uri=${redirectUri}&state=${ownerId}`;
   return authUrl;
 }
 
 async function handleMercadoPagoCallback(code, ownerId) {
+  // CORREÇÃO B4: Implementar a troca de código por token
   const clientId = process.env.MP_CLIENT_ID;
   const clientSecret = process.env.MP_CLIENT_SECRET;
-  const redirectUri = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/owner-panel`;
+  // A URI de redirecionamento deve ser a mesma usada na requisição de autorização
+  const redirectUri = `${process.env.BACKEND_URL}/api/owner/mp-callback`; 
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
   if (!clientId || !clientSecret) {
     throw new Error("MP_CLIENT_ID ou MP_CLIENT_SECRET não configurados.");
   }
 
-  // Use node-fetch (imported globally in server.cjs or available via require)
   const response = await fetch('https://api.mercadopago.com/oauth/token', {
     method: 'POST',
     headers: {
@@ -149,10 +153,11 @@ async function handleMercadoPagoCallback(code, ownerId) {
 
   if (!response.ok || data.error) {
     console.error("MP Token Exchange Error:", data);
+    // Redireciona para o painel do owner com status de erro
     throw new Error(data.message || "Falha ao trocar código por token do Mercado Pago.");
   }
 
-  // Save tokens to owners_payment_accounts
+  // Salva os tokens
   const { error } = await supabaseService
     .from('owners_payment_accounts')
     .upsert({
@@ -169,6 +174,9 @@ async function handleMercadoPagoCallback(code, ownerId) {
     console.error("Supabase save token error:", error);
     throw new Error("Falha ao salvar credenciais do Mercado Pago no banco de dados.");
   }
+  
+  // Retorna o ownerId para o controller redirecionar corretamente
+  return ownerId;
 }
 
 async function disconnectMercadoPago(ownerId) {

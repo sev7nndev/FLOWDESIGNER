@@ -5,7 +5,7 @@ import { AppTitleHeader } from './components/AppTitleHeader';
 import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
 import { Sparkles } from 'lucide-react';
-import { useGeneration } from './src/hooks/useGeneration';
+import { useGeneration } from './hooks/useGeneration'; // CORREÇÃO: Importando do novo local
 import { ResultDisplay } from './components/ResultDisplay';
 import { SettingsModal } from './components/Modals';
 import { useProfile } from './hooks/useProfile';
@@ -171,6 +171,8 @@ export const AppContent: React.FC = () => {
       // A returnUrl é a URL para onde o Mercado Pago deve redirecionar após o pagamento.
       // O backend usará essa URL para construir as URLs de sucesso/falha/pendente.
       const returnUrl = `${window.location.origin}/`; 
+      
+      // CORREÇÃO A2: Usando a função implementada na API
       const checkoutUrl = await api.createPaymentPreference(planId, returnUrl);
       
       toast.success('Tudo pronto! Abrindo checkout seguro.', { id: toastId });
@@ -227,7 +229,7 @@ export const AppContent: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 relative z-20 mt-[-2rem] md:mt-[-4rem] p-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7">
-            <GenerationForm form={form} status={state.status} error={state.error} handleInputChange={handleInputChange} handleLogoUpload={handleLogoUpload} handleGenerate={handleGenerate} loadExample={loadExample} usage={usage} isLoadingUsage={isLoadingUsage} />
+            <GenerationForm form={form} status={state.status} error={state.error} handleInputChange={handleInputChange} handleLogoUpload={handleLogoUpload} handleGenerate={handleGenerate} loadExample={loadExample} usage={usage} isLoadingUsage={isLoadingUsage} onPlanSelect={handlePlanSelection} />
           </div>
           <div className="lg:col-span-5">
             <ResultDisplay state={state} downloadImage={downloadImage} />

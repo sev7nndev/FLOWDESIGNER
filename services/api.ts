@@ -241,23 +241,25 @@ export const api = {
     return data.recipientId;
   },
   
+  // CORREÇÃO A3: Implementação da função de criação de preferência de pagamento
   createPaymentPreference: async (planId: string, returnUrl: string): Promise<string> => {
-    // O planId aqui é o nome do plano ('starter' ou 'pro')
+    // Não precisamos do token de autenticação aqui, pois o endpoint é público
     const response = await fetch(`${BACKEND_URL}/payments/create-preference`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Não precisa de token de autorização para este fluxo
       },
       body: JSON.stringify({ planId, returnUrl })
     });
 
     if (!response.ok) {
-      // Usa o novo parser de erro robusto
       await parseErrorResponse(response);
     }
 
     const data = await response.json();
+    if (!data.initPoint) {
+        throw new Error("O backend não retornou a URL de checkout do Mercado Pago.");
+    }
     return data.initPoint; // Retorna a URL de checkout do Mercado Pago
   }
 };

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { User } from '../types';
 import { useOwnerChat, ChatThread } from '../hooks/useOwnerChat';
 import { Loader2, MessageSquare, Send, User as UserIcon, Clock, ArrowLeft } from 'lucide-react';
@@ -66,24 +66,37 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ thread, isActive, onClick }
 interface ActiveChatWindowProps {
   thread: ChatThread;
   ownerName: string;
+  sendMessage: (recipientId: string, content: string) => Promise<void>; // Adicionando prop
 }
 
-const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName }) => {
+const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName, sendMessage }) => {
   const [message, setMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+  
+  useEffect(scrollToBottom, [thread.messages]);
 
-  // Função mock para envio de mensagem
-  const handleSendMessage = (e: React.FormEvent) => {
+  // Função real para envio de mensagem
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim() === '') return;
+    if (message.trim() === '' || isSending) return;
     
-    // Simulação de envio (em um app real, isso chamaria uma API/WebSocket)
-    console.log(`Enviando para ${thread.name}: ${message}`);
+    setIsSending(true);
+    const content = message.trim();
+    setMessage(''); // Limpa o input imediatamente
     
-    // Limpar input
-    setMessage('');
-    
-    // Em um app real, você atualizaria o estado do chat com a nova mensagem
-    // Por enquanto, apenas logamos.
+    try {
+      await sendMessage(thread.id, content);
+    } catch (e) {
+      // O toast já é exibido no hook, mas podemos reverter o input se necessário
+      setMessage(content); 
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -115,6 +128,7 @@ const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName }
             </div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
       
       {/* Input de Mensagem */}
@@ -125,8 +139,9 @@ const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName }
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           className="flex-1 bg-zinc-800 border-zinc-700 text-white"
+          disabled={isSending}
         />
-        <Button type="submit" icon={<Send size={16} />}>
+        <Button type="submit" icon={<Send size={16} />} isLoading={isSending} disabled={!message.trim() || isSending}>
           Enviar
         </Button>
       </form>
@@ -136,7 +151,7 @@ const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName }
 
 // --- Componente Principal OwnerChatPanel ---
 export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner }) => {
-  const { chatHistory, isLoading, error, refreshHistory } = useOwnerChat();
+  const { chatHistory, isLoading, error, refreshHistory, sendMessage } = useOwnerChat();
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   
   const activeThread = useMemo(() => {
@@ -204,7 +219,11 @@ export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner }) => {
       {/* Janela de Chat Ativa */}
       <div className={`flex-1 ${activeThreadId ? 'block' : 'hidden md:block'}`}>
         {activeThread ? (
-          <ActiveChatWindow thread={activeThread} ownerName={owner.first_name || 'Dono'} />
+          <ActiveChatWindow 
+            thread={activeThread} 
+            ownerName={owner.first_name || 'Dono'} 
+            sendMessage={sendMessage} // Passando a função de envio
+          />
         ) : (
           <div className="flex items-center justify-center h-full bg-zinc-900/70 text-gray-500">
             Selecione um cliente para começar a conversar.
