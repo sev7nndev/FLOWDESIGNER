@@ -15,7 +15,7 @@ import { useLandingImages } from './hooks/useLandingImages';
 import { DevPanelPage } from './pages/DevPanelPage';
 import { OwnerPanelPage } from './pages/OwnerPanelPage';
 import { ClientChatPanel } from './components/ClientChatPanel';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { api } from './services/api';
 
@@ -40,6 +40,20 @@ export const AppContent: React.FC = () => {
   
   const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
 
+  // Helper function to determine the correct view based on the user's role
+  const getRoleBasedView = (role: UserRole): ViewType => {
+    switch (role) {
+      case 'owner':
+        return 'OWNER_PANEL';
+      case 'admin':
+      case 'dev':
+        return 'DEV_PANEL';
+      default:
+        return 'APP';
+    }
+  };
+
+  // 1. Initialization and Auth Listener
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -57,13 +71,12 @@ export const AppContent: React.FC = () => {
           console.log(`✅ Pagamento aprovado para o plano: ${planFromUrl}. Redirecionando para cadastro.`);
           setView('AUTH');
         } else {
+          // Check current session
           const currentUser = await authService.getCurrentUser();
           if (currentUser) {
-            console.log('✅ User found:', currentUser.email);
             setUser(currentUser);
-            setView(getInitialView(currentUser));
+            // The view will be set by the profile loading effect below
           } else {
-            console.log('ℹ️ No user found, showing landing');
             setView(lastView);
           }
         }
@@ -77,13 +90,11 @@ export const AppContent: React.FC = () => {
 
     initializeAuth();
 
+    // Set up auth state listener
     const { data: { subscription } } = authService.onAuthStateChange((authUser) => {
       console.log('🔄 Auth state changed:', authUser?.email);
       if (authUser) {
         setUser(authUser);
-        const newView = getInitialView(authUser);
-        setView(newView);
-        setLastView(newView);
       } else {
         setUser(null);
         setView('LANDING');
@@ -94,26 +105,30 @@ export const AppContent: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const getInitialView = (currentUser: User): ViewType => {
-    switch (currentUser.role) {
-      case 'owner':
-        return 'OWNER_PANEL';
-      case 'admin':
-      case 'dev':
-        return 'DEV_PANEL';
-      default:
-        return 'APP';
-    }
-  };
-
+  // 2. Profile Loading and Redirection Effect
   useEffect(() => {
-    if (user) {
+    if (isInitialized && user && !isProfileLoading && profile) {
+      const roleView = getRoleBasedView(profileRole);
+      
+      // Only redirect if the current view is LANDING or AUTH, or if the user is trying to access a restricted panel
+      if (view === 'LANDING' || view === 'AUTH' || view !== roleView) {
+        setView(roleView);
+        setLastView(roleView);
+      }
+      
       loadHistory();
+    } else if (isInitialized && !user) {
+      // If user logs out or is not authenticated, ensure we are on LANDING or AUTH
+      if (view !== 'AUTH' && view !== 'LANDING') {
+        setView('LANDING');
+      }
     }
-  }, [user, loadHistory]);
+  }, [isInitialized, user, isProfileLoading, profileRole, view, setLastView, loadHistory, profile]);
 
+
+  // 3. Save view to localStorage when it changes
   useEffect(() => {
-    if (view !== 'AUTH') {
+    if (view !== 'AUTH') { // Don't save auth view
       setLastView(view);
     }
   }, [view, setLastView]);
@@ -121,9 +136,7 @@ export const AppContent: React.FC = () => {
   const handleLogout = async () => {
     try {
       await authService.logout();
-      setUser(null);
-      setView('LANDING');
-      setLastView('LANDING');
+      // State change listener handles the rest
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -132,10 +145,7 @@ export const AppContent: React.FC = () => {
   const handleAuthSuccess = (authUser: User | null) => {
     if (authUser) {
       setUser(authUser);
-      const newView = getInitialView(authUser);
-      setView(newView);
-      setLastView(newView);
-      // Limpa os parâmetros da URL após o login/cadastro
+      // Redirection handled by the profile loading effect
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
@@ -160,17 +170,19 @@ export const AppContent: React.FC = () => {
     }
   };
 
-  if (!isInitialized) {
+  // Loading state (Initial or Profile Loading)
+  if (!isInitialized || (user && isProfileLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950">
         <div className="flex flex-col items-center gap-4">
           <Sparkles size={32} className="animate-spin text-primary" />
-          <p className="text-gray-400">Carregando...</p>
+          <p className="text-gray-400">Carregando aplicação...</p>
         </div>
       </div>
     );
   }
 
+  // Error state
   if (initError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
@@ -235,10 +247,5 @@ export const AppContent: React.FC = () => {
     }
   };
 
-  return (
-    <>
-      <Toaster richColors theme="dark" position="top-right" />
-      {renderView()}
-    </>
-  );
+  return renderView();
 };

@@ -4,6 +4,7 @@ import { Sparkles, ArrowLeft, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../services/authService';
 import { GoogleIcon } from './GoogleIcon';
 import { User } from '../types';
+import { toast } from 'sonner'; // Importando toast
 
 interface AuthScreensProps {
   onSuccess: (user: User | null) => void;
