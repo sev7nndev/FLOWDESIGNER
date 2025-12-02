@@ -7,6 +7,8 @@ const BACKEND_URL = "/api";
 // Função auxiliar para analisar a resposta de erro
 const parseErrorResponse = async (response: Response) => {
   let errorText = `O servidor retornou um erro inesperado (Status: ${response.status}).`;
+  
+  // Tenta ler o corpo da resposta como JSON
   try {
     const err = await response.json();
     // Verifica se o erro é de quota bloqueada
@@ -15,8 +17,18 @@ const parseErrorResponse = async (response: Response) => {
     }
     errorText = err.error || errorText;
   } catch (e) {
-    // Se falhar ao analisar JSON, usamos a mensagem padrão
-    console.error("Falha ao analisar a resposta de erro como JSON.", { status: response.status, statusText: response.statusText });
+    // Se falhar ao analisar JSON, tenta ler como texto para debug
+    try {
+        const text = await response.text();
+        if (text.length > 0) {
+            errorText = `Erro do servidor: ${text.substring(0, 100)}... (Status: ${response.status})`;
+        } else {
+            errorText = `Erro do servidor: Resposta vazia (Status: ${response.status}). Verifique os logs do backend.`;
+        }
+    } catch (readError) {
+        // Se falhar ao ler como texto, usa a mensagem padrão
+        console.error("Falha ao ler corpo da resposta como texto.", readError);
+    }
   }
   throw new Error(errorText);
 };
@@ -241,8 +253,8 @@ export const api = {
     });
 
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || `Falha ao criar preferência de pagamento: Status ${response.status}`);
+      // Usa o novo parser de erro robusto
+      await parseErrorResponse(response);
     }
 
     const data = await response.json();
