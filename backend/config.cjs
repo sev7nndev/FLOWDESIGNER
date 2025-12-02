@@ -1,6 +1,6 @@
 // backend/config.cjs
 const { createClient } = require('@supabase/supabase-js');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenerativeAI } = require('@google/generative-ai'); // Import correto
 
 // --- Supabase Configuration ---
 // Usando process.env diretamente, pois o dotenv já carregou as variáveis

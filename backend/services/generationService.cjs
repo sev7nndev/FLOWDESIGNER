@@ -28,7 +28,7 @@ const generateImageWithQuotaCheck = async (userId, promptInfo) => {
   // 2. Contar quantas imagens o usuário já gerou este mês
   const today = new Date();
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
+  
   const { count: imagesGenerated, error: countError } = await supabaseService
     .from('image_generations')
     .select('*', { count: 'exact', head: true })
@@ -49,7 +49,6 @@ const generateImageWithQuotaCheck = async (userId, promptInfo) => {
   // 4. Se a quota estiver OK, gerar o prompt detalhado
   const detailedPrompt = `
     Crie um flyer profissional e atraente com o seguinte briefing:
-    
     Nome da Empresa: ${promptInfo.companyName}
     Telefone: ${promptInfo.phone}
     Endereço: ${promptInfo.addressStreet}, ${promptInfo.addressNumber} - ${promptInfo.addressNeighborhood}, ${promptInfo.addressCity}
@@ -72,7 +71,7 @@ const generateImageWithQuotaCheck = async (userId, promptInfo) => {
         text: detailedPrompt
       }
     ]);
-
+    
     const imageBase64 = result.response.candidates[0].content.parts[0].inlineData.data;
     const mimeType = result.response.candidates[0].content.parts[0].inlineData.mimeType;
 
