@@ -6,6 +6,25 @@ const client = new MercadoPagoConfig({ accessToken: '', options: { timeout: 5000
 const oauth = new OAuth(client);
 
 /**
+ * Helper function to safely fetch count from Supabase.
+ * Returns 0 on error or if no count is found.
+ */
+const safeFetchCount = async (query) => {
+    try {
+        // Using select('*', { count: 'exact', head: true }) as requested
+        const { count, error } = await query.select('*', { count: 'exact', head: true });
+        if (error) {
+            console.error("Supabase Count Error:", error.message);
+            return 0;
+        }
+        return count || 0;
+    } catch (e) {
+        console.error("Unexpected error during count query:", e.message);
+        return 0;
+    }
+};
+
+/**
  * Busca métricas agregadas de usuários (contagem por plano e status).
  * @returns {Promise<{planCounts: object, statusCounts: object}>}
  */
@@ -15,87 +34,64 @@ const fetchOwnerMetrics = async (ownerId) => {
     const EXCLUDED_ROLES_STRING = `(${EXCLUDED_ROLES.map(r => `'${r}'`).join(',')})`;
 
     // --- 1. Contagem de usuários por plano (role) ---
-    // Corrigido para usar contagens explícitas com head: true para garantir que o count seja retornado corretamente.
     const countsByPlan = { free: 0, starter: 0, pro: 0 };
     
-    // Fetch count for 'free'
-    const { count: freeCount } = await supabaseService
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'free');
-    countsByPlan.free = freeCount || 0;
-
-    // Fetch count for 'starter'
-    const { count: starterCount } = await supabaseService
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'starter');
-    countsByPlan.starter = starterCount || 0;
-
-    // Fetch count for 'pro'
-    const { count: proCount } = await supabaseService
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'pro');
-    countsByPlan.pro = proCount || 0;
+    countsByPlan.free = await safeFetchCount(supabaseService.from('profiles').eq('role', 'free'));
+    countsByPlan.starter = await safeFetchCount(supabaseService.from('profiles').eq('role', 'starter'));
+    countsByPlan.pro = await safeFetchCount(supabaseService.from('profiles').eq('role', 'pro'));
     
     // --- 2. Contagem de usuários por status ---
     const countsByStatus = { on: 0, paused: 0, cancelled: 0 };
     
-    // Fetch count for 'on' status (Active Clients)
-    const { count: onCount } = await supabaseService
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'on')
-        .not('role', 'in', EXCLUDED_ROLES_STRING);
-    countsByStatus.on = onCount || 0;
-
-    // Fetch count for 'paused' status (Paused Clients)
-    const { count: pausedCount } = await supabaseService
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'paused')
-        .not('role', 'in', EXCLUDED_ROLES_STRING);
-    countsByStatus.paused = pausedCount || 0;
-
-    // Fetch count for 'cancelled' status (Cancelled Clients)
-    const { count: cancelledCount } = await supabaseService
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'cancelled')
-        .not('role', 'in', EXCLUDED_ROLES_STRING);
-    countsByStatus.cancelled = cancelledCount || 0;
+    countsByStatus.on = await safeFetchCount(supabaseService.from('profiles').eq('status', 'on').not('role', 'in', EXCLUDED_ROLES_STRING));
+    countsByStatus.paused = await safeFetchCount(supabaseService.from('profiles').eq('status', 'paused').not('role', 'in', EXCLUDED_ROLES_STRING));
+    countsByStatus.cancelled = await safeFetchCount(supabaseService.from('profiles').eq('status', 'cancelled').not('role', 'in', EXCLUDED_ROLES_STRING));
     
     // 3. Lista de Clientes (Nome, Email, Plano, Status)
-    const { data: clients, error: clientsError } = await supabaseService
-        .from('profiles')
-        .select('id, first_name, last_name, role, status, user:id(email)')
-        .not('role', 'in', EXCLUDED_ROLES_STRING)
-        .order('updated_at', { ascending: false });
+    let clientList = [];
+    try {
+        const { data: clients, error: clientsError } = await supabaseService
+            .from('profiles')
+            .select('id, first_name, last_name, role, status, user:id(email)')
+            .not('role', 'in', EXCLUDED_ROLES_STRING)
+            .order('updated_at', { ascending: false });
+            
+        if (clientsError) throw clientsError;
         
-    if (clientsError) throw clientsError;
-    
-    const clientList = clients.map(client => ({
-        id: client.id,
-        name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
-        // CORREÇÃO: Acessando o email corretamente do join (o join retorna um array de 1 elemento)
-        email: (client.user && Array.isArray(client.user) ? client.user[0]?.email : client.user?.email) || 'N/A', 
-        plan: client.role,
-        status: client.status,
-    }));
+        clientList = clients.map(client => ({
+            id: client.id,
+            name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
+            // CORREÇÃO: Acessando o email corretamente do join (o join retorna um array de 1 elemento)
+            email: (client.user && Array.isArray(client.user) ? client.user[0]?.email : client.user?.email) || 'N/A', 
+            plan: client.role,
+            status: client.status,
+        }));
+    } catch (e) {
+        console.error("Error fetching client list:", e.message);
+        // clientList remains empty array
+    }
 
     // 4. Status da Conexão Mercado Pago
-    const { data: mpAccount, error: mpError } = await supabaseService
-        .from('owners_payment_accounts')
-        .select('owner_id')
-        .eq('owner_id', ownerId)
-        .single();
+    let mpConnectionStatus = 'disconnected';
+    try {
+        const { data: mpAccount } = await supabaseService
+            .from('owners_payment_accounts')
+            .select('owner_id')
+            .eq('owner_id', ownerId)
+            .single();
+
+        if (mpAccount) {
+            mpConnectionStatus = 'connected';
+        }
+    } catch (e) {
+        console.error("Error checking MP connection status:", e.message);
+    }
 
     return {
         planCounts: countsByPlan,
         statusCounts: countsByStatus,
         clients: clientList,
-        mpConnectionStatus: mpAccount ? 'connected' : 'disconnected',
+        mpConnectionStatus: mpConnectionStatus,
     };
 };
 
