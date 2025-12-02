@@ -27,9 +27,9 @@ router.post('/create-preference', async (req, res) => {
     }
     
     // 2. Verificar se o Mercado Pago está configurado
-    if (!mercadopago.configurations.access_token) {
-        // Lança um erro claro se o token estiver faltando
-        throw new Error("MP_ACCESS_TOKEN não configurado no servidor. Verifique o .env.local e reinicie o backend.");
+    if (!mercadopago.configurations.access_token || mercadopago.configurations.access_token === 'test_access_token') {
+        // Lança um erro claro se o token estiver faltando ou for o de teste
+        throw new Error("MP_ACCESS_TOKEN não configurado ou é o token de teste. Verifique o .env.local e reinicie o backend.");
     }
 
     // 3. Criar a preferência de pagamento
@@ -72,6 +72,8 @@ router.post('/create-preference', async (req, res) => {
     
     // Tenta extrair a mensagem de erro do Mercado Pago, se disponível
     if (error.message && error.message.includes('MP_ACCESS_TOKEN')) {
+        errorMessage = error.message;
+    } else if (error.message && error.message.includes('token de teste')) {
         errorMessage = error.message;
     } else if (error.cause && error.cause.length > 0 && error.cause[0].message) {
         errorMessage = `Erro MP: ${error.cause[0].message}`;
