@@ -25,6 +25,7 @@ export const AppContent: React.FC = () => {
   const [view, setView] = useState<ViewType>('LANDING');
   const [showSettings, setShowSettings] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
   
   // Persist view in localStorage for better UX
   const [lastView, setLastView] = useLocalStorage<ViewType>('lastView', 'LANDING');
@@ -43,17 +44,20 @@ export const AppContent: React.FC = () => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        console.log('🚀 Initializing app...');
         const currentUser = await authService.getCurrentUser();
         if (currentUser) {
+          console.log('✅ User found:', currentUser.email);
           setUser(currentUser);
           setView(getInitialView(currentUser));
         } else {
+          console.log('ℹ️ No user found, showing landing');
           // Restore last view if no user
           setView(lastView);
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
-        setView('LANDING');
+        console.error('❌ Error initializing auth:', error);
+        setInitError(error instanceof Error ? error.message : 'Erro ao inicializar aplicação');
       } finally {
         setIsInitialized(true);
       }
@@ -63,12 +67,14 @@ export const AppContent: React.FC = () => {
 
     // Set up auth state listener
     const { data: { subscription } } = authService.onAuthStateChange((authUser) => {
-      setUser(authUser);
+      console.log('🔄 Auth state changed:', authUser?.email);
       if (authUser) {
+        setUser(authUser);
         const newView = getInitialView(authUser);
         setView(newView);
         setLastView(newView);
       } else {
+        setUser(null);
         setView('LANDING');
         setLastView('LANDING');
       }
@@ -131,6 +137,47 @@ export const AppContent: React.FC = () => {
         <div className="flex flex-col items-center gap-4">
           <Sparkles size={32} className="animate-spin text-primary" />
           <p className="text-gray-400">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (initError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
+        <div className="max-w-md w-full bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl text-center">
+          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Sparkles size={32} className="text-red-500" />
+          </div>
+          
+          <h2 className="text-2xl font-bold text-white mb-2">
+            Erro ao Inicializar
+          </h2>
+          
+          <p className="text-gray-400 mb-6">
+            {initError}
+          </p>
+
+          <div className="space-y-3">
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              Recarregar Página
+            </button>
+            
+            <button 
+              onClick={() => {
+                setInitError(null);
+                setIsInitialized(false);
+                setTimeout(() => setIsInitialized(true), 100);
+              }}
+              className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              Tentar Novamente
+            </button>
+          </div>
         </div>
       </div>
     );
