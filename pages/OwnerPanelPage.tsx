@@ -94,8 +94,10 @@ const PaymentsPanel: React.FC<{ user: User, status: string, onRefresh: () => voi
                 headers: { 'Authorization': `Bearer ${session.access_token}` }
             });
             const data = await response.json();
-            if (data.url) {
-                window.location.href = data.url;
+            
+            // CORREÇÃO: Usar data.authUrl conforme retornado pelo backend
+            if (data.authUrl) {
+                window.location.href = data.authUrl;
             } else {
                 toast.error("Não foi possível obter a URL de autorização.");
             }
