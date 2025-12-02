@@ -136,13 +136,20 @@ app.use('*', (req, res) => {
 app.use((error, req, res, next) => {
   console.error('❌ Unhandled error:', error);
   
+  // Se a resposta já foi enviada, não podemos fazer nada
+  if (res.headersSent) {
+    return next(error);
+  }
+  
+  const statusCode = error.statusCode || 500;
+  
   if (error.type === 'entity.parse.failed') {
     return res.status(400).json({ error: 'JSON inválido no corpo da requisição.' });
   }
   
-  res.status(500).json({ 
-    error: 'Erro interno do servidor.',
-    details: process.env.NODE_ENV === 'development' ? error.message : undefined
+  res.status(statusCode).json({ 
+    error: error.message || 'Erro interno do servidor.',
+    details: process.env.NODE_ENV === 'development' ? error.stack : undefined
   });
 });
 
