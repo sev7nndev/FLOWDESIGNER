@@ -30,8 +30,11 @@ export const AppContent: React.FC = () => {
   
   const [lastView, setLastView] = useLocalStorage<ViewType>('lastView', 'LANDING');
   
-  const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(user?.id);
-  const profileRole = (profile?.role || 'free') as UserRole;
+  // Use useProfile principalmente para a função de atualização (updateProfile)
+  const { updateProfile } = useProfile(user?.id); 
+  
+  // Use a função diretamente do estado do usuário, que é populado pelo authService
+  const profileRole = (user?.role || 'free') as UserRole;
   
   const { 
     form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage,
@@ -75,7 +78,7 @@ export const AppContent: React.FC = () => {
           const currentUser = await authService.getCurrentUser();
           if (currentUser) {
             setUser(currentUser);
-            // The view will be set by the profile loading effect below
+            // A visualização será definida pelo efeito de redirecionamento abaixo
           } else {
             setView(lastView);
           }
@@ -105,30 +108,35 @@ export const AppContent: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. Profile Loading and Redirection Effect
+  // 2. Redirection Effect (Simplified)
   useEffect(() => {
-    if (isInitialized && user && !isProfileLoading && profile) {
+    // Só prosseguimos se o app estiver inicializado e o objeto user (com a role) estiver disponível
+    if (isInitialized && user && user.role) {
       const roleView = getRoleBasedView(profileRole);
       
-      // Only redirect if the current view is LANDING or AUTH, or if the user is trying to access a restricted panel
-      if (view === 'LANDING' || view === 'AUTH' || view !== roleView) {
+      // Redireciona se estiver atualmente em LANDING, AUTH, ou se a visualização atual estiver incorreta para a função
+      const shouldRedirect = view === 'LANDING' || view === 'AUTH' || (view !== 'CHAT' && view !== roleView);
+      
+      if (shouldRedirect) {
+        console.log(`Redirecting user ${user.id} (Role: ${profileRole}) from ${view} to ${roleView}`);
         setView(roleView);
         setLastView(roleView);
       }
       
+      // Carrega o histórico uma vez autenticado
       loadHistory();
     } else if (isInitialized && !user) {
-      // If user logs out or is not authenticated, ensure we are on LANDING or AUTH
+      // Se o usuário sair ou não estiver autenticado, garante que estamos em LANDING ou AUTH
       if (view !== 'AUTH' && view !== 'LANDING') {
         setView('LANDING');
       }
     }
-  }, [isInitialized, user, isProfileLoading, profileRole, view, setLastView, loadHistory, profile]);
+  }, [isInitialized, user, profileRole, view, setLastView, loadHistory]);
 
 
   // 3. Save view to localStorage when it changes
   useEffect(() => {
-    if (view !== 'AUTH') { // Don't save auth view
+    if (view !== 'AUTH') { // Não salva a visualização de autenticação
       setLastView(view);
     }
   }, [view, setLastView]);
@@ -136,7 +144,7 @@ export const AppContent: React.FC = () => {
   const handleLogout = async () => {
     try {
       await authService.logout();
-      // State change listener handles the rest
+      // O listener de mudança de estado lida com o resto
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -145,7 +153,7 @@ export const AppContent: React.FC = () => {
   const handleAuthSuccess = (authUser: User | null) => {
     if (authUser) {
       setUser(authUser);
-      // Redirection handled by the profile loading effect
+      // O redirecionamento é tratado pelo efeito de redirecionamento
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
@@ -171,7 +179,8 @@ export const AppContent: React.FC = () => {
   };
 
   // Loading state (Initial or Profile Loading)
-  if (!isInitialized || (user && isProfileLoading)) {
+  // Verificamos se o objeto user está presente E se a role está populada
+  if (!isInitialized || (user && !user.role)) { 
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950">
         <div className="flex flex-col items-center gap-4">
