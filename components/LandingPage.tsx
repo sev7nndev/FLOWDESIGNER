@@ -12,6 +12,7 @@ import { useScrollDirection } from '../hooks/useScrollDirection';
 
 interface LandingPageProps {
   onGetStarted: () => void;
+  onPlanSelect: (planId: string) => void;
   onLogin: () => void;
   landingImages: LandingImage[];
   isLandingImagesLoading: boolean;
@@ -35,7 +36,7 @@ const sectionVariants = {
   }
 };
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, landingImages, isLandingImagesLoading }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onPlanSelect, onLogin, landingImages, isLandingImagesLoading }) => {
   const [isModalOpen, setModalOpen] = useState(false);
   const scrollDirection = useScrollDirection();
 
@@ -46,6 +47,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   
   // Duplicamos o conteúdo 2x
   const marqueeContent = [...carouselItems, ...carouselItems];
+
+  const handleModalPlanSelect = (planId: string) => {
+    if (planId === 'free') {
+      onGetStarted();
+    } else {
+      onPlanSelect(planId);
+    }
+  };
 
   const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string, color: 'primary' | 'secondary' | 'accent' }> = ({ icon, title, description, color }) => {
     const colorClasses = {
@@ -240,7 +249,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
           </footer>
         </main>
       </div>
-      <PricingModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} onPlanSelect={onGetStarted} />
+      <PricingModal 
+        isOpen={isModalOpen} 
+        onClose={() => setModalOpen(false)} 
+        onPlanSelect={handleModalPlanSelect} 
+      />
     </>
   );
 };

@@ -7,7 +7,7 @@ import { X } from 'lucide-react';
 interface PricingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPlanSelect: () => void;
+  onPlanSelect: (planId: string) => void;
 }
 
 export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, onPlanSelect }) => {
@@ -37,6 +37,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, onP
             price="R$ 0"
             description="Para testar a tecnologia."
             buttonText="Criar Conta Grátis"
+            planId="free"
             features={["3 Gerações Gratuitas", "Qualidade Padrão", "Marca d'água", "Suporte Comunitário"]}
             onClick={onPlanSelect}
           />
@@ -46,6 +47,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, onP
             period="/mês"
             description="Ideal para autônomos."
             buttonText="Assinar Start"
+            planId="starter"
             features={["20 Imagens Profissionais", "Qualidade 4K", "Sem marca d'água", "Uso Comercial Liberado", "Suporte por Email"]}
             onClick={onPlanSelect}
           />
@@ -55,6 +57,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, onP
             period="/mês"
             description="Para agências e power users."
             buttonText="Assinar Pro"
+            planId="pro"
             features={["50 Imagens Profissionais", "Qualidade Ultra 8K", "Geração Instantânea (Turbo)", "Sem marca d'água", "Prioridade no Suporte"]}
             highlight={true}
             badge="Melhor Custo-Benefício"

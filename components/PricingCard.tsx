@@ -11,11 +11,12 @@ interface PricingCardProps {
   features: string[];
   highlight?: boolean;
   badge?: string;
-  onClick: () => void;
+  onClick: (planId: string) => void;
+  planId: string;
 }
 
 export const PricingCard: React.FC<PricingCardProps> = ({ 
-  name, price, period, description, buttonText, features, highlight, badge, onClick 
+  name, price, period, description, buttonText, features, highlight, badge, onClick, planId
 }) => {
   return (
     <div className={`relative rounded-3xl p-8 flex flex-col h-full transition-all duration-300 ${
@@ -50,7 +51,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
       </div>
 
       <Button 
-        onClick={onClick}
+        onClick={() => onClick(planId)}
         className={`w-full h-14 rounded-xl text-base font-bold ${
           highlight 
             ? 'bg-gradient-to-r from-primary to-secondary hover:brightness-110 shadow-xl shadow-primary/30' 

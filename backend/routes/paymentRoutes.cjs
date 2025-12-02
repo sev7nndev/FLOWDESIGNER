@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const { supabaseService, mercadopago } = require('../config');
+const { authenticateToken } = require('../middleware/auth.cjs');
+const { supabaseService, mercadopago } = require('../config.cjs');
 
 // Create payment preference
 router.post('/create-preference', authenticateToken, async (req, res) => {
@@ -17,7 +17,7 @@ router.post('/create-preference', authenticateToken, async (req, res) => {
     const { data: plan, error: planError } = await supabaseService
       .from('plans')
       .select('*')
-      .eq('id', planId)
+      .ilike('name', planId) // Use case-insensitive search by name
       .single();
 
     if (planError || !plan) {
@@ -39,10 +39,10 @@ router.post('/create-preference', authenticateToken, async (req, res) => {
         pending: returnUrl || `${process.env.FRONTEND_URL}/app`
       },
       auto_return: 'approved',
-      external_reference: `${userId}_${planId}_${Date.now()}`,
+      external_reference: `${userId}_${plan.id}_${Date.now()}`, // Use plan.id (UUID)
       metadata: {
         user_id: userId,
-        plan_id: planId
+        plan_id: plan.id // Use plan.id (UUID)
       }
     };
 

@@ -5,7 +5,7 @@ import { AppTitleHeader } from './components/AppTitleHeader';
 import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
 import { Sparkles } from 'lucide-react';
-import { useGeneration } from './hooks/useGeneration';
+import { useGeneration } from './src/hooks/useGeneration';
 import { ResultDisplay } from './components/ResultDisplay';
 import { SettingsModal } from './components/Modals';
 import { useProfile } from './hooks/useProfile';
@@ -15,8 +15,9 @@ import { useLandingImages } from './hooks/useLandingImages';
 import { DevPanelPage } from './pages/DevPanelPage';
 import { OwnerPanelPage } from './pages/OwnerPanelPage';
 import { ClientChatPanel } from './components/ClientChatPanel';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { api } from './services/api';
 
 type ViewType = 'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'OWNER_PANEL' | 'CHAT';
 
@@ -136,6 +137,25 @@ export const AppContent: React.FC = () => {
     }
   };
 
+  const handlePlanSelection = async (planId: string) => {
+    if (!user) {
+      toast.info('Por favor, crie uma conta ou faça login para assinar um plano.');
+      setView('AUTH');
+      return;
+    }
+
+    const toastId = toast.loading('Redirecionando para o pagamento...');
+
+    try {
+      const checkoutUrl = await api.createPaymentPreference(planId);
+      toast.success('Tudo pronto! Abrindo checkout seguro.', { id: toastId });
+      window.location.href = checkoutUrl;
+    } catch (error: any) {
+      console.error('Failed to create payment preference:', error);
+      toast.error(error.message || 'Não foi possível iniciar o pagamento. Tente novamente.', { id: toastId });
+    }
+  };
+
   // Loading state
   if (!isInitialized) {
     return (
@@ -249,6 +269,7 @@ export const AppContent: React.FC = () => {
       return (
         <LandingPage 
           onGetStarted={() => setView('AUTH')} 
+          onPlanSelect={handlePlanSelection}
           onLogin={() => setView('AUTH')} 
           landingImages={landingImages} 
           isLandingImagesLoading={isLandingImagesLoading} 
