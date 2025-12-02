@@ -9,20 +9,16 @@ const oauth = new OAuth(client);
  * Helper function to safely fetch count from Supabase.
  * Returns 0 on error or if no count is found.
  */
-const safeFetchCount = async (query, role = 'N/A', status = 'N/A') => {
+const safeFetchCount = async (query) => {
     try {
         const { count, error } = await query.select('*', { count: 'exact', head: true });
         if (error) {
-            console.error(`Supabase Count Error for Role=${role}, Status=${status}:`, error.message);
+            console.error("Supabase Count Error:", error.message);
             return 0;
-        }
-        if (count === 0) {
-            // Log the query details if count is zero to help debug filtering
-            console.log(`DEBUG: Count is zero for Role=${role}, Status=${status}.`);
         }
         return count || 0;
     } catch (e) {
-        console.error(`Unexpected error during count query for Role=${role}, Status=${status}:`, e.message, e.stack);
+        console.error("Unexpected error during count query:", e.message, e.stack);
         return 0;
     }
 };
@@ -32,30 +28,28 @@ const safeFetchCount = async (query, role = 'N/A', status = 'N/A') => {
  * @returns {Promise<{planCounts: object, statusCounts: object}>}
  */
 const fetchOwnerMetrics = async (ownerId) => {
+    // Roles que representam clientes (incluindo free, starter e pro)
     const CLIENT_ROLES = ['free', 'starter', 'pro'];
-    
-    // --- DEBUG: Contagem Total de Perfis ---
-    const totalProfiles = await safeFetchCount(supabaseService.from('profiles'), 'TOTAL');
-    console.log(`DEBUG: Total profiles found in DB: ${totalProfiles}`);
     
     // --- 1. Contagem de usuários por plano (role) ---
     const countsByPlan = { free: 0, starter: 0, pro: 0 };
     
-    countsByPlan.free = await safeFetchCount(supabaseService.from('profiles').eq('role', 'free'), 'free');
-    countsByPlan.starter = await safeFetchCount(supabaseService.from('profiles').eq('role', 'starter'), 'starter');
-    countsByPlan.pro = await safeFetchCount(supabaseService.from('profiles').eq('role', 'pro'), 'pro');
+    countsByPlan.free = await safeFetchCount(supabaseService.from('profiles').eq('role', 'free'));
+    countsByPlan.starter = await safeFetchCount(supabaseService.from('profiles').eq('role', 'starter'));
+    countsByPlan.pro = await safeFetchCount(supabaseService.from('profiles').eq('role', 'pro'));
     
     // --- 2. Contagem de usuários por status ---
     const countsByStatus = { on: 0, paused: 0, cancelled: 0 };
     
-    // Aplicando FIX: Passando o array CLIENT_ROLES
-    countsByStatus.on = await safeFetchCount(supabaseService.from('profiles').eq('status', 'on').in('role', CLIENT_ROLES), CLIENT_ROLES.join('|'), 'on');
-    countsByStatus.paused = await safeFetchCount(supabaseService.from('profiles').eq('status', 'paused').in('role', CLIENT_ROLES), CLIENT_ROLES.join('|'), 'paused');
-    countsByStatus.cancelled = await safeFetchCount(supabaseService.from('profiles').eq('status', 'cancelled').in('role', CLIENT_ROLES), CLIENT_ROLES.join('|'), 'cancelled');
+    // Usando o array CLIENT_ROLES no método .in()
+    countsByStatus.on = await safeFetchCount(supabaseService.from('profiles').eq('status', 'on').in('role', CLIENT_ROLES));
+    countsByStatus.paused = await safeFetchCount(supabaseService.from('profiles').eq('status', 'paused').in('role', CLIENT_ROLES));
+    countsByStatus.cancelled = await safeFetchCount(supabaseService.from('profiles').eq('status', 'cancelled').in('role', CLIENT_ROLES));
     
     // 3. Lista de Clientes (Nome, Email, Plano, Status)
     let clientList = [];
     try {
+        // A chave estrangeira adicionada no SQL garante que esta sintaxe de join funcione
         const { data: clients, error: clientsError } = await supabaseService
             .from('profiles')
             .select('id, first_name, last_name, role, status, auth_user:id(email)') 
@@ -65,6 +59,8 @@ const fetchOwnerMetrics = async (ownerId) => {
         if (clientsError) throw clientsError;
         
         clientList = clients.map(client => {
+            // Acessando o email através da relação 'auth_user'
+            // O resultado do join é um array, então acessamos o primeiro elemento
             const email = (client.auth_user && Array.isArray(client.auth_user) ? client.auth_user[0]?.email : client.auth_user?.email) || 'N/A';
             
             return {
@@ -76,7 +72,9 @@ const fetchOwnerMetrics = async (ownerId) => {
             };
         });
     } catch (e) {
-        console.error("Error fetching client list:", e.message);
+        // Captura e loga o erro, mas permite que o serviço retorne métricas parciais (se as contagens funcionarem)
+        console.error("Error fetching client list (likely join issue):", e.message);
+        // Se a lista falhar, ela será retornada vazia, mas o 500 deve ser evitado.
     }
 
     // 4. Status da Conexão Mercado Pago
