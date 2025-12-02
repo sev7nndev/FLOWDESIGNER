@@ -32,10 +32,14 @@ const ClientTable: React.FC<ClientTableProps> = ({ clients, isLoading }) => {
 
   const getPlanIcon = (plan: string) => {
     switch (plan) {
-      case 'pro': return <Star size={14} className="text-yellow-400" />;
-      case 'starter': return <Zap size={14} className="text-blue-400" />;
-      case 'free': return <Shield size={14} className="text-gray-400" />;
-      default: return <UserIcon size={14} className="text-gray-400" />;
+      case 'pro':
+        return <Star size={14} className="text-yellow-400" />;
+      case 'starter':
+        return <Zap size={14} className="text-blue-400" />;
+      case 'free':
+        return <Shield size={14} className="text-gray-400" />;
+      default:
+        return <UserIcon size={14} className="text-gray-400" />;
     }
   };
 
@@ -57,12 +61,15 @@ const ClientTable: React.FC<ClientTableProps> = ({ clients, isLoading }) => {
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{client.email}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm">
                 <span className="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary capitalize">
-                  {getPlanIcon(client.plan)} {client.plan}
+                  {getPlanIcon(client.plan)}
+                  {client.plan}
                 </span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm">
                 <span className={`px-3 py-1 text-xs font-semibold rounded-full capitalize ${
-                  client.status === 'on' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                  client.status === 'on' 
+                    ? 'bg-green-500/10 text-green-400' 
+                    : 'bg-red-500/10 text-red-400'
                 }`}>
                   {client.status}
                 </span>
@@ -86,6 +93,7 @@ const PaymentsPanel: React.FC<{ user: User, status: string, onRefresh: () => voi
     setIsLoading(true);
     const supabase = getSupabase();
     if (!supabase) return;
+    
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
@@ -96,6 +104,7 @@ const PaymentsPanel: React.FC<{ user: User, status: string, onRefresh: () => voi
         }
       });
       const data = await response.json();
+      
       // CORREÇÃO: Usar data.authUrl conforme retornado pelo backend
       if (data.authUrl) {
         window.location.href = data.authUrl;
@@ -113,9 +122,11 @@ const PaymentsPanel: React.FC<{ user: User, status: string, onRefresh: () => voi
     if (!window.confirm("Tem certeza que deseja desconectar sua conta do Mercado Pago? Seus clientes não poderão mais assinar.")) {
       return;
     }
+    
     setIsLoading(true);
     const supabase = getSupabase();
     if (!supabase) return;
+    
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
@@ -126,6 +137,7 @@ const PaymentsPanel: React.FC<{ user: User, status: string, onRefresh: () => voi
           'Authorization': `Bearer ${session.access_token}`
         }
       });
+      
       if (response.ok) {
         toast.success("Conta do Mercado Pago desconectada.");
         onRefresh();
@@ -225,7 +237,9 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
           <button
             onClick={() => setActiveTab('dashboard')}
             className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'dashboard' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-white'
+              activeTab === 'dashboard'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-gray-400 hover:text-white'
             }`}
           >
             Dashboard
@@ -233,7 +247,9 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
           <button
             onClick={() => setActiveTab('clients')}
             className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'clients' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-white'
+              activeTab === 'clients'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-gray-400 hover:text-white'
             }`}
           >
             Clientes ({totalClients})
@@ -241,7 +257,9 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
           <button
             onClick={() => setActiveTab('chat')}
             className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'chat' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-white'
+              activeTab === 'chat'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-gray-400 hover:text-white'
             }`}
           >
             Chat
@@ -249,7 +267,9 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
           <button
             onClick={() => setActiveTab('payments')}
             className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'payments' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-white'
+              activeTab === 'payments'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-gray-400 hover:text-white'
             }`}
           >
             Pagamentos
@@ -276,16 +296,41 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
             
             {/* Contagem por Plano */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <MetricCard title="Plano Free" value={metrics.planCounts.free} icon={<Users size={24} />} color="gray" />
-              <MetricCard title="Plano Starter" value={metrics.planCounts.starter} icon={<Zap size={24} />} color="accent" />
-              <MetricCard title="Plano Pro" value={metrics.planCounts.pro} icon={<Star size={24} />} color="primary" />
+              <MetricCard
+                title="Plano Free"
+                value={metrics.planCounts.free}
+                icon={<Users size={24} />}
+                color="gray"
+              />
+              <MetricCard
+                title="Plano Starter"
+                value={metrics.planCounts.starter}
+                icon={<Zap size={24} />}
+                color="accent"
+              />
+              <MetricCard
+                title="Plano Pro"
+                value={metrics.planCounts.pro}
+                icon={<Star size={24} />}
+                color="primary"
+              />
             </div>
 
             {/* Contagem por Status */}
             <h2 className="text-2xl font-bold text-white pt-6">Status dos Planos</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
-              <MetricCard title="Planos Ativos (ON)" value={totalActive} icon={<CheckCircle size={24} />} color="primary" />
-              <MetricCard title="Planos Pausados/Cancelados" value={totalInactive} icon={<PauseCircle size={24} />} color="red" />
+              <MetricCard
+                title="Planos Ativos (ON)"
+                value={totalActive}
+                icon={<CheckCircle size={24} />}
+                color="primary"
+              />
+              <MetricCard
+                title="Planos Pausados/Cancelados"
+                value={totalInactive}
+                icon={<PauseCircle size={24} />}
+                color="red"
+              />
             </div>
 
             <div className="pt-8">
