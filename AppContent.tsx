@@ -167,7 +167,9 @@ export const AppContent: React.FC = () => {
     const toastId = toast.loading('Redirecionando para o pagamento...');
     
     try {
-      const returnUrl = `${window.location.origin}?status=success&plan=${planId}`;
+      // A returnUrl é a URL para onde o Mercado Pago deve redirecionar após o pagamento.
+      // O backend usará essa URL para construir as URLs de sucesso/falha/pendente.
+      const returnUrl = `${window.location.origin}/`; 
       const checkoutUrl = await api.createPaymentPreference(planId, returnUrl);
       
       toast.success('Tudo pronto! Abrindo checkout seguro.', { id: toastId });

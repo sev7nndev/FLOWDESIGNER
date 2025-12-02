@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-// const { authenticateToken } = require('../middleware/auth.cjs'); // Removido
-const { supabaseService, mercadopago } = require('../config.cjs');
+const { supabaseService, mercadopago } = require('../config');
 
 // Create payment preference - AGORA É PÚBLICO
 router.post('/create-preference', async (req, res) => {
@@ -12,6 +11,7 @@ router.post('/create-preference', async (req, res) => {
   }
 
   try {
+    // 1. Buscar o plano pelo nome (planId é o nome do plano: 'starter' ou 'pro')
     const { data: plan, error: planError } = await supabaseService
       .from('plans')
       .select('*')
@@ -21,7 +21,12 @@ router.post('/create-preference', async (req, res) => {
     if (planError || !plan) {
       return res.status(404).json({ error: 'Plano não encontrado.' });
     }
+    
+    if (plan.price <= 0) {
+        return res.status(400).json({ error: 'Não é possível criar preferência de pagamento para planos gratuitos.' });
+    }
 
+    // 2. Criar a preferência de pagamento
     const preference = {
       items: [{
         title: `Plano ${plan.name} - Flow Designer`,
@@ -30,29 +35,33 @@ router.post('/create-preference', async (req, res) => {
         currency_id: 'BRL',
         unit_price: parseFloat(plan.price)
       }],
+      // URLs de retorno após o pagamento
       back_urls: {
-        success: returnUrl || `${process.env.FRONTEND_URL}/`,
-        failure: returnUrl || `${process.env.FRONTEND_URL}/`,
-        pending: returnUrl || `${process.env.FRONTEND_URL}/`
+        // Redireciona para a tela de autenticação/cadastro com o status e o plano
+        success: `${process.env.FRONTEND_URL}/?status=success&plan=${planId}`,
+        failure: `${process.env.FRONTEND_URL}/?status=failure&plan=${planId}`,
+        pending: `${process.env.FRONTEND_URL}/?status=pending&plan=${planId}`
       },
       auto_return: 'approved',
-      // Não temos userId ainda, então o external_reference será mais simples
+      // O external_reference é usado para identificar a transação no webhook
       external_reference: `plan_${plan.id}_${Date.now()}`,
+      notification_url: `${process.env.BACKEND_URL}/api/payments/webhook`,
       metadata: {
-        // Guardamos o ID do plano (UUID) para o webhook
-        plan_id: plan.id 
+        plan_id: plan.id,
+        plan_name: plan.name
       }
     };
 
     const response = await mercadopago.preferences.create(preference);
     
+    // 3. Retorna o init_point (URL de checkout do Mercado Pago)
     res.status(200).json({
       preferenceId: response.body.id,
       initPoint: response.body.init_point
     });
   } catch (error) {
     console.error('Payment preference error:', error);
-    res.status(500).json({ error: 'Erro ao criar preferência de pagamento.' });
+    res.status(500).json({ error: 'Erro ao criar preferência de pagamento. Verifique se o MP_ACCESS_TOKEN está configurado.' });
   }
 });
 
@@ -64,13 +73,17 @@ router.post('/webhook', async (req, res) => {
     if (paymentData.type === 'payment') {
       const paymentId = paymentData.data.id;
       
+      // Busca os detalhes do pagamento usando o SDK
       const payment = await mercadopago.payment.findById(paymentId);
       
       if (payment.body.status === 'approved') {
-        // O webhook não pode mais atualizar a assinatura diretamente,
-        // pois não temos o user_id no momento do pagamento.
-        // A lógica de associar o plano ao usuário foi movida para o momento do cadastro.
-        console.log(`Pagamento ${paymentId} aprovado para o plano ${payment.body.metadata.plan_id}. Aguardando cadastro do usuário.`);
+        const { metadata } = payment.body;
+        
+        // Neste ponto, o usuário ainda não está logado/cadastrado.
+        // A lógica de associação do plano ao usuário é feita no frontend (AppContent.tsx)
+        // após o redirecionamento para a tela de cadastro.
+        
+        console.log(`Pagamento ${paymentId} aprovado para o plano ${metadata.plan_name}. Aguardando cadastro/login do usuário.`);
       }
     }
     

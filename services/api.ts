@@ -230,6 +230,7 @@ export const api = {
   },
   
   createPaymentPreference: async (planId: string, returnUrl: string): Promise<string> => {
+    // O planId aqui é o nome do plano ('starter' ou 'pro')
     const response = await fetch(`${BACKEND_URL}/payments/create-preference`, {
       method: "POST",
       headers: {
@@ -245,6 +246,6 @@ export const api = {
     }
 
     const data = await response.json();
-    return data.initPoint;
+    return data.initPoint; // Retorna a URL de checkout do Mercado Pago
   }
 };

@@ -39,6 +39,7 @@ const FREE_LIMIT = 3;
 
 // Mercado Pago Configuration
 const mercadopago = require('mercadopago');
+// Configura o SDK com o token de acesso do dono do SaaS
 mercadopago.configure({
   access_token: process.env.MP_ACCESS_TOKEN || '',
 });
