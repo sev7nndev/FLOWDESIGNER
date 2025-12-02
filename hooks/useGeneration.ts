@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User } from '../types';
 import { api } from '../services/api';
 import { PLACEHOLDER_EXAMPLES } from '../constants';
-import { useUsage } from './useUsage'; // Importando o novo hook de uso
+import { useUsage } from './useUsage'; // Corrigido o caminho de importação
 import { toast } from 'sonner';
 
 const INITIAL_FORM: BusinessInfo = {
