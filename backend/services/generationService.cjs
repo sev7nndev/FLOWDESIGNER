@@ -13,10 +13,7 @@ const generateImageWithQuotaCheck = async (userId, promptInfo) => {
     .from('subscriptions')
     .select(`
       status,
-      plans (
-        name,
-        image_quota
-      )
+      plans ( name, image_quota )
     `)
     .eq('user_id', userId)
     .eq('status', 'active')
@@ -52,6 +49,7 @@ const generateImageWithQuotaCheck = async (userId, promptInfo) => {
   // 4. Se a quota estiver OK, gerar o prompt detalhado
   const detailedPrompt = `
     Crie um flyer profissional e atraente com o seguinte briefing:
+    
     Nome da Empresa: ${promptInfo.companyName}
     Telefone: ${promptInfo.phone}
     Endereço: ${promptInfo.addressStreet}, ${promptInfo.addressNumber} - ${promptInfo.addressNeighborhood}, ${promptInfo.addressCity}
@@ -133,7 +131,6 @@ const generateImageWithQuotaCheck = async (userId, promptInfo) => {
       businessInfo: promptInfo,
       createdAt: new Date().toISOString(),
     };
-
   } catch (geminiError) {
     console.error("Erro na API do Gemini:", geminiError);
     throw new Error("Falha ao gerar a imagem com a inteligência artificial.");

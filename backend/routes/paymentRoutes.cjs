@@ -20,9 +20,8 @@ router.post('/create-preference', authMiddleware, async (req, res) => {
     console.error("Error creating payment preference:", error);
     res.status(500).json({ error: error.message });
   }
-});
+}); // Rota para o webhook do Mercado Pago (pública)
 
-// Rota para o webhook do Mercado Pago (pública)
 router.post('/webhook', async (req, res) => {
   try {
     await paymentService.handleWebhook(req.body);

@@ -94,7 +94,6 @@ const handleWebhook = async (paymentData) => {
     .single();
 
   if (!ownerAccount) throw new Error("Owner MP account not found.");
-
   const ownerCredentials = ownerAccount.value;
   mercadopago.configure({
     access_token: ownerCredentials.access_token,
@@ -145,7 +144,9 @@ const handleWebhook = async (paymentData) => {
     const { data: plan } = await supabaseService.from('plans').select('name').eq('id', planId).single();
     await supabaseService
       .from('profiles')
-      .update({ role: plan.name.toLowerCase() })
+      .update({
+        role: plan.name.toLowerCase()
+      })
       .eq('id', userId);
 
     console.log(`Webhook: Assinatura do usuário ${userId} atualizada para o plano ${planId}.`);

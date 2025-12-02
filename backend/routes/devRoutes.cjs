@@ -7,9 +7,8 @@ const { roleMiddleware } = require('../middleware/roleMiddleware'); // Corrigido
 
 // Proteger todas as rotas de dev
 router.use(authMiddleware);
-router.use(roleMiddleware(['dev']));
+router.use(roleMiddleware(['dev'])); // Rota para atualizar os detalhes de um plano
 
-// Rota para atualizar os detalhes de um plano
 router.post('/update-plan', async (req, res) => {
   const { planId, price, image_quota } = req.body;
 
@@ -28,14 +27,11 @@ router.post('/update-plan', async (req, res) => {
       .select();
 
     if (error) throw error;
-
     res.status(200).json(data[0]);
   } catch (error) {
     console.error("Error updating plan:", error);
     res.status(500).json({ error: 'Não foi possível atualizar o plano.' });
   }
-});
-
-// TODO: Adicionar rotas para 'fix-app' e 'change-carousel-images'
+}); // TODO: Adicionar rotas para 'fix-app' e 'change-carousel-images'
 
 module.exports = router;
