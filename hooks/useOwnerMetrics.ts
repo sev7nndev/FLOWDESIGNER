@@ -13,17 +13,33 @@ interface ClientData {
 }
 
 interface OwnerMetrics {
-  planCounts: { free: number; starter: number; pro: number; };
-  statusCounts: { on: number; paused: number; cancelled: number; };
+  planCounts: {
+    free: number;
+    starter: number;
+    pro: number;
+  };
+  statusCounts: {
+    on: number;
+    paused: number;
+    cancelled: number;
+  };
   clients: ClientData[];
   mpConnectionStatus: 'connected' | 'disconnected' | 'loading';
 }
 
 const INITIAL_METRICS: OwnerMetrics = {
-  planCounts: { free: 0, starter: 0, pro: 0 },
-  statusCounts: { on: 0, paused: 0, cancelled: 0 },
+  planCounts: {
+    free: 0,
+    starter: 0,
+    pro: 0
+  },
+  statusCounts: {
+    on: 0,
+    paused: 0,
+    cancelled: 0
+  },
   clients: [],
-  mpConnectionStatus: 'loading',
+  mpConnectionStatus: 'loading'
 };
 
 export const useOwnerMetrics = (user: User | null) => {
@@ -35,6 +51,7 @@ export const useOwnerMetrics = (user: User | null) => {
   const fetchMetrics = useCallback(async () => {
     const userId = user?.id;
     const userRole = user?.role;
+    
     if (!userId || userRole !== 'owner') {
       setIsLoading(false);
       return;
@@ -57,6 +74,7 @@ export const useOwnerMetrics = (user: User | null) => {
 
       if (!response.ok) {
         let errorBody = { error: `Erro do servidor: Status ${response.status}` };
+        
         // Tenta analisar o corpo da resposta como JSON, mas de forma defensiva
         try {
           const contentType = response.headers.get("content-type");
@@ -73,6 +91,7 @@ export const useOwnerMetrics = (user: User | null) => {
           // Falha na análise de JSON (Unexpected end of JSON input)
           console.warn("Falha ao analisar JSON de erro do backend:", e);
         }
+        
         throw new Error(errorBody.error || `Erro desconhecido: Status ${response.status}`);
       }
 

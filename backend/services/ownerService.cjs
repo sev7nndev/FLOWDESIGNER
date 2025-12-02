@@ -15,7 +15,7 @@ async function fetchOwnerMetrics(ownerId) {
     // Fetch profiles with counts
     console.log('📊 Fetching profile counts...');
     const { data: profiles, error: profilesError } = await supabaseService
-      .from('profiles_with_email')
+      .from('profiles')
       .select('role, status')
       .in('role', CLIENT_ROLES);
       
@@ -63,7 +63,7 @@ async function fetchOwnerMetrics(ownerId) {
     // Fetch client list
     console.log('👥 Fetching client list...');
     const { data: clients, error: clientsError } = await supabaseService
-      .from('profiles_with_email')
+      .from('profiles')
       .select('id, first_name, last_name, email, role, status')
       .in('role', CLIENT_ROLES)
       .order('updated_at', { ascending: false });
@@ -124,7 +124,7 @@ async function getOwnerChatHistory(ownerId) {
     
     // Fetch all clients
     const { data: clients, error: clientsError } = await supabaseService
-      .from('profiles_with_email')
+      .from('profiles')
       .select('id, first_name, last_name, email')
       .in('role', CLIENT_ROLES);
       
