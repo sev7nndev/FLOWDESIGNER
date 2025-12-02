@@ -20,14 +20,15 @@ router.post('/update-plan', async (req, res) => {
   try {
     const { data, error } = await supabaseService
       .from('plans')
-      .update({ 
-        price: Number(price), 
-        image_quota: parseInt(image_quota) 
+      .update({
+        price: Number(price),
+        image_quota: parseInt(image_quota)
       })
       .eq('id', planId)
       .select();
 
     if (error) throw error;
+
     res.status(200).json(data[0]);
   } catch (error) {
     console.error("Error updating plan:", error);
