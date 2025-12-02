@@ -45,6 +45,12 @@ export const AppContent: React.FC = () => {
     const initializeAuth = async () => {
       try {
         console.log('🚀 Initializing app...');
+        
+        // Check if Supabase is configured
+        if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+          throw new Error('Supabase não configurado. Verifique as variáveis de ambiente.');
+        }
+        
         const currentUser = await authService.getCurrentUser();
         if (currentUser) {
           console.log('✅ User found:', currentUser.email);
