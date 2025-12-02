@@ -1,9 +1,10 @@
+// backend/middleware/auth.cjs
 const { supabaseAnon, supabaseService } = require('../config');
 
-// Helper function to verify JWT token
+// Helper function to verify JWT token using supabaseAnon (client-side key)
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
     return res.status(401).json({ error: 'Token de autenticação ausente.' });
@@ -18,7 +19,13 @@ const authenticateToken = async (req, res, next) => {
       return res.status(403).json({ error: 'Token inválido ou expirado.' });
     }
 
-    req.user = { id: user.id, email: user.email, token: token };
+    // Attach user object to request for use in routes
+    req.user = {
+      id: user.id,
+      email: user.email,
+      token: token // Optional: if you need the raw token later
+    };
+
     next();
   } catch (e) {
     console.error("Error during token authentication:", e.message);
@@ -26,7 +33,7 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-// Helper function to check if user has admin or dev role
+// Helper function to check if user has admin or dev role using supabaseService (service key)
 const checkAdminOrDev = async (req, res, next) => {
   const user = req.user;
   if (!user) {
@@ -43,6 +50,7 @@ const checkAdminOrDev = async (req, res, next) => {
     if (error || !profile || !['admin', 'dev'].includes(profile.role)) {
       return res.status(403).json({ error: 'Acesso negado. Apenas administradores e desenvolvedores podem realizar esta ação.' });
     }
+
     next();
   } catch (e) {
     console.error("Error checking admin/dev role:", e.message);

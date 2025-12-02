@@ -6,9 +6,10 @@ const CLIENT_ROLES = ['free', 'starter', 'pro'];
 
 /**
  * Busca todas as métricas necessárias para o Painel do Dono.
+ * @param {string} ownerId - ID do proprietário.
  * @returns {Promise<object>} Métricas do sistema.
  */
-async function fetchOwnerMetrics() {
+async function fetchOwnerMetrics(ownerId) {
   let planCounts = { free: 0, starter: 0, pro: 0 };
   let statusCounts = { on: 0, paused: 0, cancelled: 0 };
   let mpConnectionStatus = 'disconnected';
@@ -93,7 +94,7 @@ async function getMercadoPagoAuthUrl(ownerId) {
   // Esta é uma simulação. Deve-se usar as credenciais do MP e o ownerId para gerar a URL.
   const redirectUri = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/owner-panel`;
   // Substituir pelas credenciais reais do aplicativo Mercado Pago
-  const clientId = process.env.MP_CLIENT_ID; 
+  const clientId = process.env.MP_CLIENT_ID;
   if (!clientId) {
     throw new Error("MP_CLIENT_ID não configurado.");
   }
@@ -103,21 +104,23 @@ async function getMercadoPagoAuthUrl(ownerId) {
 
 /**
  * Desconecta a conta do Mercado Pago, removendo o token de acesso.
+ * @param {string} ownerId - ID do proprietário.
  */
-async function disconnectMercadoPago() {
+async function disconnectMercadoPago(ownerId) {
   const { error } = await supabaseService
     .from('app_config') // Usando app_config
     .delete()
     .eq('key', 'mp_access_token');
-    
+
   if (error) throw error;
 }
 
 /**
  * Busca o histórico de chat entre o dono e todos os clientes.
+ * @param {string} ownerId - ID do proprietário.
  * @returns {Promise<Array>} Histórico de mensagens.
  */
-async function getOwnerChatHistory() {
+async function getOwnerChatHistory(ownerId) {
   // Para garantir que o chat funcione com os IDs reais dos clientes,
   // vamos buscar a lista de clientes usando a nova view
   let clients = [];
@@ -126,7 +129,7 @@ async function getOwnerChatHistory() {
       .from('profiles_with_email')
       .select('id, first_name, last_name, email')
       .in('role', CLIENT_ROLES);
-      
+
     if (error) throw error;
     clients = data;
   } catch (e) {

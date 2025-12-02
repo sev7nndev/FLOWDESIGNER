@@ -1,47 +1,40 @@
 // backend/server.cjs
 const express = require('express');
 const cors = require('cors');
-const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config'); // Import the anonymous client and limits
-const generationRoutes = require('./routes/generationRoutes'); // Import the new routes
-const ownerRoutes = require('./routes/ownerRoutes'); // Importando rotas do proprietário
-const adminRoutes = require('./routes/adminRoutes'); // Importando rotas do Admin
-const publicRoutes = require('./routes/publicRoutes'); // NOVO: Importando rotas públicas
-const planRoutes = require('./routes/planRoutes.cjs'); // NOVO: Importando rotas de planos
+const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config');
+const generationRoutes = require('./routes/generationRoutes');
+const ownerRoutes = require('./routes/ownerRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const publicRoutes = require('./routes/publicRoutes');
+const planRoutes = require('./routes/planRoutes.cjs');
+const historyRoutes = require('./routes/historyRoutes.cjs'); // NOVO: Importando rota de histórico
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
 app.use(cors({
-  // CORREÇÃO CRÍTICA: Adicionando a porta 5173 (Vite default) e 3000 (caso use)
   origin: ['http://localhost:5173', 'http://localhost:3000'],
-  methods: ['GET', 'POST', 'DELETE'], // Adicionando DELETE para rotas admin
+  methods: ['GET', 'POST', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
 
-// --- Public Routes (e.g., Health Check) ---
 app.get('/', (req, res) => {
   res.status(200).json({ message: 'AI Art Generator Backend is running.' });
 });
 
 // --- API Routes ---
-// Use the modularized generation routes
 app.use('/api/generation', generationRoutes);
-// Rotas do Proprietário
 app.use('/api/owner', ownerRoutes);
-// Rotas do Administrador
 app.use('/api/admin', adminRoutes);
-// NOVO: Rotas Públicas (Montadas)
 app.use('/api', publicRoutes);
-// NOVO: Rotas de Planos
 app.use('/api/plans', planRoutes);
+app.use('/api/history', historyRoutes); // NOVO: Registrando rota de histórico
 
-// --- Quota/Usage Endpoint (Public, but requires user ID/token for data retrieval) ---
+// --- Quota/Usage Endpoint ---
 app.get('/api/usage/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
-    // 1. Get Role from profiles
     const { data: profileData, error: profileError } = await supabaseAnon
       .from('profiles')
       .select('role')
@@ -50,7 +43,6 @@ app.get('/api/usage/:userId', async (req, res) => {
 
     const role = profileData?.role || 'free';
 
-    // 2. Get Usage Count from user_usage
     const { data: usageData, error: usageError } = await supabaseAnon
       .from('user_usage')
       .select('current_usage')
@@ -59,7 +51,6 @@ app.get('/api/usage/:userId', async (req, res) => {
 
     const current_usage = usageData?.current_usage || 0;
 
-    // Define limits based on role (must match backend/services/generationService.cjs)
     let limit = 0;
     let isUnlimited = false;
     switch (role) {
@@ -87,7 +78,6 @@ app.get('/api/usage/:userId', async (req, res) => {
       isUnlimited,
     });
   } catch (error) {
-    // If any error occurs (e.g., user not found in profiles/usage), return default free plan
     console.error('Error fetching usage data:', error);
     res.status(200).json({
       role: 'free',
@@ -98,7 +88,6 @@ app.get('/api/usage/:userId', async (req, res) => {
   }
 });
 
-// --- Start Server ---
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

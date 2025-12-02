@@ -1,18 +1,18 @@
 // backend/routes/ownerRoutes.cjs
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth'); // Importando middleware de autenticação
 const ownerController = require('../controllers/ownerController'); // Importando o novo controlador
 
 // Middleware para verificar se o usuário é 'owner'
 // NOTE: A verificação de role real é feita no serviço, mas mantemos este middleware para estrutura.
 const checkOwnerRole = async (req, res, next) => {
-    const user = req.user;
-    if (!user) {
-        return res.status(401).json({ error: 'Não autenticado.' });
-    }
-    // A verificação de role real será feita no serviço que acessa o DB
-    next();
+  const user = req.user;
+  if (!user) {
+    return res.status(401).json({ error: 'Não autenticado.' });
+  }
+  // A verificação de role real será feita no serviço que acessa o DB
+  next();
 };
 
 // Endpoint para buscar todas as métricas do proprietário
