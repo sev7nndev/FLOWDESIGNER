@@ -1,209 +1,205 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Send, MessageSquare, Loader2, User as UserIcon } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { User } from '../types';
+import { useOwnerChat, ChatThread } from '../hooks/useOwnerChat';
+import { Loader2, MessageSquare, Send, User as UserIcon, Clock, ArrowLeft } from 'lucide-react';
 import { Button } from './Button';
-import { getSupabase } from '../services/supabaseClient';
-import { User, ChatMessage } from '../types'; // Importando ChatMessage
-
-interface Client {
-    id: string;
-    name: string;
-    email: string;
-    plan: string;
-}
+import { Input } from './Input';
 
 interface OwnerChatPanelProps {
-    owner: User;
-    clients: Client[];
+  owner: User;
+  clients: any[]; // Lista de clientes do OwnerPanelPage
 }
 
-export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner, clients }) => {
-    const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [newMessage, setNewMessage] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [isSending, setIsSending] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const supabase = getSupabase();
+// --- Componente de Item da Lista de Chats ---
+interface ChatListItemProps {
+  thread: ChatThread;
+  isActive: boolean;
+  onClick: () => void;
+}
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
+const ChatListItem: React.FC<ChatListItemProps> = ({ thread, isActive, onClick }) => {
+  const lastMessageTime = useMemo(() => {
+    const date = new Date(thread.lastMessage.timestamp);
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }, [thread.lastMessage.timestamp]);
 
-    const fetchMessages = useCallback(async (clientId: string) => {
-        if (!supabase || !clientId) return;
-        setIsLoading(true);
-        
-        // Busca mensagens entre o owner e o cliente
-        const { data, error } = await supabase
-            .from('chat_messages')
-            .select('*')
-            .or(`and(sender_id.eq.${owner.id},recipient_id.eq.${clientId}),and(sender_id.eq.${clientId},recipient_id.eq.${owner.id})`)
-            .order('created_at', { ascending: true });
-
-        if (error) {
-            console.error("Error fetching messages:", error);
-        } else {
-            setMessages(data || []);
-        }
-        setIsLoading(false);
-        scrollToBottom();
-    }, [supabase, owner.id]);
-
-    useEffect(() => {
-        if (selectedClient) {
-            fetchMessages(selectedClient.id);
-        } else {
-            setMessages([]);
-        }
-    }, [selectedClient, fetchMessages]);
-    
-    useEffect(scrollToBottom, [messages]);
-
-    // Realtime Listener
-    useEffect(() => {
-        if (!supabase || !owner.id) return;
-
-        const channel = supabase
-            .channel('owner_chat')
-            .on('postgres_changes', { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'chat_messages',
-                // Filtra mensagens destinadas ao owner OU enviadas pelo owner
-                filter: `or(recipient_id.eq.${owner.id},sender_id.eq.${owner.id})` 
-            }, (payload: any) => {
-                const newMessage = payload.new as ChatMessage;
-                
-                // Atualiza apenas se a mensagem for relevante para a conversa selecionada
-                if (selectedClient) {
-                    const isRelevant = (newMessage.sender_id === selectedClient.id && newMessage.recipient_id === owner.id) || 
-                                     (newMessage.sender_id === owner.id && newMessage.recipient_id === selectedClient.id);
-                                     
-                    if (isRelevant) {
-                        setMessages((prev) => [...prev, newMessage]);
-                    }
-                }
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [supabase, owner.id, selectedClient]);
-
-
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newMessage.trim() || !selectedClient || !supabase) return;
-
-        setIsSending(true);
-        const messageContent = newMessage.trim();
-
-        const { data, error } = await supabase
-            .from('chat_messages')
-            .insert({
-                sender_id: owner.id,
-                recipient_id: selectedClient.id,
-                content: messageContent,
-                is_admin_message: true,
-            })
-            .select()
-            .single();
-
-        if (error) {
-            console.error("Error sending message:", error);
-        } else if (data) {
-            // Adiciona a mensagem localmente para feedback imediato (o listener também pode pegar, mas isso é mais rápido)
-            setMessages((prev) => [...prev, data as ChatMessage]);
-            setNewMessage('');
-        }
-        setIsSending(false);
-    };
-
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[70vh] min-h-[500px]">
-            {/* Lista de Clientes */}
-            <div className="lg:col-span-1 bg-zinc-900/50 border border-white/10 rounded-xl overflow-hidden flex flex-col">
-                <h4 className="p-4 text-white font-bold border-b border-white/10 flex items-center gap-2">
-                    <UserIcon size={18} className="text-primary" /> Clientes ({clients.length})
-                </h4>
-                <div className="overflow-y-auto custom-scrollbar flex-grow">
-                    {clients.map((client) => (
-                        <button
-                            key={client.id}
-                            onClick={() => setSelectedClient(client)}
-                            className={`w-full text-left p-3 border-b border-white/5 transition-colors ${
-                                selectedClient?.id === client.id ? 'bg-primary/20 border-primary/50' : 'hover:bg-white/5'
-                            }`}
-                        >
-                            <p className="text-sm font-medium text-white truncate">{client.name}</p>
-                            <p className="text-xs text-gray-400 truncate">{client.email}</p>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Painel de Chat */}
-            <div className="lg:col-span-3 bg-zinc-900/50 border border-white/10 rounded-xl flex flex-col">
-                {selectedClient ? (
-                    <>
-                        <div className="p-4 border-b border-white/10 bg-zinc-800/50">
-                            <h4 className="text-white font-bold">{selectedClient.name}</h4>
-                            <p className="text-xs text-gray-400">Conversando com o cliente ({selectedClient.plan})</p>
-                        </div>
-
-                        {/* Área de Mensagens */}
-                        <div className="flex-grow overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                            {isLoading ? (
-                                <div className="flex justify-center items-center h-full">
-                                    <Loader2 size={24} className="animate-spin text-primary" />
-                                </div>
-                            ) : messages.length === 0 ? (
-                                <div className="text-center text-gray-500 pt-10">Nenhuma mensagem nesta conversa.</div>
-                            ) : (
-                                messages.map((msg) => (
-                                    <div 
-                                        key={msg.id} 
-                                        className={`flex ${msg.sender_id === owner.id ? 'justify-end' : 'justify-start'}`}
-                                    >
-                                        <div className={`max-w-xs md:max-w-md p-3 rounded-xl text-sm ${
-                                            msg.sender_id === owner.id 
-                                                ? 'bg-primary text-white rounded-br-none' 
-                                                : 'bg-zinc-700 text-white rounded-tl-none'
-                                        }`}>
-                                            {msg.content}
-                                            <span className="block text-[10px] text-right mt-1 opacity-70">
-                                                {new Date(msg.created_at).toLocaleTimeString()}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                            <div ref={messagesEndRef} />
-                        </div>
-
-                        {/* Formulário de Envio */}
-                        <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 bg-zinc-800/50 flex gap-3">
-                            <input
-                                type="text"
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder="Digite sua mensagem..."
-                                className="flex-grow bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary outline-none text-sm"
-                                disabled={isSending}
-                            />
-                            <Button type="submit" isLoading={isSending} disabled={!newMessage.trim() || isSending} className="h-10 px-4">
-                                <Send size={16} />
-                            </Button>
-                        </form>
-                    </>
-                ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                        <MessageSquare size={48} className="mb-4 opacity-30" />
-                        <p>Selecione um cliente para iniciar o chat.</p>
-                    </div>
-                )}
-            </div>
+  return (
+    <div
+      className={`flex items-center p-4 cursor-pointer transition-colors border-b border-white/5 ${
+        isActive ? 'bg-primary/20 border-l-4 border-primary' : 'hover:bg-white/5'
+      }`}
+      onClick={onClick}
+    >
+      <div className="relative mr-4">
+        <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center text-white">
+          <UserIcon size={20} />
         </div>
+        {thread.unreadCount > 0 && (
+          <span className="absolute top-0 right-0 block h-3 w-3 rounded-full ring-2 ring-zinc-900 bg-red-500" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-white truncate">{thread.name}</p>
+        <p className="text-xs text-gray-400 truncate">
+          {thread.lastMessage.sender === 'owner' ? 'Você: ' : ''}
+          {thread.lastMessage.text}
+        </p>
+      </div>
+      <div className="text-xs text-gray-500 ml-2 flex flex-col items-end">
+        <span>{lastMessageTime}</span>
+        {thread.unreadCount > 0 && (
+          <span className="mt-1 px-2 py-0.5 text-xs font-bold text-white bg-primary rounded-full">
+            {thread.unreadCount}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- Componente de Janela de Chat Ativa ---
+interface ActiveChatWindowProps {
+  thread: ChatThread;
+  ownerName: string;
+}
+
+const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName }) => {
+  const [message, setMessage] = useState('');
+  
+  // Função mock para envio de mensagem
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (message.trim() === '') return;
+
+    // Simulação de envio (em um app real, isso chamaria uma API/WebSocket)
+    console.log(`Enviando para ${thread.name}: ${message}`);
+    
+    // Limpar input
+    setMessage('');
+    
+    // Em um app real, você atualizaria o estado do chat com a nova mensagem
+    // Por enquanto, apenas logamos.
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-zinc-900 rounded-xl border border-white/10">
+      {/* Header do Chat */}
+      <div className="p-4 border-b border-white/10 flex items-center">
+        <h3 className="text-lg font-bold text-white">{thread.name}</h3>
+      </div>
+
+      {/* Área de Mensagens */}
+      <div className="flex-1 p-4 overflow-y-auto space-y-4 custom-scrollbar">
+        {thread.messages.map((msg) => (
+          <div 
+            key={msg.id} 
+            className={`flex ${msg.sender === 'owner' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-xl ${
+              msg.sender === 'owner' 
+                ? 'bg-primary text-white rounded-br-none' 
+                : 'bg-zinc-700 text-white rounded-tl-none'
+            }`}>
+              <p className="text-sm">{msg.text}</p>
+              <span className="block text-right text-[10px] mt-1 opacity-70">
+                {new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Input de Mensagem */}
+      <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 flex gap-3">
+        <Input
+          type="text"
+          placeholder="Digite sua mensagem..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          className="flex-1 bg-zinc-800 border-zinc-700 text-white"
+        />
+        <Button type="submit" icon={<Send size={16} />}>
+          Enviar
+        </Button>
+      </form>
+    </div>
+  );
+};
+
+// --- Componente Principal OwnerChatPanel ---
+export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner }) => {
+  const { chatHistory, isLoading, error, refreshHistory } = useOwnerChat();
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+
+  const activeThread = useMemo(() => {
+    return chatHistory.find(thread => thread.id === activeThreadId);
+  }, [chatHistory, activeThreadId]);
+
+  // Define o primeiro chat como ativo ao carregar
+  React.useEffect(() => {
+    if (!activeThreadId && chatHistory.length > 0) {
+      setActiveThreadId(chatHistory[0].id);
+    }
+  }, [chatHistory, activeThreadId]);
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-20">
+        <Loader2 size={32} className="animate-spin text-primary mx-auto" />
+        <p className="text-gray-400 mt-4">Carregando histórico de chat...</p>
+      </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg">
+        Erro ao carregar o chat: {error}
+        <Button onClick={refreshHistory} variant="secondary" className="ml-4">Tentar Novamente</Button>
+      </div>
+    );
+  }
+
+  if (chatHistory.length === 0) {
+    return (
+      <div className="text-center py-20 text-gray-500">
+        <MessageSquare size={48} className="mx-auto mb-4" />
+        <p>Nenhum histórico de chat encontrado com clientes.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-[70vh] min-h-[600px] rounded-2xl shadow-2xl overflow-hidden border border-white/10">
+      {/* Painel Lateral de Clientes */}
+      <div className={`w-full md:w-80 flex-shrink-0 bg-zinc-900/50 ${activeThreadId && 'hidden md:block'}`}>
+        <div className="p-4 border-b border-white/10">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <MessageSquare size={20} className="text-primary" /> Clientes ({chatHistory.length})
+          </h3>
+        </div>
+        <div className="overflow-y-auto h-[calc(100%-65px)] custom-scrollbar">
+          {chatHistory.map((thread) => (
+            <ChatListItem
+              key={thread.id}
+              thread={thread}
+              isActive={thread.id === activeThreadId}
+              onClick={() => setActiveThreadId(thread.id)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Janela de Chat Ativa */}
+      <div className={`flex-1 ${activeThreadId ? 'block' : 'hidden md:block'}`}>
+        {activeThread ? (
+          <ActiveChatWindow thread={activeThread} ownerName={owner.first_name || 'Dono'} />
+        ) : (
+          <div className="flex items-center justify-center h-full bg-zinc-900/70 text-gray-500">
+            Selecione um cliente para começar a conversar.
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
