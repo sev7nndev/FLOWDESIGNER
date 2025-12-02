@@ -1,55 +1,35 @@
 // backend/routes/paymentRoutes.cjs
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const { createSubscriptionCheckout } = require('../services/paymentService');
-const { supabaseAnon } = require('../config');
+const paymentService = require('../services/paymentService');
+const { authMiddleware } = require('../middleware/authMiddleware'); // Middleware a ser criado
 
-// Endpoint para iniciar o checkout de assinatura
-router.post('/create-checkout', authenticateToken, async (req, res) => {
+// Rota para criar uma preferência de pagamento (protegida)
+router.post('/create-preference', authMiddleware, async (req, res) => {
+    const userId = req.user.id; // Do middleware de autenticação
     const { planId } = req.body;
-    const userId = req.user.id; // O cliente que está comprando
 
     if (!planId) {
-        return res.status(400).json({ error: 'ID do plano é obrigatório.' });
+        return res.status(400).json({ error: 'O ID do plano é obrigatório.' });
     }
 
     try {
-        // 1. Determinar o Dono do SaaS (Tenant ID)
-        // Como este é um SaaS multi-tenant, precisamos saber quem é o Dono para usar o token dele.
-        // Por enquanto, vamos assumir que o Dono é o único usuário com role 'owner' (você pode refinar isso depois).
-        const { data: ownerData, error: ownerError } = await supabaseAnon
-            .from('profiles')
-            .select('id')
-            .eq('role', 'owner')
-            .limit(1)
-            .single();
-            
-        if (ownerError || !ownerData) {
-            return res.status(500).json({ error: 'Nenhum proprietário de SaaS configurado para receber pagamentos.' });
-        }
-        const ownerId = ownerData.id;
-
-        // 2. Buscar o preço do plano
-        const { data: planData, error: planError } = await supabaseAnon
-            .from('plan_settings')
-            .select('price')
-            .eq('id', planId)
-            .single();
-
-        if (planError || !planData) {
-            return res.status(404).json({ error: 'Plano não encontrado.' });
-        }
-        const price = planData.price;
-
-        // 3. Criar o checkout usando o token do Dono
-        const checkoutUrl = await createSubscriptionCheckout(ownerId, planId, price);
-
-        res.json({ checkoutUrl });
-
+        const init_point = await paymentService.createPaymentPreference(userId, planId);
+        res.status(200).json({ init_point });
     } catch (error) {
-        console.error('Erro ao criar checkout do Mercado Pago:', error.message);
-        res.status(500).json({ error: error.message || 'Falha ao iniciar o pagamento.' });
+        console.error("Error creating payment preference:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Rota para o webhook do Mercado Pago (pública)
+router.post('/webhook', async (req, res) => {
+    try {
+        await paymentService.handleWebhook(req.body);
+        res.status(200).send('Webhook recebido.');
+    } catch (error) {
+        console.error("Error processing webhook:", error);
+        res.status(500).json({ error: 'Erro ao processar o webhook.' });
     }
 });
 
