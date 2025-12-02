@@ -18,10 +18,7 @@ export const authService = {
         throw new Error('Login falhou. Usuário não encontrado.');
       }
 
-      // Check if email is confirmed
       if (!data.user.email_confirmed_at && data.user.email) {
-        // For development, we might want to allow unconfirmed emails
-        // In production, you might want to enforce email confirmation
         console.warn('Email não confirmado, mas permitindo acesso para desenvolvimento');
       }
 
@@ -32,7 +29,7 @@ export const authService = {
     }
   },
 
-  async register(firstName: string, lastName: string, email: string, password: string): Promise<void> {
+  async register(firstName: string, lastName: string, email: string, password: string, planId?: string): Promise<void> {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -54,27 +51,49 @@ export const authService = {
         throw new Error('Registro falhou. Tente novamente.');
       }
 
-      // Create profile record
-      if (data.user.id) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            first_name: firstName,
-            last_name: lastName,
-            email: email,
-            role: 'free',
-            status: 'on'
-          });
+      const newUserId = data.user.id;
+      const role = planId || 'free';
 
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          // Don't throw error here, user is created in auth
-          console.warn('Profile creation failed, but auth user was created');
+      // O trigger 'handle_new_user' já cria um perfil básico.
+      // Aqui, nós atualizamos o perfil com a role correta e criamos a assinatura se for um plano pago.
+      
+      // 1. Atualiza a role no perfil do usuário
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ role: role })
+        .eq('id', newUserId);
+
+      if (profileError) {
+        console.error('Profile role update error:', profileError);
+        // Não lançar erro, pois o usuário já foi criado na autenticação
+      }
+
+      // 2. Se for um plano pago, cria a assinatura
+      if (planId && planId !== 'free') {
+        const { data: planData, error: planError } = await supabase
+          .from('plans')
+          .select('id')
+          .ilike('name', planId)
+          .single();
+
+        if (planError || !planData) {
+          console.error(`Plano '${planId}' não encontrado para criar a assinatura.`);
+        } else {
+          const { error: subscriptionError } = await supabase
+            .from('subscriptions')
+            .update({
+              plan_id: planData.id,
+              status: 'active'
+            })
+            .eq('user_id', newUserId);
+            
+          if (subscriptionError) {
+            console.error('Subscription creation error:', subscriptionError);
+          }
         }
       }
 
-      console.log('Registration successful:', data.user.id);
+      console.log('Registration successful:', newUserId, 'with plan:', role);
     } catch (error: any) {
       console.error('AuthService registration error:', error);
       throw new Error(error.message || 'Falha no registro. Tente novamente.');
@@ -133,7 +152,6 @@ export const authService = {
         return null;
       }
 
-      // Get profile data
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -165,7 +183,6 @@ export const authService = {
       
       if (session?.user) {
         try {
-          // Get profile data
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')

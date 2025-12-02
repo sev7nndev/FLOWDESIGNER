@@ -229,20 +229,14 @@ export const api = {
     return data.recipientId;
   },
   
-  // NOVO: Método para criar preferência de pagamento
-  createPaymentPreference: async (planId: string): Promise<string> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Supabase not configured.");
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Faça login para realizar pagamentos.");
-
+  createPaymentPreference: async (planId: string, returnUrl: string): Promise<string> => {
     const response = await fetch(`${BACKEND_URL}/payments/create-preference`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${session.access_token}`
+        // Não precisa de token de autorização para este fluxo
       },
-      body: JSON.stringify({ planId })
+      body: JSON.stringify({ planId, returnUrl })
     });
 
     if (!response.ok) {
@@ -251,6 +245,6 @@ export const api = {
     }
 
     const data = await response.json();
-    return data.init_point;
+    return data.initPoint;
   }
 };

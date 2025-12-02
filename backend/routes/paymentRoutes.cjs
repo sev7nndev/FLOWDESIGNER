@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth.cjs');
+// const { authenticateToken } = require('../middleware/auth.cjs'); // Removido
 const { supabaseService, mercadopago } = require('../config.cjs');
 
-// Create payment preference
-router.post('/create-preference', authenticateToken, async (req, res) => {
-  const userId = req.user.id;
+// Create payment preference - AGORA É PÚBLICO
+router.post('/create-preference', async (req, res) => {
   const { planId, returnUrl } = req.body;
 
   if (!planId) {
@@ -13,18 +12,16 @@ router.post('/create-preference', authenticateToken, async (req, res) => {
   }
 
   try {
-    // Get plan details
     const { data: plan, error: planError } = await supabaseService
       .from('plans')
       .select('*')
-      .ilike('name', planId) // Use case-insensitive search by name
+      .ilike('name', planId)
       .single();
 
     if (planError || !plan) {
       return res.status(404).json({ error: 'Plano não encontrado.' });
     }
 
-    // Create Mercado Pago preference
     const preference = {
       items: [{
         title: `Plano ${plan.name} - Flow Designer`,
@@ -34,15 +31,16 @@ router.post('/create-preference', authenticateToken, async (req, res) => {
         unit_price: parseFloat(plan.price)
       }],
       back_urls: {
-        success: returnUrl || `${process.env.FRONTEND_URL}/app`,
-        failure: returnUrl || `${process.env.FRONTEND_URL}/app`,
-        pending: returnUrl || `${process.env.FRONTEND_URL}/app`
+        success: returnUrl || `${process.env.FRONTEND_URL}/`,
+        failure: returnUrl || `${process.env.FRONTEND_URL}/`,
+        pending: returnUrl || `${process.env.FRONTEND_URL}/`
       },
       auto_return: 'approved',
-      external_reference: `${userId}_${plan.id}_${Date.now()}`, // Use plan.id (UUID)
+      // Não temos userId ainda, então o external_reference será mais simples
+      external_reference: `plan_${plan.id}_${Date.now()}`,
       metadata: {
-        user_id: userId,
-        plan_id: plan.id // Use plan.id (UUID)
+        // Guardamos o ID do plano (UUID) para o webhook
+        plan_id: plan.id 
       }
     };
 
@@ -66,26 +64,13 @@ router.post('/webhook', async (req, res) => {
     if (paymentData.type === 'payment') {
       const paymentId = paymentData.data.id;
       
-      // Get payment details
       const payment = await mercadopago.payment.findById(paymentId);
       
       if (payment.body.status === 'approved') {
-        const { user_id, plan_id } = payment.body.metadata;
-        
-        // Update or create subscription
-        const { error: subError } = await supabaseService
-          .from('subscriptions')
-          .upsert({
-            user_id,
-            plan_id,
-            status: 'active',
-            mp_subscription_id: paymentId,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'user_id' });
-
-        if (subError) {
-          console.error('Subscription update error:', subError);
-        }
+        // O webhook não pode mais atualizar a assinatura diretamente,
+        // pois não temos o user_id no momento do pagamento.
+        // A lógica de associar o plano ao usuário foi movida para o momento do cadastro.
+        console.log(`Pagamento ${paymentId} aprovado para o plano ${payment.body.metadata.plan_id}. Aguardando cadastro do usuário.`);
       }
     }
     

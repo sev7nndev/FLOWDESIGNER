@@ -28,7 +28,6 @@ export const AppContent: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   
-  // Persist view in localStorage for better UX
   const [lastView, setLastView] = useLocalStorage<ViewType>('lastView', 'LANDING');
   
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(user?.id);
@@ -41,26 +40,32 @@ export const AppContent: React.FC = () => {
   
   const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
 
-  // Initialize auth state
   useEffect(() => {
     const initializeAuth = async () => {
       try {
         console.log('🚀 Initializing app...');
         
-        // Check if Supabase is configured
         if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
           throw new Error('Supabase não configurado. Verifique as variáveis de ambiente.');
         }
         
-        const currentUser = await authService.getCurrentUser();
-        if (currentUser) {
-          console.log('✅ User found:', currentUser.email);
-          setUser(currentUser);
-          setView(getInitialView(currentUser));
+        const urlParams = new URLSearchParams(window.location.search);
+        const planFromUrl = urlParams.get('plan');
+        const paymentStatus = urlParams.get('status');
+
+        if (planFromUrl && paymentStatus === 'success') {
+          console.log(`✅ Pagamento aprovado para o plano: ${planFromUrl}. Redirecionando para cadastro.`);
+          setView('AUTH');
         } else {
-          console.log('ℹ️ No user found, showing landing');
-          // Restore last view if no user
-          setView(lastView);
+          const currentUser = await authService.getCurrentUser();
+          if (currentUser) {
+            console.log('✅ User found:', currentUser.email);
+            setUser(currentUser);
+            setView(getInitialView(currentUser));
+          } else {
+            console.log('ℹ️ No user found, showing landing');
+            setView(lastView);
+          }
         }
       } catch (error) {
         console.error('❌ Error initializing auth:', error);
@@ -72,7 +77,6 @@ export const AppContent: React.FC = () => {
 
     initializeAuth();
 
-    // Set up auth state listener
     const { data: { subscription } } = authService.onAuthStateChange((authUser) => {
       console.log('🔄 Auth state changed:', authUser?.email);
       if (authUser) {
@@ -90,7 +94,6 @@ export const AppContent: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Helper function to determine initial view based on user role
   const getInitialView = (currentUser: User): ViewType => {
     switch (currentUser.role) {
       case 'owner':
@@ -103,16 +106,14 @@ export const AppContent: React.FC = () => {
     }
   };
 
-  // Load history when user is available
   useEffect(() => {
     if (user) {
       loadHistory();
     }
   }, [user, loadHistory]);
 
-  // Save view to localStorage when it changes
   useEffect(() => {
-    if (view !== 'AUTH') { // Don't save auth view
+    if (view !== 'AUTH') {
       setLastView(view);
     }
   }, [view, setLastView]);
@@ -134,20 +135,25 @@ export const AppContent: React.FC = () => {
       const newView = getInitialView(authUser);
       setView(newView);
       setLastView(newView);
+      // Limpa os parâmetros da URL após o login/cadastro
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
 
   const handlePlanSelection = async (planId: string) => {
-    if (!user) {
-      toast.info('Por favor, crie uma conta ou faça login para assinar um plano.');
+    // Não exige mais login para planos pagos
+    if (planId === 'free') {
       setView('AUTH');
       return;
     }
 
     const toastId = toast.loading('Redirecionando para o pagamento...');
-
+    
     try {
-      const checkoutUrl = await api.createPaymentPreference(planId);
+      // A URL de retorno agora aponta para a tela de cadastro com o plano selecionado
+      const returnUrl = `${window.location.origin}?status=success&plan=${planId}`;
+      const checkoutUrl = await api.createPaymentPreference(planId, returnUrl);
+      
       toast.success('Tudo pronto! Abrindo checkout seguro.', { id: toastId });
       window.location.href = checkoutUrl;
     } catch (error: any) {
@@ -156,7 +162,6 @@ export const AppContent: React.FC = () => {
     }
   };
 
-  // Loading state
   if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950">
@@ -168,7 +173,6 @@ export const AppContent: React.FC = () => {
     );
   }
 
-  // Error state
   if (initError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
@@ -176,31 +180,13 @@ export const AppContent: React.FC = () => {
           <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Sparkles size={32} className="text-red-500" />
           </div>
-          
-          <h2 className="text-2xl font-bold text-white mb-2">
-            Erro ao Inicializar
-          </h2>
-          
-          <p className="text-gray-400 mb-6">
-            {initError}
-          </p>
-
+          <h2 className="text-2xl font-bold text-white mb-2">Erro ao Inicializar</h2>
+          <p className="text-gray-400 mb-6">{initError}</p>
           <div className="space-y-3">
-            <button 
-              onClick={() => window.location.reload()}
-              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-colors"
-            >
+            <button onClick={() => window.location.reload()} className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-colors">
               Recarregar Página
             </button>
-            
-            <button 
-              onClick={() => {
-                setInitError(null);
-                setIsInitialized(false);
-                setTimeout(() => setIsInitialized(true), 100);
-              }}
-              className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
-            >
+            <button onClick={() => { setInitError(null); setIsInitialized(false); setTimeout(() => setIsInitialized(true), 100); }} className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
               Tentar Novamente
             </button>
           </div>
@@ -209,104 +195,42 @@ export const AppContent: React.FC = () => {
     );
   }
 
-  // Main App Component
   const MainApp = () => (
     <div className="min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
       <Toaster richColors theme="dark" position="top-right" />
       <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
-      
-      <AppHeader 
-        user={user} 
-        profileRole={profileRole} 
-        onLogout={handleLogout} 
-        onShowSettings={() => setShowSettings(true)} 
-        onShowDevPanel={() => setView('DEV_PANEL')}
-        onShowChat={() => setView('CHAT')}
-      />
-
+      <AppHeader user={user} profileRole={profileRole} onLogout={handleLogout} onShowSettings={() => setShowSettings(true)} onShowDevPanel={() => setView('DEV_PANEL')} onShowChat={() => setView('CHAT')} />
       <div className="relative z-10 -mt-8 md:-mt-10">
         <AppTitleHeader />
       </div>
-
       <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 relative z-20 mt-[-2rem] md:mt-[-4rem] p-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7">
-            <GenerationForm 
-                form={form}
-                status={state.status}
-                error={state.error}
-                handleInputChange={handleInputChange}
-                handleLogoUpload={handleLogoUpload}
-                handleGenerate={handleGenerate}
-                loadExample={loadExample}
-                usage={usage}
-                isLoadingUsage={isLoadingUsage}
-            />
+            <GenerationForm form={form} status={state.status} error={state.error} handleInputChange={handleInputChange} handleLogoUpload={handleLogoUpload} handleGenerate={handleGenerate} loadExample={loadExample} usage={usage} isLoadingUsage={isLoadingUsage} />
           </div>
           <div className="lg:col-span-5">
-            <ResultDisplay 
-                state={state}
-                downloadImage={downloadImage}
-            />
+            <ResultDisplay state={state} downloadImage={downloadImage} />
           </div>
         </div>
       </main>
-
       {showSettings && user && (
-        <SettingsModal 
-          onClose={() => setShowSettings(false)} 
-          user={user} 
-          updateProfile={updateProfile} 
-          profileRole={profileRole} 
-        />
+        <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profileRole} />
       )}
     </div>
   );
 
-  // Render based on current view
   switch(view) {
     case 'LANDING':
-      return (
-        <LandingPage 
-          onGetStarted={() => setView('AUTH')} 
-          onPlanSelect={handlePlanSelection}
-          onLogin={() => setView('AUTH')} 
-          landingImages={landingImages} 
-          isLandingImagesLoading={isLandingImagesLoading} 
-        />
-      );
+      return <LandingPage onGetStarted={() => setView('AUTH')} onPlanSelect={handlePlanSelection} onLogin={() => setView('AUTH')} landingImages={landingImages} isLandingImagesLoading={isLandingImagesLoading} />;
     case 'AUTH':
-      return (
-        <AuthScreens 
-          onSuccess={handleAuthSuccess} 
-          onBack={() => setView('LANDING')} 
-        />
-      );
+      return <AuthScreens onSuccess={handleAuthSuccess} onBack={() => setView('LANDING')} />;
     case 'OWNER_PANEL':
-      return (
-        <OwnerPanelPage 
-          user={user} 
-          onBackToApp={() => setView('APP')} 
-          onLogout={handleLogout} 
-        />
-      );
+      return <OwnerPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
     case 'DEV_PANEL':
-      return (
-        <DevPanelPage 
-          user={user} 
-          onBackToApp={() => setView('APP')} 
-          onLogout={handleLogout} 
-        />
-      );
+      return <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
     case 'CHAT':
       if (!user) return <MainApp />;
-      return (
-        <ClientChatPanel 
-          user={user} 
-          onBack={() => setView('APP')} 
-          onLogout={handleLogout} 
-        />
-      );
+      return <ClientChatPanel user={user} onBack={() => setView('APP')} onLogout={handleLogout} />;
     case 'APP':
     default:
       return <MainApp />;

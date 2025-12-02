@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { Sparkles, ArrowLeft, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../services/authService';
@@ -17,6 +17,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [planId, setPlanId] = useState<string | undefined>(undefined);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -25,6 +26,18 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
     password: '',
     confirmPassword: ''
   });
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const plan = urlParams.get('plan');
+    if (plan) {
+      setPlanId(plan);
+      setIsLogin(false); // Força a visão de cadastro se um plano foi pago
+      toast.success(`Plano ${plan} selecionado!`, {
+        description: 'Crie sua conta para ativar seu plano.',
+      });
+    }
+  }, []);
 
   const validateForm = () => {
     if (!formData.email || !formData.password) {
@@ -66,12 +79,10 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
     try {
       if (isLogin) {
         await authService.login(formData.email, formData.password);
-        // The auth state change will be handled by the parent component
         onSuccess(null);
       } else {
-        await authService.register(formData.firstName, formData.lastName, formData.email, formData.password);
+        await authService.register(formData.firstName, formData.lastName, formData.email, formData.password, planId);
         setSuccessMessage('Cadastro realizado! Você já pode fazer login.');
-        // Switch to login view after successful registration
         setTimeout(() => {
           setIsLogin(true);
           setSuccessMessage('');
@@ -81,7 +92,6 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
       console.error('Auth error:', err);
       let errorMessage = err.message || 'Ocorreu um erro desconhecido.';
       
-      // Handle specific error messages
       if (errorMessage.includes('Invalid login credentials')) {
         errorMessage = 'Email ou senha inválidos.';
       } else if (errorMessage.includes('User already registered')) {
@@ -103,7 +113,6 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
     setIsGoogleLoading(true);
     try {
       await authService.loginWithGoogle();
-      // The redirect will handle the rest
     } catch (err: any) {
       console.error('Google auth error:', err);
       setError(err.message || 'Erro ao fazer login com Google.');
@@ -111,7 +120,6 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
     }
   };
 
-  // Success screen
   if (successMessage) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative">
@@ -125,7 +133,6 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
     );
   }
 
-  // Main auth screen
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative">
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] pointer-events-none" />
@@ -150,56 +157,25 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Primeiro Nome</label>
-                <input 
-                  type="text" 
-                  required 
-                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors"
-                  placeholder="Seu nome"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                />
+                <input type="text" required className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors" placeholder="Seu nome" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Sobrenome</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors"
-                  placeholder="Seu sobrenome"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                />
+                <input type="text" className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors" placeholder="Seu sobrenome" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
               </div>
             </div>
           )}
           
           <div>
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Email</label>
-            <input 
-              type="email" 
-              required 
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors"
-              placeholder="seu@email.com"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-            />
+            <input type="email" required className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors" placeholder="seu@email.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
           </div>
           
           <div>
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Senha</label>
             <div className="relative">
-              <input 
-                type={showPassword ? "text" : "password"} 
-                required 
-                className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors pr-12"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-              >
+              <input type={showPassword ? "text" : "password"} required className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors pr-12" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
@@ -208,14 +184,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
           {!isLogin && (
             <div>
               <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Confirmar Senha</label>
-              <input 
-                type="password" 
-                required 
-                className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-              />
+              <input type="password" required className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none transition-colors" placeholder="••••••••" value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} />
             </div>
           )}
 
@@ -240,34 +209,13 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
         </div>
 
         <div>
-          <Button 
-            variant="secondary" 
-            className="w-full h-12 rounded-lg"
-            onClick={handleGoogleLogin}
-            isLoading={isGoogleLoading}
-            icon={<GoogleIcon className="h-5 w-5" />}
-          >
+          <Button variant="secondary" className="w-full h-12 rounded-lg" onClick={handleGoogleLogin} isLoading={isGoogleLoading} icon={<GoogleIcon className="h-5 w-5" />}>
             {isLogin ? 'Entrar com Google' : 'Cadastrar com Google'}
           </Button>
         </div>
 
         <div className="mt-6 text-center">
-          <button 
-            type="button"
-            onClick={() => { 
-              setIsLogin(!isLogin); 
-              setError(''); 
-              setSuccessMessage(''); 
-              setFormData({
-                firstName: '',
-                lastName: '',
-                email: '',
-                password: '',
-                confirmPassword: ''
-              });
-            }}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
-          >
+          <button type="button" onClick={() => { setIsLogin(!isLogin); setError(''); setSuccessMessage(''); setFormData({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' }); }} className="text-sm text-gray-400 hover:text-white transition-colors">
             {isLogin ? 'Não tem conta? Crie uma agora.' : 'Já tem conta? Faça login.'}
           </button>
         </div>
