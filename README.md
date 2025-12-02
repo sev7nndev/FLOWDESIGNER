@@ -2,24 +2,104 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# Flow Designer - SaaS de Geração de Artes com IA
 
-This contains everything you need to run your app locally.
+Crie artes profissionais em segundos usando inteligência artificial. Sua agência de design particular.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1A8UVm-5tINifrUBgaDIc6f7zu7tdS5N1
+## 🚀 Funcionalidades
 
-## Run Locally
+- ✅ Geração de imagens com Google Gemini AI
+- ✅ Sistema de autenticação completo
+- ✅ Painel de Admin/Dev para gestão
+- ✅ Painel do Owner com métricas
+- ✅ Chat de suporte integrado
+- ✅ Sistema de assinaturas e quotas
+- ✅ Upload e gestão de imagens
+- ✅ Interface responsiva e moderna
 
-**Prerequisites:**  Node.js
+## 📋 Pré-requisitos
 
+- Node.js 18+
+- Conta Supabase
+- Chave API do Google Gemini
 
-1. Install dependencies:
-   `npm install`
-2. Set the following keys in [.env.local](.env.local) (These keys are used by the secure backend server and frontend):
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY` (Public key for client-side Supabase interactions)
-   - `SUPABASE_SERVICE_KEY` (Crucial for server-side auth and storage access)
-   - `GEMINI_API_KEY`
-   - `FREEPIK_API_KEY`
-3. Run the app:
-   `npm run dev`
+## 🛠️ Configuração
+
+1. **Instale as dependências:**
+   ```bash
+   npm install
+   ```
+
+2. **Configure as variáveis de ambiente:**
+   Copie `.env.local.example` para `.env.local` e preencha:
+   ```env
+   # Supabase
+   SUPABASE_URL=sua_url_supabase
+   SUPABASE_ANON_KEY=sua_chave_anon
+   SUPABASE_SERVICE_KEY=sua_chave_service
+   
+   # Google Gemini
+   GEMINI_API_KEY=sua_chave_gemini
+   
+   # Mercado Pago (opcional)
+   MP_CLIENT_ID=seu_client_id
+   MP_CLIENT_SECRET=seu_client_secret
+   ```
+
+3. **Execute o banco de dados:**
+   ```bash
+   # Execute as migrações SQL no Supabase
+   # Use o arquivo sql/supabase_schema.sql
+   ```
+
+4. **Inicie a aplicação:**
+   ```bash
+   npm run dev
+   ```
+
+Isso iniciará:
+- Frontend: http://localhost:5173
+- Backend: http://localhost:3001
+
+## 📁 Estrutura do Projeto
+
+```
+├── src/                    # Frontend React
+│   ├── components/         # Componentes UI
+│   ├── hooks/             # Hooks customizados
+│   ├── pages/             # Páginas principais
+│   ├── services/          # Serviços de API
+│   └── types.ts           # Tipos TypeScript
+├── backend/               # Backend Node.js
+│   ├── controllers/       # Controladores
+│   ├── middleware/        # Middlewares
+│   ├── routes/           # Rotas da API
+│   └── services/         # Serviços do backend
+└── sql/                  # Scripts SQL
+```
+
+## 👤 Papéis de Usuário
+
+- **free**: 3 gerações/mês
+- **starter**: 20 gerações/mês  
+- **pro**: 50 gerações/mês
+- **admin/dev**: Acesso ilimitado ao painel
+- **owner**: Painel completo com métricas
+
+## 🔧 Desenvolvimento
+
+### Frontend
+- React 19 + TypeScript
+- Tailwind CSS
+- Framer Motion
+- Supabase Auth
+
+### Backend
+- Node.js + Express
+- Supabase Service Role
+- Google Gemini AI
+- Mercado Pago SDK
+
+## 📝 Licença
+
+MIT License - veja o arquivo LICENSE para detalhes.

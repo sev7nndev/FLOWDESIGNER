@@ -3,10 +3,12 @@ import { Button } from './Button';
 import { Sparkles, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { authService } from '../services/authService';
 import { GoogleIcon } from './GoogleIcon';
-import { User } from '../types'; // Import User type
+import { User } from '../types';
+import { getSupabase } from '../services/supabaseClient';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthScreensProps {
-  onSuccess: (user: User | null) => void; 
+  onSuccess: (user: User | null) => void;
   onBack: () => void;
 }
 
@@ -33,19 +35,19 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
     try {
       if (isLogin) {
         await authService.login(formData.email, formData.password);
-        onSuccess(null); 
+        // The auth state change will be handled by the parent component
+        onSuccess(null);
       } else {
-        if (!formData.firstName) throw new Error("Primeiro nome é obrigatório");
+        if (!formData.firstName) {
+          throw new Error("Primeiro nome é obrigatório");
+        }
         
         await authService.register(formData.firstName, formData.lastName, formData.email, formData.password);
-        
-        // Exibe a mensagem de sucesso em vez de tentar redirecionar
         setSuccessMessage('Cadastro realizado! Verifique seu e-mail para confirmar sua conta e poder fazer o login.');
       }
     } catch (err: any) {
       let errorMessage = err.message || 'Ocorreu um erro desconhecido.';
       
-      // Traduzindo erros comuns do Supabase
       if (errorMessage.includes('you can only request this after')) {
         errorMessage = 'Muitas tentativas. Por favor, aguarde um minuto e tente novamente.';
       } else if (errorMessage.includes('User already registered')) {
@@ -71,7 +73,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
     }
   };
 
-  // --- TELA DE SUCESSO PÓS-CADASTRO ---
+  // Success screen
   if (successMessage) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative">
@@ -88,7 +90,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
     );
   }
 
-  // --- TELA DE LOGIN/CADASTRO PADRÃO ---
+  // Main auth screen
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative">
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] pointer-events-none" />
@@ -111,27 +113,27 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Primeiro Nome</label>
-                    <input 
-                        type="text" 
-                        required 
-                        className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
-                        placeholder="Seu nome"
-                        value={formData.firstName}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, firstName: e.target.value})}
-                    />
-                </div>
-                <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Sobrenome (Opcional)</label>
-                    <input 
-                        type="text" 
-                        className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
-                        placeholder="Seu sobrenome"
-                        value={formData.lastName}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, lastName: e.target.value})}
-                    />
-                </div>
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Primeiro Nome</label>
+                <input 
+                  type="text" 
+                  required 
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
+                  placeholder="Seu nome"
+                  value={formData.firstName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, firstName: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Sobrenome (Opcional)</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
+                  placeholder="Seu sobrenome"
+                  value={formData.lastName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, lastName: e.target.value})}
+                />
+              </div>
             </div>
           )}
           

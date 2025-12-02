@@ -1,14 +1,7 @@
-// backend/services/generationService.cjs
-const { supabaseService, imageModel } = require('../config'); // Usar service key para operações no DB
+const { supabaseService, imageModel } = require('../config');
 
-/**
- * Verifica a quota, gera uma imagem e registra o uso.
- * @param {string} userId - O ID do usuário.
- * @param {object} promptInfo - O objeto com informações do negócio.
- * @returns {Promise<object>} O objeto da imagem gerada.
- */
 const generateImageWithQuotaCheck = async (userId, promptInfo) => {
-  // 1. Buscar a assinatura ativa do usuário e a quota do plano associado
+  // 1. Get user's active subscription and quota
   const { data: subscription, error: subError } = await supabaseService
     .from('subscriptions')
     .select(`
@@ -20,12 +13,27 @@ const generateImageWithQuotaCheck = async (userId, promptInfo) => {
     .single();
 
   if (subError || !subscription) {
-    throw new Error("Assinatura ativa não encontrada.");
+    // Create free subscription if none exists
+    const { data: freePlan } = await supabaseService
+      .from('plans')
+      .select('id')
+      .eq('name', 'Free')
+      .single();
+    
+    if (freePlan) {
+      await supabaseService
+        .from('subscriptions')
+        .upsert({
+          user_id: userId,
+          plan_id: freePlan.id,
+          status: 'active'
+        });
+    }
   }
 
-  const quotaLimit = subscription.plans.image_quota;
+  const quotaLimit = subscription?.plans?.image_quota || 3;
 
-  // 2. Contar quantas imagens o usuário já gerou este mês
+  // 2. Count images generated this month
   const today = new Date();
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   
@@ -39,14 +47,14 @@ const generateImageWithQuotaCheck = async (userId, promptInfo) => {
     throw new Error("Erro ao verificar o uso de imagens.");
   }
 
-  // 3. Validar a quota
+  // 3. Check quota
   if (imagesGenerated >= quotaLimit) {
-    const error = new Error(`Quota excedida. Limite do plano "${subscription.plans.name}": ${quotaLimit} imagens.`);
+    const error = new Error(`Quota excedida. Limite do plano "${subscription?.plans?.name || 'Free'}": ${quotaLimit} imagens.`);
     error.code = 'QUOTA_EXCEEDED';
     throw error;
   }
 
-  // 4. Se a quota estiver OK, gerar o prompt detalhado
+  // 4. Generate detailed prompt
   const detailedPrompt = `
     Crie um flyer profissional e atraente com o seguinte briefing:
     Nome da Empresa: ${promptInfo.companyName}
@@ -60,12 +68,11 @@ const generateImageWithQuotaCheck = async (userId, promptInfo) => {
     - Cores vibrantes e atraentes
     - Tipografia clara e legível
     - Incluir todos os dados fornecidos de forma organizada
-    - Se houver logo, integrá-lo de forma harmônica (logo fornecido como base64)
     - Foco em conversão e impacto visual
   `;
 
-  // 5. Chamar a API do Google AI Studio (Gemini) para gerar a imagem
   try {
+    // 5. Generate image with Gemini
     const result = await imageModel.generateContent([
       {
         text: detailedPrompt
@@ -75,7 +82,7 @@ const generateImageWithQuotaCheck = async (userId, promptInfo) => {
     const imageBase64 = result.response.candidates[0].content.parts[0].inlineData.data;
     const mimeType = result.response.candidates[0].content.parts[0].inlineData.mimeType;
 
-    // 6. Salvar a imagem no storage do Supabase
+    // 6. Save to Supabase Storage
     const fileName = `${userId}/${Date.now()}.png`;
     const { data: uploadData, error: uploadError } = await supabaseService.storage
       .from('generated-arts')
@@ -89,42 +96,36 @@ const generateImageWithQuotaCheck = async (userId, promptInfo) => {
       throw new Error("Falha ao salvar a imagem gerada.");
     }
 
-    // 7. Obter a URL pública da imagem
+    // 7. Get public URL
     const { data: { publicUrl } } = supabaseService.storage
       .from('generated-arts')
       .getPublicUrl(fileName);
 
-    // 8. Registrar a geração no banco de dados
-    const { error: insertError } = await supabaseService
+    // 8. Register generation
+    await supabaseService
       .from('image_generations')
       .insert({
         user_id: userId
       });
 
-    if (insertError) {
-      // Logar o erro mas não falhar a requisição, pois a imagem já foi gerada
-      console.error(`Falha ao registrar uso para o usuário ${userId}:`, insertError);
-    }
-
-    // 9. Registrar a imagem na tabela 'images' para histórico
+    // 9. Save image record
     const { data: imageData, error: imageInsertError } = await supabaseService
       .from('images')
       .insert({
         user_id: userId,
         prompt: detailedPrompt,
-        image_url: fileName, // Armazenar o caminho do arquivo
+        image_url: fileName,
         business_info: promptInfo
       })
       .select()
       .single();
 
     if (imageInsertError) {
-      console.error("Erro ao registrar imagem na tabela 'images':", imageInsertError);
-      // Mesmo que falhe, retornamos a imagem gerada
+      console.error("Erro ao registrar imagem:", imageInsertError);
     }
 
     return {
-      id: imageData?.id || 'temp-id',
+      id: imageData?.id || `temp-${Date.now()}`,
       url: publicUrl,
       prompt: detailedPrompt,
       businessInfo: promptInfo,

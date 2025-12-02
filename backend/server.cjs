@@ -1,4 +1,3 @@
-// backend/server.cjs
 const express = require('express');
 const cors = require('cors');
 const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config');
@@ -9,8 +8,8 @@ const publicRoutes = require('./routes/publicRoutes');
 const planRoutes = require('./routes/planRoutes.cjs');
 const historyRoutes = require('./routes/historyRoutes.cjs');
 const configRoutes = require('./routes/configRoutes.cjs');
-const devRoutes = require('./routes/devRoutes.cjs'); // NOVO
-const paymentRoutes = require('./routes/paymentRoutes.cjs'); // NOVO
+const devRoutes = require('./routes/devRoutes.cjs');
+const paymentRoutes = require('./routes/paymentRoutes.cjs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -20,13 +19,13 @@ app.use(cors({
   methods: ['GET', 'POST', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increase limit for base64 images
 
 app.get('/', (req, res) => {
-  res.status(200).json({ message: 'AI Art Generator Backend is running.' });
+  res.status(200).json({ message: 'Flow Designer Backend is running.' });
 });
 
-// --- API Routes ---
+// API Routes
 app.use('/api/generation', generationRoutes);
 app.use('/api/owner', ownerRoutes);
 app.use('/api/admin', adminRoutes);
@@ -34,10 +33,10 @@ app.use('/api', publicRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/config', configRoutes);
-app.use('/api/dev', devRoutes); // NOVO
-app.use('/api/payments', paymentRoutes); // NOVO
+app.use('/api/dev', devRoutes);
+app.use('/api/payments', paymentRoutes);
 
-// --- Quota/Usage Endpoint ---
+// Quota/Usage Endpoint
 app.get('/api/usage/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
@@ -92,6 +91,12 @@ app.get('/api/usage/:userId', async (req, res) => {
       isUnlimited: false,
     });
   }
+});
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('Unhandled error:', error);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 app.listen(PORT, () => {

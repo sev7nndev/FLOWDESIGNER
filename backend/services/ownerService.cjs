@@ -1,34 +1,18 @@
-// backend/services/ownerService.cjs
 const { supabaseService } = require('../config');
 const axios = require('axios');
 
 const CLIENT_ROLES = ['free', 'starter', 'pro'];
 
-/**
- * Busca todas as métricas necessárias para o Painel do Dono.
- * @param {string} ownerId - ID do proprietário.
- * @returns {Promise<object>} Métricas do sistema.
- */
 async function fetchOwnerMetrics(ownerId) {
-  let planCounts = {
-    free: 0,
-    starter: 0,
-    pro: 0
-  };
-  
-  let statusCounts = {
-    on: 0,
-    paused: 0,
-    cancelled: 0
-  };
-  
+  let planCounts = { free: 0, starter: 0, pro: 0 };
+  let statusCounts = { on: 0, paused: 0, cancelled: 0 };
   let mpConnectionStatus = 'disconnected';
   let clientList = [];
 
   try {
-    // 1. Contagem de Planos e Status (Usando a VIEW para obter email)
+    // Fetch profiles with counts
     const { data: profiles, error: profilesError } = await supabaseService
-      .from('profiles_with_email') // Usando a VIEW
+      .from('profiles_with_email')
       .select('role, status')
       .in('role', CLIENT_ROLES);
       
@@ -46,15 +30,15 @@ async function fetchOwnerMetrics(ownerId) {
     console.error("Error fetching profile counts:", e.message);
   }
 
-  // 2. Status da Conexão Mercado Pago (MP)
   try {
+    // Check MP connection
     const { data: settings, error: settingsError } = await supabaseService
-      .from('app_config') // Usando app_config para armazenar configurações
+      .from('app_config')
       .select('value')
       .eq('key', 'mp_access_token')
       .single();
       
-    if (settingsError && settingsError.code !== 'PGRST116') { // PGRST116 = No rows found
+    if (settingsError && settingsError.code !== 'PGRST116') {
       throw settingsError;
     }
     
@@ -65,10 +49,10 @@ async function fetchOwnerMetrics(ownerId) {
     console.error("Error fetching MP connection status:", e.message);
   }
 
-  // 3. Lista de Clientes (Nome, Email, Plano, Status) - Usando a VIEW
   try {
+    // Fetch client list
     const { data: clients, error: clientsError } = await supabaseService
-      .from('profiles_with_email') // Usando a VIEW
+      .from('profiles_with_email')
       .select('id, first_name, last_name, email, role, status')
       .in('role', CLIENT_ROLES)
       .order('updated_at', { ascending: false });
@@ -94,18 +78,10 @@ async function fetchOwnerMetrics(ownerId) {
   };
 }
 
-/**
- * Gera a URL de autorização do Mercado Pago.
- * @param {string} ownerId - ID do proprietário.
- * @returns {Promise<string>} URL de autorização.
- */
 async function getMercadoPagoAuthUrl(ownerId) {
-  // TODO: Implementar lógica real de geração da URL de autenticação
-  // Esta é uma simulação. Deve-se usar as credenciais do MP e o ownerId para gerar a URL.
   const redirectUri = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/owner-panel`;
-  
-  // Substituir pelas credenciais reais do aplicativo Mercado Pago
   const clientId = process.env.MP_CLIENT_ID;
+  
   if (!clientId) {
     throw new Error("MP_CLIENT_ID não configurado.");
   }
@@ -114,68 +90,73 @@ async function getMercadoPagoAuthUrl(ownerId) {
   return authUrl;
 }
 
-/**
- * Desconecta a conta do Mercado Pago, removendo o token de acesso.
- * @param {string} ownerId - ID do proprietário.
- */
 async function disconnectMercadoPago(ownerId) {
   const { error } = await supabaseService
-    .from('app_config') // Usando app_config
+    .from('app_config')
     .delete()
     .eq('key', 'mp_access_token');
     
   if (error) throw error;
 }
 
-/**
- * Busca o histórico de chat entre o dono e todos os clientes.
- * @param {string} ownerId - ID do proprietário.
- * @returns {Promise<Array>} Histórico de mensagens.
- */
 async function getOwnerChatHistory(ownerId) {
-  // Para garantir que o chat funcione com os IDs reais dos clientes,
-  // vamos buscar a lista de clientes usando a nova view
-  let clients = [];
   try {
-    const { data, error } = await supabaseService
+    // Fetch all clients
+    const { data: clients, error: clientsError } = await supabaseService
       .from('profiles_with_email')
       .select('id, first_name, last_name, email')
       .in('role', CLIENT_ROLES);
       
-    if (error) throw error;
-    clients = data;
+    if (clientsError) throw clientsError;
+
+    // For each client, fetch their chat messages
+    const chatHistory = await Promise.all(clients.map(async (client) => {
+      const { data: messages, error: messagesError } = await supabaseService
+        .from('chat_messages')
+        .select('*')
+        .or(`and(sender_id.eq.${client.id},recipient_id.eq.${ownerId}),and(sender_id.eq.${ownerId},recipient_id.eq.${client.id})`)
+        .order('created_at', { ascending: true });
+
+      if (messagesError) {
+        console.error(`Error fetching messages for client ${client.id}:`, messagesError);
+        return null;
+      }
+
+      const formattedMessages = messages.map(msg => ({
+        id: msg.id,
+        sender: msg.sender_id === ownerId ? 'owner' : 'client',
+        text: msg.content,
+        timestamp: msg.created_at
+      }));
+
+      const lastMessage = formattedMessages[formattedMessages.length - 1] || {
+        text: 'Nenhuma mensagem ainda',
+        timestamp: new Date().toISOString(),
+        sender: 'client'
+      };
+
+      return {
+        id: client.id,
+        name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || client.email,
+        lastMessage: {
+          text: lastMessage.text,
+          timestamp: lastMessage.timestamp,
+          sender: lastMessage.sender
+        },
+        unreadCount: 0, // TODO: Implement unread count logic
+        messages: formattedMessages
+      };
+    }));
+
+    // Filter out null results and sort by last message timestamp
+    return chatHistory
+      .filter(thread => thread !== null)
+      .sort((a, b) => new Date(b.lastMessage.timestamp).getTime() - new Date(a.lastMessage.timestamp).getTime());
+
   } catch (e) {
-    console.error("Error fetching clients for chat history:", e.message);
+    console.error("Error fetching owner chat history:", e.message);
     return [];
   }
-
-  // Simulação de histórico de chat
-  const mockMessages = clients.map(client => ({
-    id: client.id,
-    name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || client.email,
-    lastMessage: {
-      text: `Olá, ${client.first_name || 'cliente'}. Esta é uma mensagem de exemplo.`,
-      timestamp: new Date().toISOString(),
-      sender: 'client'
-    },
-    unreadCount: Math.floor(Math.random() * 3),
-    messages: [
-      {
-        id: 1,
-        sender: 'client',
-        text: "Olá, tenho uma dúvida sobre minha assinatura.",
-        timestamp: new Date(Date.now() - 3600000).toISOString()
-      },
-      {
-        id: 2,
-        sender: 'owner',
-        text: "Olá! Claro, posso te ajudar. Qual é a sua dúvida?",
-        timestamp: new Date(Date.now() - 1800000).toISOString()
-      }
-    ]
-  }));
-
-  return mockMessages;
 }
 
 module.exports = {

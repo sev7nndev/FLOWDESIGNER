@@ -1,8 +1,8 @@
-// backend/routes/generationRoutes.cjs
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { generateImageWithQuotaCheck } = require('../services/generationService');
+const { supabaseService } = require('../config');
 
 router.post('/generate', authMiddleware, async (req, res) => {
   const userId = req.user.id;
@@ -24,10 +24,10 @@ router.post('/generate', authMiddleware, async (req, res) => {
   }
 });
 
-// NOVO: Endpoint para buscar o destinatário de suporte
+// Support recipient endpoint
 router.get('/support-recipient', authMiddleware, async (req, res) => {
   try {
-    // Buscar um usuário com role 'admin' ou 'dev' para ser o destinatário do suporte
+    // Find an admin or dev user to be the support recipient
     const { data: supportUser, error } = await supabaseService
       .from('profiles')
       .select('id')
@@ -36,7 +36,7 @@ router.get('/support-recipient', authMiddleware, async (req, res) => {
       .single();
 
     if (error || !supportUser) {
-      // Se não encontrar admin/dev, usar um usuário 'owner' como fallback
+      // If no admin/dev found, use an owner as fallback
       const { data: ownerUser, error: ownerError } = await supabaseService
         .from('profiles')
         .select('id')

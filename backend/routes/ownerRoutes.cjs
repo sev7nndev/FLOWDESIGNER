@@ -1,30 +1,43 @@
-// backend/routes/ownerRoutes.cjs
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth'); // Importando middleware de autenticação
-const ownerController = require('../controllers/ownerController'); // Importando o novo controlador
+const { authenticateToken } = require('../middleware/auth');
+const ownerController = require('../controllers/ownerController');
 
-// Middleware para verificar se o usuário é 'owner'
-// NOTE: A verificação de role real é feita no serviço, mas mantemos este middleware para estrutura.
+// Middleware to check if user is owner
 const checkOwnerRole = async (req, res, next) => {
+  const { supabaseService } = require('../config');
   const user = req.user;
+  
   if (!user) {
     return res.status(401).json({ error: 'Não autenticado.' });
   }
-  // A verificação de role real será feita no serviço que acessa o DB
-  next();
+
+  try {
+    const { data: profile, error } = await supabaseService
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !profile || profile.role !== 'owner') {
+      return res.status(403).json({ error: 'Acesso negado. Apenas proprietários podem acessar.' });
+    }
+
+    next();
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao verificar permissões.' });
+  }
 };
 
-// Endpoint para buscar todas as métricas do proprietário
+// Metrics endpoint
 router.get('/metrics', authenticateToken, checkOwnerRole, ownerController.getOwnerMetrics);
 
-// Endpoint para obter a URL de autorização do Mercado Pago
+// Mercado Pago endpoints
 router.get('/mp-auth-url', authenticateToken, checkOwnerRole, ownerController.getMercadoPagoAuthUrl);
-
-// Endpoint de callback do Mercado Pago (Não requer authenticateToken/checkOwnerRole pois é um redirect externo)
 router.get('/mp-callback', ownerController.handleMercadoPagoCallback);
-
-// Endpoint para desconectar a conta do Mercado Pago
 router.delete('/mp-disconnect', authenticateToken, checkOwnerRole, ownerController.disconnectMercadoPago);
+
+// Chat history endpoint
+router.get('/chat-history', authenticateToken, checkOwnerRole, ownerController.getChatHistory);
 
 module.exports = router;
