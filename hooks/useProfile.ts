@@ -14,25 +14,6 @@ export const useProfile = (userId: string | undefined) => {
     const supabase = getSupabase();
 
     const fetchProfile = useCallback(async () => {
-       Vou continuar a correção do hook useProfile:
-
-<dyad-write path="hooks/useProfile.ts" description="Fixed useProfile hook with proper error handling">
-import { useState, useCallback, useEffect } from 'react';
-import { getSupabase } from '../services/supabaseClient';
-
-interface ProfileData {
-    firstName: string;
-    lastName: string;
-    role: string;
-}
-
-export const useProfile = (userId: string | undefined) => {
-    const [profile, setProfile] = useState<ProfileData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const supabase = getSupabase();
-
-    const fetchProfile = useCallback(async () => {
         if (!userId || !supabase) {
             setProfile(null);
             setIsLoading(false);
