@@ -3,62 +3,46 @@ const { supabaseService, imageModel } = require('../config');
 const generateImageWithQuotaCheck = async (userId, promptInfo) => {
   console.log('🎨 Starting image generation for user:', userId);
 
-  // 1. Get user's profile and subscription
-  const { data: profile, error: profileError } = await supabaseService
-    .from('profiles')
-    .select('role, status')
-    .eq('id', userId)
+  // 1. Get user's profile and usage data
+  const { data: usageData, error: usageError } = await supabaseService
+    .from('user_usage')
+    .select(`
+      current_usage,
+      profiles (role, status),
+      plan_settings (max_images_per_month)
+    `)
+    .eq('user_id', userId)
     .single();
 
-  if (profileError || !profile) {
-    console.error('Profile fetch error:', profileError);
-    throw new Error('Perfil do usuário não encontrado.');
+  if (usageError || !usageData || !usageData.profiles) {
+    console.error('Usage/Profile fetch error:', usageError);
+    throw new Error('Dados de uso ou perfil do usuário não encontrados.');
   }
 
+  const profile = usageData.profiles;
+  const currentUsage = usageData.current_usage || 0;
+  
   if (profile.status !== 'on') {
     throw new Error('Sua conta está pausada. Entre em contato com o suporte.');
   }
 
-  // 2. Get quota based on role
-  let quotaLimit = 3; // Free default
-  let isUnlimited = false;
-
-  switch (profile.role) {
-    case 'owner':
-    case 'dev':
-    case 'admin':
-      isUnlimited = true;
-      break;
-    case 'pro':
-      quotaLimit = 50;
-      break;
-    case 'starter':
-      quotaLimit = 20;
-      break;
-    case 'free':
-    default:
+  // 2. Determine limits
+  let quotaLimit = (usageData.plan_settings && usageData.plan_settings.max_images_per_month) || 0;
+  let isUnlimited = ['owner', 'dev', 'admin'].includes(profile.role);
+  
+  // Fallback for free plan if plan_settings is missing (shouldn't happen if seed data is run)
+  if (profile.role === 'free' && quotaLimit === 0) {
       quotaLimit = 3;
-      break;
+  }
+  
+  // 3. Check quota
+  if (!isUnlimited && currentUsage >= quotaLimit) {
+    const error = new Error(`Você atingiu seu limite de ${quotaLimit} imagens este mês. Faça upgrade para continuar gerando!`);
+    error.code = 'QUOTA_EXCEEDED';
+    throw error;
   }
 
-  // 3. Check current usage (only if not unlimited)
-  if (!isUnlimited) {
-    const { data: usageData, error: usageError } = await supabaseService
-      .from('user_usage')
-      .select('current_usage')
-      .eq('user_id', userId)
-      .single();
-
-    const currentUsage = usageData?.current_usage || 0;
-
-    if (currentUsage >= quotaLimit) {
-      const error = new Error(`Você atingiu seu limite de ${quotaLimit} imagens este mês. Faça upgrade para continuar gerando!`);
-      error.code = 'QUOTA_EXCEEDED';
-      throw error;
-    }
-
-    console.log(`User ${userId} has used ${currentUsage}/${quotaLimit} images`);
-  }
+  console.log(`User ${userId} (Role: ${profile.role}) has used ${currentUsage}/${isUnlimited ? 'Unlimited' : quotaLimit} images`);
 
   // 4. Generate detailed prompt
   const detailedPrompt = `

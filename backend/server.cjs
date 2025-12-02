@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { supabaseAnon, PRO_LIMIT, STARTER_LIMIT, FREE_LIMIT } = require('./config');
+const { supabaseAnon, supabaseService } = require('./config'); // Adicionado supabaseService
 const generationRoutes = require('./routes/generationRoutes');
 const ownerRoutes = require('./routes/ownerRoutes');
 const adminRoutes = require('./routes/adminRoutes');
@@ -63,57 +63,59 @@ app.get('/api/usage/:userId', async (req, res) => {
   try {
     console.log('📊 Fetching usage for user:', userId);
     
-    // Get user profile
-    const { data: profileData, error: profileError } = await supabaseAnon
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
-
-    if (profileError || !profileData) {
-      return res.status(404).json({ error: 'Usuário não encontrado.' });
-    }
-
-    const role = profileData?.role || 'free';
-
-    // Get current usage
+    // Fetch usage data including plan settings
     const { data: usageData, error: usageError } = await supabaseAnon
       .from('user_usage')
-      .select('current_usage')
+      .select(`
+        current_usage,
+        profiles (role),
+        plan_settings (max_images_per_month)
+      `)
       .eq('user_id', userId)
       .single();
 
-    const current_usage = usageData?.current_usage || 0;
-
-    // Determine limits
-    let limit = 0;
-    let isUnlimited = false;
-    
-    switch (role) {
-      case 'owner':
-      case 'dev':
-      case 'admin':
-        isUnlimited = true;
-        break;
-      case 'pro':
-        limit = PRO_LIMIT;
-        break;
-      case 'starter':
-        limit = STARTER_LIMIT;
-        break;
-      case 'free':
-      default:
-        limit = FREE_LIMIT;
-        break;
+    if (usageError || !usageData || !usageData.profiles) {
+      // If no usage data found, assume free plan default
+      const { data: profileData } = await supabaseAnon
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+        
+      const role = profileData?.role || 'free';
+      const limit = role === 'free' ? 3 : 0; // Default free limit if no usage record exists
+      
+      return res.status(200).json({
+        role,
+        current: 0,
+        limit,
+        isUnlimited: ['owner', 'dev', 'admin'].includes(role),
+        usagePercentage: 0,
+        isBlocked: false
+      });
     }
+
+    const role = usageData.profiles.role || 'free';
+    const current_usage = usageData.current_usage || 0;
+    
+    let limit = (usageData.plan_settings && usageData.plan_settings.max_images_per_month) || 0;
+    let isUnlimited = ['owner', 'dev', 'admin'].includes(role);
+    
+    // Fallback for free plan if plan_settings is missing
+    if (role === 'free' && limit === 0) {
+        limit = 3;
+    }
+
+    const usagePercentage = isUnlimited || limit === 0 ? 0 : Math.min((current_usage / limit) * 100, 100);
+    const isBlocked = !isUnlimited && limit > 0 && current_usage >= limit;
 
     const result = {
       role,
       current: current_usage,
       limit,
       isUnlimited,
-      usagePercentage: isUnlimited ? 0 : Math.min((current_usage / limit) * 100, 100),
-      isBlocked: !isUnlimited && current_usage >= limit
+      usagePercentage,
+      isBlocked
     };
 
     console.log('✅ Usage data:', result);

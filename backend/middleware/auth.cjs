@@ -1,4 +1,4 @@
-const { supabaseAnon } = require('../config');
+const { supabaseAnon, supabaseService } = require('../config'); // Import supabaseService
 
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -11,6 +11,7 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     console.log('🔐 Verifying token...');
+    // Use supabaseAnon to verify the JWT token (standard practice)
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
 
     if (error) {
@@ -23,9 +24,9 @@ const authenticateToken = async (req, res, next) => {
       return res.status(403).json({ error: 'Usuário não encontrado.' });
     }
 
-    // Get user profile
+    // Get user profile using the SERVICE ROLE client for reliable access
     try {
-      const { data: profile, error: profileError } = await supabaseAnon
+      const { data: profile, error: profileError } = await supabaseService // <-- CHANGED TO supabaseService
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -33,12 +34,12 @@ const authenticateToken = async (req, res, next) => {
 
       if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = No rows found
         console.error('❌ Profile fetch error:', profileError.message);
-        // Se o perfil não for encontrado, ainda podemos prosseguir, mas sem a role
+        // If profile not found, default to 'free' role
         req.user = { ...user, profile: { role: 'free' } };
       } else {
         req.user = {
           ...user,
-          profile: profile || { role: 'free' } // Garante que profile não seja null
+          profile: profile || { role: 'free' } // Ensure profile is not null
         };
       }
       

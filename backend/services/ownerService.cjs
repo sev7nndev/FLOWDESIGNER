@@ -1,4 +1,5 @@
 const { supabaseService } = require('../config');
+const fetch = require('node-fetch'); // Need to ensure node-fetch is available if not using global fetch
 
 const CLIENT_ROLES = ['free', 'starter', 'pro'];
 
@@ -49,17 +50,17 @@ async function fetchOwnerMetrics(ownerId) {
   }
 
   try {
-    // Check MP connection
+    // Check MP connection using owners_payment_accounts
     console.log('💳 Checking MP connection...');
-    const { data: settings, error: settingsError } = await supabaseService
-      .from('app_config')
-      .select('value')
-      .eq('key', 'mp_access_token')
+    const { data: mpAccount, error: mpAccountError } = await supabaseService
+      .from('owners_payment_accounts')
+      .select('access_token')
+      .eq('owner_id', ownerId)
       .single();
       
-    if (settingsError && settingsError.code !== 'PGRST116') {
-      console.error('❌ MP settings error:', settingsError);
-    } else if (settings && settings.value) {
+    if (mpAccountError && mpAccountError.code !== 'PGRST116') {
+      console.error('❌ MP account error:', mpAccountError);
+    } else if (mpAccount && mpAccount.access_token) {
       mpConnectionStatus = 'connected';
       console.log('✅ MP connection: connected');
     } else {
@@ -115,15 +116,67 @@ function getMercadoPagoAuthUrl(ownerId) {
     throw new Error("MP_CLIENT_ID não configurado.");
   }
   
+  // State must be URL encoded if it contains special characters, but ownerId (UUID) is safe.
   const authUrl = `https://auth.mercadopago.com/authorization?client_id=${clientId}&response_type=code&platform_id=mp&redirect_uri=${redirectUri}&state=${ownerId}`;
   return authUrl;
 }
 
-async function disconnectMercadoPago(ownerId) {
+async function handleMercadoPagoCallback(code, ownerId) {
+  const clientId = process.env.MP_CLIENT_ID;
+  const clientSecret = process.env.MP_CLIENT_SECRET;
+  const redirectUri = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/owner-panel`;
+
+  if (!clientId || !clientSecret) {
+    throw new Error("MP_CLIENT_ID ou MP_CLIENT_SECRET não configurados.");
+  }
+
+  // Use node-fetch (imported globally in server.cjs or available via require)
+  const response = await fetch('https://api.mercadopago.com/oauth/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: clientSecret,
+      code: code,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || data.error) {
+    console.error("MP Token Exchange Error:", data);
+    throw new Error(data.message || "Falha ao trocar código por token do Mercado Pago.");
+  }
+
+  // Save tokens to owners_payment_accounts
   const { error } = await supabaseService
-    .from('app_config')
+    .from('owners_payment_accounts')
+    .upsert({
+      owner_id: ownerId,
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_in: data.expires_in,
+      token_type: data.token_type,
+      scope: data.scope,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'owner_id' });
+
+  if (error) {
+    console.error("Supabase save token error:", error);
+    throw new Error("Falha ao salvar credenciais do Mercado Pago no banco de dados.");
+  }
+}
+
+async function disconnectMercadoPago(ownerId) {
+  // Delete the record from owners_payment_accounts
+  const { error } = await supabaseService
+    .from('owners_payment_accounts')
     .delete()
-    .eq('key', 'mp_access_token');
+    .eq('owner_id', ownerId);
     
   if (error) throw error;
 }
@@ -158,6 +211,7 @@ async function getOwnerChatHistory(ownerId) {
 
     // For each client, fetch their chat messages
     const chatHistory = await Promise.all(clients.map(async (client) => {
+      // Fetch messages between client and owner
       const { data: messages, error: messagesError } = await supabaseService
         .from('chat_messages')
         .select('*')
@@ -167,6 +221,11 @@ async function getOwnerChatHistory(ownerId) {
       if (messagesError) {
         console.error(`❌ Error fetching messages for client ${client.id}:`, messagesError);
         return null;
+      }
+      
+      // Filter out clients with no messages to keep the list clean
+      if (messages.length === 0) {
+          return null;
       }
 
       const formattedMessages = messages.map(msg => ({
@@ -211,6 +270,7 @@ async function getOwnerChatHistory(ownerId) {
 module.exports = {
   fetchOwnerMetrics,
   getMercadoPagoAuthUrl,
+  handleMercadoPagoCallback,
   disconnectMercadoPago,
   getOwnerChatHistory,
 };
