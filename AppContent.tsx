@@ -141,7 +141,6 @@ export const AppContent: React.FC = () => {
   };
 
   const handlePlanSelection = async (planId: string) => {
-    // Não exige mais login para planos pagos
     if (planId === 'free') {
       setView('AUTH');
       return;
@@ -150,7 +149,6 @@ export const AppContent: React.FC = () => {
     const toastId = toast.loading('Redirecionando para o pagamento...');
     
     try {
-      // A URL de retorno agora aponta para a tela de cadastro com o plano selecionado
       const returnUrl = `${window.location.origin}?status=success&plan=${planId}`;
       const checkoutUrl = await api.createPaymentPreference(planId, returnUrl);
       
@@ -197,7 +195,6 @@ export const AppContent: React.FC = () => {
 
   const MainApp = () => (
     <div className="min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
-      <Toaster richColors theme="dark" position="top-right" />
       <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
       <AppHeader user={user} profileRole={profileRole} onLogout={handleLogout} onShowSettings={() => setShowSettings(true)} onShowDevPanel={() => setView('DEV_PANEL')} onShowChat={() => setView('CHAT')} />
       <div className="relative z-10 -mt-8 md:-mt-10">
@@ -219,20 +216,29 @@ export const AppContent: React.FC = () => {
     </div>
   );
 
-  switch(view) {
-    case 'LANDING':
-      return <LandingPage onGetStarted={() => setView('AUTH')} onPlanSelect={handlePlanSelection} onLogin={() => setView('AUTH')} landingImages={landingImages} isLandingImagesLoading={isLandingImagesLoading} />;
-    case 'AUTH':
-      return <AuthScreens onSuccess={handleAuthSuccess} onBack={() => setView('LANDING')} />;
-    case 'OWNER_PANEL':
-      return <OwnerPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
-    case 'DEV_PANEL':
-      return <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
-    case 'CHAT':
-      if (!user) return <MainApp />;
-      return <ClientChatPanel user={user} onBack={() => setView('APP')} onLogout={handleLogout} />;
-    case 'APP':
-    default:
-      return <MainApp />;
-  }
+  const renderView = () => {
+    switch(view) {
+      case 'LANDING':
+        return <LandingPage onGetStarted={() => setView('AUTH')} onPlanSelect={handlePlanSelection} onLogin={() => setView('AUTH')} landingImages={landingImages} isLandingImagesLoading={isLandingImagesLoading} />;
+      case 'AUTH':
+        return <AuthScreens onSuccess={handleAuthSuccess} onBack={() => setView('LANDING')} />;
+      case 'OWNER_PANEL':
+        return <OwnerPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
+      case 'DEV_PANEL':
+        return <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
+      case 'CHAT':
+        if (!user) return <MainApp />;
+        return <ClientChatPanel user={user} onBack={() => setView('APP')} onLogout={handleLogout} />;
+      case 'APP':
+      default:
+        return <MainApp />;
+    }
+  };
+
+  return (
+    <>
+      <Toaster richColors theme="dark" position="top-right" />
+      {renderView()}
+    </>
+  );
 };
