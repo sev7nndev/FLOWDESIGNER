@@ -31,7 +31,8 @@ const safeFetchCount = async (query) => {
 const fetchOwnerMetrics = async (ownerId) => {
     // Roles a serem excluídas das métricas de clientes
     const EXCLUDED_ROLES = ['admin', 'dev', 'owner'];
-    const EXCLUDED_ROLES_STRING = `(${EXCLUDED_ROLES.map(r => `'${r}'`).join(',')})`;
+    // FIX: Use uma string simples separada por vírgulas para o operador 'in' do PostgREST.
+    const EXCLUDED_ROLES_CSV = EXCLUDED_ROLES.join(','); 
 
     // --- 1. Contagem de usuários por plano (role) ---
     const countsByPlan = { free: 0, starter: 0, pro: 0 };
@@ -43,22 +44,20 @@ const fetchOwnerMetrics = async (ownerId) => {
     // --- 2. Contagem de usuários por status ---
     const countsByStatus = { on: 0, paused: 0, cancelled: 0 };
     
-    countsByStatus.on = await safeFetchCount(supabaseService.from('profiles').eq('status', 'on').not('role', 'in', EXCLUDED_ROLES_STRING));
-    countsByStatus.paused = await safeFetchCount(supabaseService.from('profiles').eq('status', 'paused').not('role', 'in', EXCLUDED_ROLES_STRING));
-    countsByStatus.cancelled = await safeFetchCount(supabaseService.from('profiles').eq('status', 'cancelled').not('role', 'in', EXCLUDED_ROLES_STRING));
+    // Aplicando FIX: Usando EXCLUDED_ROLES_CSV
+    countsByStatus.on = await safeFetchCount(supabaseService.from('profiles').eq('status', 'on').not('role', 'in', EXCLUDED_ROLES_CSV));
+    countsByStatus.paused = await safeFetchCount(supabaseService.from('profiles').eq('status', 'paused').not('role', 'in', EXCLUDED_ROLES_CSV));
+    countsByStatus.cancelled = await safeFetchCount(supabaseService.from('profiles').eq('status', 'cancelled').not('role', 'in', EXCLUDED_ROLES_CSV));
     
     // 3. Lista de Clientes (Nome, Email, Plano, Status)
     let clientList = [];
     try {
         // Usando a sintaxe de join padrão para a tabela auth.users (que é referenciada pelo 'id' do profiles)
-        // O nome da relação é 'auth_users' se a FK for para auth.users.
-        // No entanto, como a FK é na coluna 'id' que é a PK, o PostgREST pode usar o nome da coluna.
-        // Vamos tentar a sintaxe mais robusta que funciona com a coluna 'id' referenciando auth.users.
         const { data: clients, error: clientsError } = await supabaseService
             .from('profiles')
             // Usando 'auth_user:id(email)' que é a sintaxe que funcionou no Edge Function, mas renomeando para 'auth_user'
             .select('id, first_name, last_name, role, status, auth_user:id(email)') 
-            .not('role', 'in', EXCLUDED_ROLES_STRING)
+            .not('role', 'in', EXCLUDED_ROLES_CSV) // Aplicando FIX: Usando EXCLUDED_ROLES_CSV
             .order('updated_at', { ascending: false });
             
         if (clientsError) throw clientsError;
