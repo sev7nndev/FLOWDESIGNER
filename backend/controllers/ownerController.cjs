@@ -2,18 +2,25 @@ const ownerService = require('../services/ownerService');
 
 const getOwnerMetrics = async (req, res) => {
   try {
+    console.log('📊 Fetching owner metrics for user:', req.user.id);
     const ownerId = req.user.id;
     const metrics = await ownerService.fetchOwnerMetrics(ownerId);
     
     if (!metrics || typeof metrics !== 'object') {
-      return res.status(500).json({ error: "Invalid metrics structure." });
+      console.error('Invalid metrics structure:', metrics);
+      return res.status(500).json({ 
+        error: "Estrutura de métricas inválida.",
+        details: "O serviço retornou dados inválidos."
+      });
     }
     
+    console.log('✅ Owner metrics fetched successfully');
     return res.status(200).json(metrics);
   } catch (error) {
-    console.error("Error in getOwnerMetrics controller:", error.message);
+    console.error("❌ Error in getOwnerMetrics controller:", error.message);
+    console.error("Full error:", error);
     return res.status(500).json({ 
-      error: "Failed to load data from server.",
+      error: "Falha ao carregar dados do servidor.",
       details: error.message 
     });
   }

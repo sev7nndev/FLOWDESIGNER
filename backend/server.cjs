@@ -30,6 +30,12 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // Increase limit for base64 images
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`📡 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+  next();
+});
+
 // Health check endpoint
 app.get('/', (req, res) => {
   res.status(200).json({ 
@@ -55,6 +61,8 @@ app.get('/api/usage/:userId', async (req, res) => {
   const { userId } = req.params;
   
   try {
+    console.log('📊 Fetching usage for user:', userId);
+    
     // Get user profile
     const { data: profileData, error: profileError } = await supabaseAnon
       .from('profiles')
@@ -63,7 +71,7 @@ app.get('/api/usage/:userId', async (req, res) => {
       .single();
 
     if (profileError) {
-      console.error('Profile fetch error:', profileError);
+      console.error('❌ Profile fetch error:', profileError.message);
       return res.status(404).json({ error: 'Usuário não encontrado.' });
     }
 
@@ -100,28 +108,32 @@ app.get('/api/usage/:userId', async (req, res) => {
         break;
     }
 
-    res.status(200).json({
+    const result = {
       role,
       current: current_usage,
       limit,
       isUnlimited,
       usagePercentage: isUnlimited ? 0 : Math.min((current_usage / limit) * 100, 100),
       isBlocked: !isUnlimited && current_usage >= limit
-    });
+    };
+
+    console.log('✅ Usage data:', result);
+    res.status(200).json(result);
   } catch (error) {
-    console.error('Usage endpoint error:', error);
+    console.error('❌ Usage endpoint error:', error.message);
     res.status(500).json({ error: 'Erro ao buscar dados de uso.' });
   }
 });
 
 // 404 handler
 app.use('*', (req, res) => {
+  console.log(`❌ 404 - Route not found: ${req.method} ${req.path}`);
   res.status(404).json({ error: 'Endpoint não encontrado.' });
 });
 
 // Global error handler
 app.use((error, req, res, next) => {
-  console.error('Unhandled error:', error);
+  console.error('❌ Unhandled error:', error);
   
   if (error.type === 'entity.parse.failed') {
     return res.status(400).json({ error: 'JSON inválido no corpo da requisição.' });
@@ -136,4 +148,10 @@ app.use((error, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log('🔗 Available endpoints:');
+  console.log('   GET  / - Health check');
+  console.log('   GET  /api/plans - Get plans');
+  console.log('   POST /api/generation/generate - Generate image');
+  console.log('   GET  /api/owner/metrics - Owner metrics');
+  console.log('   GET  /api/usage/:userId - User usage');
 });

@@ -25,6 +25,7 @@ const checkOwnerRole = async (req, res, next) => {
 
     next();
   } catch (error) {
+    console.error('Error checking owner role:', error);
     return res.status(500).json({ error: 'Erro ao verificar permissões.' });
   }
 };

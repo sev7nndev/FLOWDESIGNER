@@ -4,6 +4,8 @@ const axios = require('axios');
 const CLIENT_ROLES = ['free', 'starter', 'pro'];
 
 async function fetchOwnerMetrics(ownerId) {
+  console.log('🔍 Fetching owner metrics for:', ownerId);
+  
   let planCounts = { free: 0, starter: 0, pro: 0 };
   let statusCounts = { on: 0, paused: 0, cancelled: 0 };
   let mpConnectionStatus = 'disconnected';
@@ -11,13 +13,18 @@ async function fetchOwnerMetrics(ownerId) {
 
   try {
     // Fetch profiles with counts
+    console.log('📊 Fetching profile counts...');
     const { data: profiles, error: profilesError } = await supabaseService
       .from('profiles_with_email')
       .select('role, status')
       .in('role', CLIENT_ROLES);
       
-    if (profilesError) throw profilesError;
+    if (profilesError) {
+      console.error('❌ Profile count error:', profilesError);
+      throw profilesError;
+    }
     
+    console.log('✅ Profiles fetched:', profiles.length);
     profiles.forEach(profile => {
       if (planCounts.hasOwnProperty(profile.role)) {
         planCounts[profile.role]++;
@@ -27,11 +34,13 @@ async function fetchOwnerMetrics(ownerId) {
       }
     });
   } catch (e) {
-    console.error("Error fetching profile counts:", e.message);
+    console.error("❌ Error fetching profile counts:", e.message);
+    // Don't throw here, continue with other data
   }
 
   try {
     // Check MP connection
+    console.log('💳 Checking MP connection...');
     const { data: settings, error: settingsError } = await supabaseService
       .from('app_config')
       .select('value')
@@ -39,26 +48,32 @@ async function fetchOwnerMetrics(ownerId) {
       .single();
       
     if (settingsError && settingsError.code !== 'PGRST116') {
-      throw settingsError;
-    }
-    
-    if (settings && settings.value) {
+      console.error('❌ MP settings error:', settingsError);
+    } else if (settings && settings.value) {
       mpConnectionStatus = 'connected';
+      console.log('✅ MP connection: connected');
+    } else {
+      console.log('ℹ️  MP connection: not configured');
     }
   } catch (e) {
-    console.error("Error fetching MP connection status:", e.message);
+    console.error("❌ Error fetching MP connection status:", e.message);
   }
 
   try {
     // Fetch client list
+    console.log('👥 Fetching client list...');
     const { data: clients, error: clientsError } = await supabaseService
       .from('profiles_with_email')
       .select('id, first_name, last_name, email, role, status')
       .in('role', CLIENT_ROLES)
       .order('updated_at', { ascending: false });
       
-    if (clientsError) throw clientsError;
+    if (clientsError) {
+      console.error('❌ Client list error:', clientsError);
+      throw clientsError;
+    }
     
+    console.log('✅ Clients fetched:', clients.length);
     clientList = clients.map(client => ({
       id: client.id,
       name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'N/A',
@@ -67,15 +82,19 @@ async function fetchOwnerMetrics(ownerId) {
       status: client.status
     }));
   } catch (e) {
-    console.error("Error fetching client list:", e.message);
+    console.error("❌ Error fetching client list:", e.message);
+    // Don't throw here, continue with other data
   }
 
-  return {
+  const result = {
     planCounts,
     statusCounts,
     mpConnectionStatus,
     clients: clientList,
   };
+
+  console.log('✅ Owner metrics result:', result);
+  return result;
 }
 
 async function getMercadoPagoAuthUrl(ownerId) {
@@ -101,13 +120,20 @@ async function disconnectMercadoPago(ownerId) {
 
 async function getOwnerChatHistory(ownerId) {
   try {
+    console.log('💬 Fetching owner chat history for:', ownerId);
+    
     // Fetch all clients
     const { data: clients, error: clientsError } = await supabaseService
       .from('profiles_with_email')
       .select('id, first_name, last_name, email')
       .in('role', CLIENT_ROLES);
       
-    if (clientsError) throw clientsError;
+    if (clientsError) {
+      console.error('❌ Error fetching clients for chat:', clientsError);
+      throw clientsError;
+    }
+
+    console.log('📝 Found clients for chat:', clients.length);
 
     // For each client, fetch their chat messages
     const chatHistory = await Promise.all(clients.map(async (client) => {
@@ -118,7 +144,7 @@ async function getOwnerChatHistory(ownerId) {
         .order('created_at', { ascending: true });
 
       if (messagesError) {
-        console.error(`Error fetching messages for client ${client.id}:`, messagesError);
+        console.error(`❌ Error fetching messages for client ${client.id}:`, messagesError);
         return null;
       }
 
@@ -149,12 +175,14 @@ async function getOwnerChatHistory(ownerId) {
     }));
 
     // Filter out null results and sort by last message timestamp
-    return chatHistory
+    const result = chatHistory
       .filter(thread => thread !== null)
       .sort((a, b) => new Date(b.lastMessage.timestamp).getTime() - new Date(a.lastMessage.timestamp).getTime());
 
+    console.log('✅ Chat history fetched:', result.length);
+    return result;
   } catch (e) {
-    console.error("Error fetching owner chat history:", e.message);
+    console.error("❌ Error fetching owner chat history:", e.message);
     return [];
   }
 }
