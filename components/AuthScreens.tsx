@@ -31,10 +31,12 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const plan = urlParams.get('plan');
-    if (plan) {
+    const status = urlParams.get('status');
+    
+    if (plan && status === 'success') {
       setPlanId(plan);
       setIsLogin(false); // Força a visão de cadastro se um plano foi pago
-      toast.success(`Plano ${plan} selecionado!`, {
+      toast.success(`Plano ${plan.toUpperCase()} pago!`, {
         description: 'Crie sua conta para ativar seu plano.',
       });
     }
@@ -151,6 +153,12 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
           <p className="text-gray-500 text-sm mt-2">
             {isLogin ? 'Entre para gerenciar suas artes.' : 'Comece a criar designs profissionais hoje.'}
           </p>
+          
+          {planId && !isLogin && (
+            <div className="mt-4 p-3 bg-primary/10 border border-primary/30 rounded-lg text-sm text-white font-medium">
+              Você está se cadastrando com o Plano <span className="uppercase font-bold">{planId}</span>.
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

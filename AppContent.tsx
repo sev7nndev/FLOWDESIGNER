@@ -70,6 +70,7 @@ export const AppContent: React.FC = () => {
         const planFromUrl = urlParams.get('plan');
         const paymentStatus = urlParams.get('status');
 
+        // Se retornar do Mercado Pago com sucesso, forçamos a tela de AUTH
         if (planFromUrl && paymentStatus === 'success') {
           console.log(`✅ Pagamento aprovado para o plano: ${planFromUrl}. Redirecionando para cadastro.`);
           setView('AUTH');

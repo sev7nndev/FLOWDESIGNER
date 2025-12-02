@@ -52,12 +52,10 @@ export const authService = {
       }
 
       const newUserId = data.user.id;
-      const role = planId || 'free';
+      const role = planId || 'free'; // O planId é o nome do plano em minúsculas ('starter', 'pro', ou 'free')
 
-      // O trigger 'handle_new_user' já cria um perfil básico.
-      // Aqui, nós atualizamos o perfil com a role correta e criamos a assinatura se for um plano pago.
-      
       // 1. Atualiza a role no perfil do usuário
+      // O trigger 'handle_new_user' já criou o perfil, mas precisamos garantir a role correta
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ role: role })
@@ -68,8 +66,9 @@ export const authService = {
         // Não lançar erro, pois o usuário já foi criado na autenticação
       }
 
-      // 2. Se for um plano pago, cria a assinatura
+      // 2. Se for um plano pago, cria/atualiza a assinatura
       if (planId && planId !== 'free') {
+        // Busca o ID do plano na tabela 'plans'
         const { data: planData, error: planError } = await supabase
           .from('plans')
           .select('id')
@@ -79,13 +78,17 @@ export const authService = {
         if (planError || !planData) {
           console.error(`Plano '${planId}' não encontrado para criar a assinatura.`);
         } else {
+          // Cria ou atualiza a assinatura para 'active'
           const { error: subscriptionError } = await supabase
             .from('subscriptions')
-            .update({
+            .upsert({
+              user_id: newUserId,
               plan_id: planData.id,
-              status: 'active'
-            })
-            .eq('user_id', newUserId);
+              status: 'active',
+              // Definir períodos de ciclo (simplificado para 'active' imediato)
+              current_period_start: new Date().toISOString(),
+              current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 dias
+            }, { onConflict: 'user_id' });
             
           if (subscriptionError) {
             console.error('Subscription creation error:', subscriptionError);
