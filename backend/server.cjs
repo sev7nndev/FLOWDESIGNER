@@ -18,7 +18,6 @@ const express = require('express');
     const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
     const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY; 
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    // FREEPIK_API_KEY REMOVIDO
     
     // NEW: Mercado Pago Environment Variables
     const MP_CLIENT_ID = process.env.MP_CLIENT_ID;
@@ -26,7 +25,7 @@ const express = require('express');
     const MP_REDIRECT_URI = process.env.MP_REDIRECT_URI;
     const MP_OWNER_ID = process.env.MP_OWNER_ID; 
 
-    // Validate environment variables (Removed FREEPIK_API_KEY check)
+    // Validate environment variables
     if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SUPABASE_ANON_KEY || !GEMINI_API_KEY || !MP_CLIENT_ID || !MP_CLIENT_SECRET || !MP_REDIRECT_URI || !MP_OWNER_ID) {
       console.error("Missing one or more environment variables (Supabase, Gemini, or Mercado Pago). Please check your .env.local file.");
       process.exit(1);
