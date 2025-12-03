@@ -18,6 +18,28 @@ body {
   background-image: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15), transparent 40%);
 }
 
+/* Shadcn/ui CSS Variables (Mapped to existing theme) */
+@layer base {
+  :root {
+    --background: 90 5% 4%; /* #09090b (zinc-950) */
+    --foreground: 0 0% 98%; /* #fafafa (white) */
+    
+    --card: 240 4% 10%; /* #18181b (zinc-900/surface) */
+    --card-foreground: 0 0% 98%;
+    
+    --muted: 240 4% 10%;
+    --muted-foreground: 240 5% 64.9%; /* #a1a1aa (zinc-400) */
+    
+    --border: 240 3.7% 15.9%; /* #27272a (zinc-800) */
+    --input: 240 3.7% 15.9%;
+    --ring: 262 83% 60%; /* #8b5cf6 (primary) */
+    
+    --primary: 262 83% 60%;
+    --secondary: 290 80% 60%;
+    --accent: 185 94% 31%;
+  }
+}
+
 /* Grid Background Effect */
 .bg-grid {
   background-size: 40px 40px;

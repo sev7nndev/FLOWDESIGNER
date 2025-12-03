@@ -14,6 +14,15 @@ export default {
         primary: '#8b5cf6',    // Violet 500
         secondary: '#d946ef',  // Fuchsia 500
         accent: '#06b6d4',     // Cyan 500
+        
+        // Shadcn/ui mapping to existing theme
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        card: 'hsl(var(--card))',
+        'card-foreground': 'hsl(var(--card-foreground))',
+        muted: 'hsl(var(--muted))',
+        'muted-foreground': 'hsl(var(--muted-foreground))',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
