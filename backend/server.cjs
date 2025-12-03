@@ -194,7 +194,6 @@ async function generateImage(detailedPrompt) {
   }
 
   try {
-    // Endpoint correto para Gemini 2.5 Image
     const GEMINI_IMAGE_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-image:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
     const payload = {
@@ -207,8 +206,11 @@ async function generateImage(detailedPrompt) {
         }
       ],
       generationConfig: {
-        responseMimeType: "image/png",
-        size: "1024x1024" // Usando 1024x1024 como padrão
+        responseMimeType: "image/png"
+      },
+      // Configuração de imagem separada, usando aspectRatio
+      imageConfig: {
+        aspectRatio: "3:4" // Usando 3:4 para flyers verticais
       }
     };
 
@@ -217,7 +219,6 @@ async function generateImage(detailedPrompt) {
       timeout: 60000
     });
 
-    // A resposta vem em base64 dentro de candidates[0].content[0].inlineData.data
     const base64Image = response.data?.candidates?.[0]?.content?.[0]?.inlineData?.data;
     if (!base64Image) throw new Error('Nenhuma imagem gerada pelo Gemini.');
 
