@@ -25,10 +25,15 @@ const express = require('express');
     const MP_REDIRECT_URI = process.env.MP_REDIRECT_URI;
     const MP_OWNER_ID = process.env.MP_OWNER_ID; 
 
-    // Validate environment variables
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SUPABASE_ANON_KEY || !GEMINI_API_KEY || !MP_CLIENT_ID || !MP_CLIENT_SECRET || !MP_REDIRECT_URI || !MP_OWNER_ID) {
-      console.error("Missing one or more environment variables (Supabase, Gemini, or Mercado Pago). Please check your .env.local file.");
+    // Validate essential environment variables
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SUPABASE_ANON_KEY || !GEMINI_API_KEY) {
+      console.error("Missing ESSENTIAL environment variables (Supabase or Gemini). Please check your .env.local file.");
       process.exit(1);
+    }
+    
+    // Warn if Mercado Pago keys are missing, but allow server to start
+    if (!MP_CLIENT_ID || !MP_CLIENT_SECRET || !MP_REDIRECT_URI || !MP_OWNER_ID) {
+        console.warn("Mercado Pago environment variables are missing. Payment functionality will be disabled.");
     }
 
     // Supabase Clients
