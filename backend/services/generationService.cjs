@@ -3,49 +3,49 @@ const { supabaseService, imageModel } = require('../config');
 const generateImageWithQuotaCheck = async (userId, promptInfo) => {
   console.log('🎨 Starting image generation for user:', userId);
 
-  // 1. Get user's profile and usage data
-  const { data: usageData, error: usageError } = await supabaseService
-    .from('user_usage')
-    .select(`
-      current_usage,
-      profiles (role, status),
-      plan_settings (max_images_per_month)
-    `)
-    .eq('user_id', userId)
-    .single();
+  try {
+    // 1. Get user's profile and usage data
+    const { data: usageData, error: usageError } = await supabaseService
+      .from('user_usage')
+      .select(`
+        current_usage,
+        profiles (role, status),
+        plan_settings (max_images_per_month)
+      `)
+      .eq('user_id', userId)
+      .single();
 
-  if (usageError || !usageData || !usageData.profiles) {
-    console.error('Usage/Profile fetch error:', usageError);
-    throw new Error('Dados de uso ou perfil do usuário não encontrados.');
-  }
+    if (usageError || !usageData || !usageData.profiles) {
+      console.error('Usage/Profile fetch error:', usageError);
+      throw new Error('Dados de uso ou perfil do usuário não encontrados.');
+    }
 
-  const profile = usageData.profiles;
-  const currentUsage = usageData.current_usage || 0;
-  
-  if (profile.status !== 'on') {
-    throw new Error('Sua conta está pausada. Entre em contato com o suporte.');
-  }
+    const profile = usageData.profiles;
+    const currentUsage = usageData.current_usage || 0;
+    
+    if (profile.status !== 'on') {
+      throw new Error('Sua conta está pausada. Entre em contato com o suporte.');
+    }
 
-  // 2. Determine limits
-  let quotaLimit = (usageData.plan_settings && usageData.plan_settings.max_images_per_month) || 0;
-  let isUnlimited = ['owner', 'dev', 'admin'].includes(profile.role);
-  
-  // Fallback for free plan if plan_settings is missing (shouldn't happen if seed data is run)
-  if (profile.role === 'free' && quotaLimit === 0) {
-      quotaLimit = 3;
-  }
-  
-  // 3. Check quota
-  if (!isUnlimited && currentUsage >= quotaLimit) {
-    const error = new Error(`Você atingiu seu limite de ${quotaLimit} imagens este mês. Faça upgrade para continuar gerando!`);
-    error.code = 'QUOTA_EXCEEDED';
-    throw error;
-  }
+    // 2. Determine limits
+    let quotaLimit = (usageData.plan_settings && usageData.plan_settings.max_images_per_month) || 0;
+    let isUnlimited = ['owner', 'dev', 'admin'].includes(profile.role);
+    
+    if (profile.role === 'free' && quotaLimit === 0) {
+        quotaLimit = 3;
+    }
+    
+    // 3. Check quota
+    if (!isUnlimited && currentUsage >= quotaLimit) {
+      const error = new Error(`Você atingiu seu limite de ${quotaLimit} imagens este mês. Faça upgrade para continuar gerando!`);
+      error.code = 'QUOTA_EXCEEDED';
+      throw error;
+    }
 
-  console.log(`User ${userId} (Role: ${profile.role}) has used ${currentUsage}/${isUnlimited ? 'Unlimited' : quotaLimit} images`);
+    console.log(`User ${userId} (Role: ${profile.role}) has used ${currentUsage}/${isUnlimited ? 'Unlimited' : quotaLimit} images`);
 
-  // 4. Generate detailed prompt
-  const detailedPrompt = `
+    // 4. Generate detailed prompt
+    const detailedPrompt = `
 Crie um flyer profissional e atraente para uma empresa com as seguintes informações:
 
 NOME DA EMPRESA: ${promptInfo.companyName}
@@ -66,10 +66,9 @@ INSTRUÇÕES DE DESIGN:
 O flyer deve ser visualmente impactante e profissional, adequado para marketing digital.
   `.trim();
 
-  try {
+    // 5. Generate image with Google AI Studio
     console.log('🤖 Calling Google AI Studio API...');
     
-    // 5. Generate image with Google AI Studio
     const result = await imageModel.generateContent([
       {
         text: detailedPrompt
@@ -123,10 +122,9 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
 
     if (genError) {
       console.error('Generation registration error:', genError);
-      // Don't throw error here, image was generated successfully
     }
 
-    // 8. Update user usage count (only if not unlimited)
+    // 8. Update user usage count
     if (!isUnlimited) {
       const { error: usageError } = await supabaseService.rpc('increment_user_usage', {
         user_id_input: userId
@@ -134,7 +132,6 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
 
       if (usageError) {
         console.error('Usage update error:', usageError);
-        // Don't throw error here, image was generated successfully
       }
     }
 
@@ -152,7 +149,6 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
 
     if (imageInsertError) {
       console.error('Image record error:', imageInsertError);
-      // Don't throw error here, image was generated successfully
     }
 
     console.log('✅ Image generation completed successfully');

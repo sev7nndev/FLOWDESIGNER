@@ -1,6 +1,6 @@
 const { supabaseService } = require('../config');
 const fetch = require('node-fetch'); 
-const mercadopago = require('mercadopago'); // Importar mercadopago
+const mercadopago = require('mercadopago');
 
 const CLIENT_ROLES = ['free', 'starter', 'pro'];
 
@@ -47,11 +47,10 @@ async function fetchOwnerMetrics(ownerId) {
     });
   } catch (e) {
     console.error("❌ Error fetching profile counts:", e.message);
-    // Don't throw here, continue with other data
   }
 
   try {
-    // Check MP connection using owners_payment_accounts
+    // Check MP connection
     console.log('💳 Checking MP connection...');
     const { data: mpAccount, error: mpAccountError } = await supabaseService
       .from('owners_payment_accounts')
@@ -75,7 +74,7 @@ async function fetchOwnerMetrics(ownerId) {
     // Fetch client list with full details
     console.log('👥 Fetching client list...');
     const { data: clients, error: clientsError } = await supabaseService
-      .from('profiles_with_email') // Use the existing view
+      .from('profiles_with_email')
       .select('id, first_name, last_name, email, role, status')
       .in('role', CLIENT_ROLES)
       .order('updated_at', { ascending: false });
@@ -95,7 +94,6 @@ async function fetchOwnerMetrics(ownerId) {
     }));
   } catch (e) {
     console.error("❌ Error fetching client list:", e.message);
-    // Don't throw here, continue with other data
   }
 
   const result = {
@@ -110,7 +108,6 @@ async function fetchOwnerMetrics(ownerId) {
 }
 
 function getMercadoPagoAuthUrl(ownerId) {
-  // CORREÇÃO B3: Redirecionar para o endpoint de callback do backend
   const redirectUri = `${process.env.BACKEND_URL}/api/owner/mp-callback`;
   const clientId = process.env.MP_CLIENT_ID;
   
@@ -118,18 +115,15 @@ function getMercadoPagoAuthUrl(ownerId) {
     throw new Error("MP_CLIENT_ID não configurado.");
   }
   
-  // State deve ser o ownerId para sabermos quem está se conectando
   const authUrl = `https://auth.mercadopago.com/authorization?client_id=${clientId}&response_type=code&platform_id=mp&redirect_uri=${redirectUri}&state=${ownerId}`;
   return authUrl;
 }
 
 async function handleMercadoPagoCallback(code, ownerId) {
-  // CORREÇÃO B4: Implementar a troca de código por token
   const clientId = process.env.MP_CLIENT_ID;
   const clientSecret = process.env.MP_CLIENT_SECRET;
-  // A URI de redirecionamento deve ser a mesma usada na requisição de autorização
   const redirectUri = `${process.env.BACKEND_URL}/api/owner/mp-callback`; 
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
   if (!clientId || !clientSecret) {
     throw new Error("MP_CLIENT_ID ou MP_CLIENT_SECRET não configurados.");
@@ -153,7 +147,6 @@ async function handleMercadoPagoCallback(code, ownerId) {
 
   if (!response.ok || data.error) {
     console.error("MP Token Exchange Error:", data);
-    // Redireciona para o painel do owner com status de erro
     throw new Error(data.message || "Falha ao trocar código por token do Mercado Pago.");
   }
 
@@ -175,12 +168,10 @@ async function handleMercadoPagoCallback(code, ownerId) {
     throw new Error("Falha ao salvar credenciais do Mercado Pago no banco de dados.");
   }
   
-  // Retorna o ownerId para o controller redirecionar corretamente
   return ownerId;
 }
 
 async function disconnectMercadoPago(ownerId) {
-  // Delete the record from owners_payment_accounts
   const { error } = await supabaseService
     .from('owners_payment_accounts')
     .delete()
@@ -189,96 +180,9 @@ async function disconnectMercadoPago(ownerId) {
   if (error) throw error;
 }
 
-async function getOwnerChatHistory(ownerId) {
-  try {
-    console.log('💬 Fetching owner chat history for:', ownerId);
-    
-    // Verify user is owner
-    const { data: ownerProfile, error: ownerError } = await supabaseService
-      .from('profiles')
-      .select('role')
-      .eq('id', ownerId)
-      .single();
-
-    if (ownerError || !ownerProfile || ownerProfile.role !== 'owner') {
-      throw new Error('Acesso negado. Apenas proprietários podem acessar o histórico de chat.');
-    }
-
-    // Fetch all clients
-    const { data: clients, error: clientsError } = await supabaseService
-      .from('profiles')
-      .select('id, first_name, last_name, email')
-      .in('role', CLIENT_ROLES);
-      
-    if (clientsError) {
-      console.error('❌ Error fetching clients for chat:', clientsError);
-      throw clientsError;
-    }
-
-    console.log('📝 Found clients for chat:', clients.length);
-
-    // For each client, fetch their chat messages
-    const chatHistory = await Promise.all(clients.map(async (client) => {
-      // Fetch messages between client and owner
-      const { data: messages, error: messagesError } = await supabaseService
-        .from('chat_messages')
-        .select('*')
-        .or(`and(sender_id.eq.${client.id},recipient_id.eq.${ownerId}),and(sender_id.eq.${ownerId},recipient_id.eq.${client.id})`)
-        .order('created_at', { ascending: true });
-
-      if (messagesError) {
-        console.error(`❌ Error fetching messages for client ${client.id}:`, messagesError);
-        return null;
-      }
-      
-      // Filter out clients with no messages to keep the list clean
-      if (messages.length === 0) {
-          return null;
-      }
-
-      const formattedMessages = messages.map(msg => ({
-        id: msg.id,
-        sender: msg.sender_id === ownerId ? 'owner' : 'client',
-        text: msg.content,
-        timestamp: msg.created_at
-      }));
-
-      const lastMessage = formattedMessages[formattedMessages.length - 1] || {
-        text: 'Nenhuma mensagem ainda',
-        timestamp: new Date().toISOString(),
-        sender: 'client'
-      };
-
-      return {
-        id: client.id,
-        name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || client.email,
-        lastMessage: {
-          text: lastMessage.text,
-          timestamp: lastMessage.timestamp,
-          sender: lastMessage.sender
-        },
-        unreadCount: 0, // TODO: Implement unread count logic
-        messages: formattedMessages
-      };
-    }));
-
-    // Filter out null results and sort by last message timestamp
-    const result = chatHistory
-      .filter(thread => thread !== null)
-      .sort((a, b) => new Date(b.lastMessage.timestamp).getTime() - new Date(a.lastMessage.timestamp).getTime());
-
-    console.log('✅ Chat history fetched:', result.length);
-    return result;
-  } catch (e) {
-    console.error("❌ Error fetching owner chat history:", e.message);
-    return [];
-  }
-}
-
 module.exports = {
   fetchOwnerMetrics,
   getMercadoPagoAuthUrl,
   handleMercadoPagoCallback,
   disconnectMercadoPago,
-  getOwnerChatHistory,
 };

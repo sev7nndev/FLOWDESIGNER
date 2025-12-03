@@ -32,7 +32,6 @@ router.post('/generate', authenticateToken, async (req, res) => {
 // Get support recipient endpoint
 router.get('/support-recipient', authenticateToken, async (req, res) => {
   try {
-    // Find an admin or dev user to be the support recipient
     const { supabaseService } = require('../config');
     
     const { data: supportUser, error } = await supabaseService
@@ -43,7 +42,6 @@ router.get('/support-recipient', authenticateToken, async (req, res) => {
       .single();
 
     if (error || !supportUser) {
-      // If no admin/dev found, use an owner as fallback
       const { data: ownerUser, error: ownerError } = await supabaseService
         .from('profiles')
         .select('id')

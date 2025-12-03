@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { supabaseService, mercadopago } = require('../config');
 
-// Create payment preference - AGORA É PÚBLICO
+// Create payment preference
 router.post('/create-preference', async (req, res) => {
   const { planId, returnUrl } = req.body;
 
@@ -11,7 +11,7 @@ router.post('/create-preference', async (req, res) => {
   }
 
   try {
-    // 1. Buscar o plano pelo nome (planId é o nome do plano: 'starter' ou 'pro')
+    // 1. Buscar o plano pelo nome
     const { data: plan, error: planError } = await supabaseService
       .from('plans')
       .select('*')
@@ -28,8 +28,7 @@ router.post('/create-preference', async (req, res) => {
     
     // 2. Verificar se o Mercado Pago está configurado
     if (!mercadopago.configurations.access_token || mercadopago.configurations.access_token === 'test_access_token') {
-        // Lança um erro claro se o token estiver faltando ou for o de teste
-        throw new Error("MP_ACCESS_TOKEN não configurado ou é o token de teste. Verifique o .env.local e reinicie o backend.");
+        throw new Error("MP_ACCESS_TOKEN não configurado. Verifique o .env.local.");
     }
 
     // 3. Criar a preferência de pagamento
@@ -41,15 +40,12 @@ router.post('/create-preference', async (req, res) => {
         currency_id: 'BRL',
         unit_price: parseFloat(plan.price)
       }],
-      // URLs de retorno após o pagamento
       back_urls: {
-        // Redireciona para a tela de autenticação/cadastro com o status e o plano
         success: `${process.env.FRONTEND_URL}/?status=success&plan=${planId}`,
         failure: `${process.env.FRONTEND_URL}/?status=failure&plan=${planId}`,
         pending: `${process.env.FRONTEND_URL}/?status=pending&plan=${planId}`
       },
       auto_return: 'approved',
-      // O external_reference é usado para identificar a transação no webhook
       external_reference: `plan_${plan.id}_${Date.now()}`,
       notification_url: `${process.env.BACKEND_URL}/api/payments/webhook`,
       metadata: {
@@ -60,20 +56,16 @@ router.post('/create-preference', async (req, res) => {
 
     const response = await mercadopago.preferences.create(preference);
     
-    // 4. Retorna o init_point (URL de checkout do Mercado Pago)
     res.status(200).json({
       preferenceId: response.body.id,
       initPoint: response.body.init_point
     });
   } catch (error) {
-    console.error('Payment preference error (Detailed):', error); // Log detalhado
+    console.error('Payment preference error:', error);
     
     let errorMessage = 'Erro ao criar preferência de pagamento.';
     
-    // Tenta extrair a mensagem de erro do Mercado Pago, se disponível
     if (error.message && error.message.includes('MP_ACCESS_TOKEN')) {
-        errorMessage = error.message;
-    } else if (error.message && error.message.includes('token de teste')) {
         errorMessage = error.message;
     } else if (error.cause && error.cause.length > 0 && error.cause[0].message) {
         errorMessage = `Erro MP: ${error.cause[0].message}`;
@@ -81,7 +73,6 @@ router.post('/create-preference', async (req, res) => {
         errorMessage = error.message;
     }
     
-    // Retorna um erro JSON claro para o frontend
     res.status(500).json({ error: errorMessage });
   }
 });
@@ -94,17 +85,11 @@ router.post('/webhook', async (req, res) => {
     if (paymentData.type === 'payment') {
       const paymentId = paymentData.data.id;
       
-      // Busca os detalhes do pagamento usando o SDK
       const payment = await mercadopago.payment.findById(paymentId);
       
       if (payment.body.status === 'approved') {
         const { metadata } = payment.body;
-        
-        // Neste ponto, o usuário ainda não está logado/cadastrado.
-        // A lógica de associação do plano ao usuário é feita no frontend (AppContent.tsx)
-        // após o redirecionamento para a tela de cadastro.
-        
-        console.log(`Pagamento ${paymentId} aprovado para o plano ${metadata.plan_name}. Aguardando cadastro/login do usuário.`);
+        console.log(`Pagamento ${paymentId} aprovado para o plano ${metadata.plan_name}.`);
       }
     }
     

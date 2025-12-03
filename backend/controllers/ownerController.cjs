@@ -18,7 +18,6 @@ const getOwnerMetrics = async (req, res) => {
     return res.status(200).json(metrics);
   } catch (error) {
     console.error("❌ Error in getOwnerMetrics controller:", error.message);
-    console.error("Full error:", error);
     return res.status(500).json({ 
       error: "Falha ao carregar dados do servidor.",
       details: error.message 
@@ -39,16 +38,14 @@ const getMercadoPagoAuthUrl = (req, res) => {
 
 const handleMercadoPagoCallback = async (req, res) => {
   const { code, state } = req.query;
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
   
   if (!code || !state) {
     return res.redirect(`${FRONTEND_URL}/owner-panel?mp_status=error&message=${encodeURIComponent("Missing authorization code or state.")}`);
   }
 
   try {
-    // O state é o ownerId
     await ownerService.handleMercadoPagoCallback(code, state);
-    // Redireciona de volta para o painel do owner com status de sucesso
     res.redirect(`${FRONTEND_URL}/owner-panel?mp_status=success`);
   } catch (error) {
     console.error("Error handling MP callback:", error);
@@ -67,21 +64,9 @@ const disconnectMercadoPago = async (req, res) => {
   }
 };
 
-const getChatHistory = async (req, res) => {
-  try {
-    const ownerId = req.user.id;
-    const chatHistory = await ownerService.getOwnerChatHistory(ownerId);
-    res.status(200).json(chatHistory);
-  } catch (error) {
-    console.error("Error fetching chat history:", error);
-    res.status(500).json({ error: "Failed to fetch chat history." });
-  }
-};
-
 module.exports = {
   getOwnerMetrics,
   getMercadoPagoAuthUrl,
   handleMercadoPagoCallback,
   disconnectMercadoPago,
-  getChatHistory,
 };

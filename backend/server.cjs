@@ -1,15 +1,15 @@
 const express = require('express');
 const cors = require('cors');
-const { supabaseAnon, supabaseService } = require('./config'); // Adicionado supabaseService
+const { supabaseAnon, supabaseService } = require('./config');
 const generationRoutes = require('./routes/generationRoutes');
 const ownerRoutes = require('./routes/ownerRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const publicRoutes = require('./routes/publicRoutes');
-const planRoutes = require('./routes/planRoutes.cjs');
-const historyRoutes = require('./routes/historyRoutes.cjs');
-const configRoutes = require('./routes/configRoutes.cjs');
-const devRoutes = require('./routes/devRoutes.cjs');
-const paymentRoutes = require('./routes/paymentRoutes.cjs');
+const planRoutes = require('./routes/planRoutes');
+const historyRoutes = require('./routes/historyRoutes');
+const configRoutes = require('./routes/configRoutes');
+const devRoutes = require('./routes/devRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -17,8 +17,8 @@ const PORT = process.env.PORT || 3001;
 // CORS configuration
 const corsOptions = {
   origin: [
-    'http://localhost:5173',
     'http://localhost:3000',
+    'http://localhost:5173',
     'https://your-production-domain.com'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -63,7 +63,6 @@ app.get('/api/usage/:userId', async (req, res) => {
   try {
     console.log('📊 Fetching usage for user:', userId);
     
-    // Fetch usage data including plan settings
     const { data: usageData, error: usageError } = await supabaseAnon
       .from('user_usage')
       .select(`
@@ -75,7 +74,6 @@ app.get('/api/usage/:userId', async (req, res) => {
       .single();
 
     if (usageError || !usageData || !usageData.profiles) {
-      // If no usage data found, assume free plan default
       const { data: profileData } = await supabaseAnon
         .from('profiles')
         .select('role')
@@ -83,7 +81,7 @@ app.get('/api/usage/:userId', async (req, res) => {
         .single();
         
       const role = profileData?.role || 'free';
-      const limit = role === 'free' ? 3 : 0; // Default free limit if no usage record exists
+      const limit = role === 'free' ? 3 : 0;
       
       return res.status(200).json({
         role,
@@ -101,7 +99,6 @@ app.get('/api/usage/:userId', async (req, res) => {
     let limit = (usageData.plan_settings && usageData.plan_settings.max_images_per_month) || 0;
     let isUnlimited = ['owner', 'dev', 'admin'].includes(role);
     
-    // Fallback for free plan if plan_settings is missing
     if (role === 'free' && limit === 0) {
         limit = 3;
     }
@@ -136,7 +133,6 @@ app.use('*', (req, res) => {
 app.use((error, req, res, next) => {
   console.error('❌ Unhandled error:', error);
   
-  // Se a resposta já foi enviada, não podemos fazer nada
   if (res.headersSent) {
     return next(error);
   }
