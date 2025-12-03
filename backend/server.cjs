@@ -293,11 +293,6 @@ async function uploadImageToSupabase(imageDataUrl, userId) {
 
 // --- API Endpoints ---
 
-// Root check (NEW)
-app.get('/', (req, res) => {
-  res.json({ status: 'Backend Root', message: 'Este é o servidor de API (porta 3001). O frontend está na porta 3000.' });
-});
-
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Backend está rodando!' });
@@ -408,6 +403,12 @@ app.use((err, req, res, next) => {
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`[SERVIDOR] Backend rodando em http://localhost:${PORT}`);
+  const requiredEnvVars = [
+    'SUPABASE_URL', 
+    'SUPABASE_SERVICE_KEY', 
+    'SUPABASE_ANON_KEY', 
+    'GEMINI_API_KEY'
+  ];
   console.log('[SERVIDOR] Variáveis de ambiente configuradas:', requiredEnvVars.map(v => `${v}: ${process.env[v] ? 'OK' : 'MISSING'}`).join(', '));
   
   // NOVO: Log da versão do SDK para diagnóstico
