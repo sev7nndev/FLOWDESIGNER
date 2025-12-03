@@ -239,15 +239,15 @@ async function generateImage(detailedPrompt) {
   if (!GEMINI_API_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
   }
+  
+  // Usando o modelo mais estável e comum para geração de imagens
+  const IMAGEN_MODEL = 'imagen-3.0'; // Mantendo o 3.0, mas se falhar, o problema é na chave/permissão.
+  const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGEN_MODEL}:generateImages?key=${GEMINI_API_KEY}`;
+  
   try {
-    // CORREÇÃO: Usando o endpoint mais recente para Imagen 3.
-    // O modelo 'imagen-3.0' é o mais recomendado para alta qualidade.
-    const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0:generateImages?key=${GEMINI_API_KEY}`;
-    
     const response = await axios.post(
       IMAGEN_API_URL,
       {
-        // A API REST espera o prompt diretamente no corpo
         prompt: detailedPrompt,
         config: { 
           numberOfImages: 1, 
@@ -269,7 +269,12 @@ async function generateImage(detailedPrompt) {
       throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
     }
   } catch (error) {
-    console.error('Erro ao gerar imagem com Google AI Studio:', error.response ? error.response.data : error.message);
+    // Logando a resposta de erro completa para diagnóstico
+    if (error.response) {
+        console.error('Erro detalhado da API do Google:', JSON.stringify(error.response.data, null, 2));
+    } else {
+        console.error('Erro de rede/timeout:', error.message);
+    }
     throw new Error('Falha ao gerar imagem. Verifique o modelo ou a API KEY.');
   }
 }
