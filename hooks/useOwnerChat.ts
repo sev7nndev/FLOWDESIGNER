@@ -1,17 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getSupabase } from '@/services/supabaseClient';
 import { toast } from 'sonner';
-import { ChatMessage } from '@/types'; // Importando ChatMessage
+import { ChatMessage } from '@/types';
 
-// Tipagem para uma única mensagem
 interface Message {
-  id: string; // Alterado para string para corresponder ao UUID do banco
+  id: string;
   sender: 'owner' | 'client';
   text: string;
   timestamp: string;
 }
 
-// Tipagem para um thread de chat com um cliente
 export interface ChatThread {
   id: string;
   name: string;
@@ -29,7 +27,7 @@ interface UseOwnerChatResult {
   isLoading: boolean;
   error: string | null;
   refreshHistory: () => void;
-  sendMessage: (recipientId: string, content: string) => Promise<void>; // Nova função
+  sendMessage: (recipientId: string, content: string) => Promise<void>;
 }
 
 export const useOwnerChat = (): UseOwnerChatResult => {
@@ -117,7 +115,7 @@ export const useOwnerChat = (): UseOwnerChatResult => {
               timestamp: newMessage.timestamp,
               sender: 'owner'
             }
-          } as ChatThread; // Explicitamente tipado
+          };
         }
         return thread;
       }));
@@ -144,7 +142,6 @@ export const useOwnerChat = (): UseOwnerChatResult => {
             event: 'INSERT', 
             schema: 'public', 
             table: 'chat_messages',
-            // Filtra mensagens enviadas por clientes (is_admin_message = false)
             filter: `is_admin_message.eq.false` 
         }, (payload: any) => {
             const newMessage = payload.new as ChatMessage;
@@ -156,7 +153,7 @@ export const useOwnerChat = (): UseOwnerChatResult => {
                     if (thread.id === senderId) {
                         const newMsg: Message = {
                             id: newMessage.id,
-                            sender: 'client', // Explicitamente tipado como 'client'
+                            sender: 'client',
                             text: newMessage.content,
                             timestamp: newMessage.created_at
                         };
@@ -168,15 +165,11 @@ export const useOwnerChat = (): UseOwnerChatResult => {
                                 timestamp: newMsg.timestamp,
                                 sender: 'client'
                             },
-                            unreadCount: thread.unreadCount + 1 // Incrementa não lidas
-                        } as ChatThread; // Explicitamente tipado
+                            unreadCount: thread.unreadCount + 1
+                        };
                     }
                     return thread;
                 });
-                
-                // Se a mensagem for de um cliente que não está na lista (novo chat)
-                // Isso é complexo de resolver sem buscar o perfil do cliente aqui.
-                // Por enquanto, confiamos que o cliente já está na lista de 'clients' do owner panel.
                 
                 return updatedHistory;
             });
@@ -189,7 +182,6 @@ export const useOwnerChat = (): UseOwnerChatResult => {
         supabase.removeChannel(channel);
     };
   }, []);
-
 
   return {
     chatHistory,

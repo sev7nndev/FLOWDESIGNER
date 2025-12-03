@@ -64,9 +64,91 @@ const disconnectMercadoPago = async (req, res) => {
   }
 };
 
+const getChatHistory = async (req, res) => {
+  try {
+    const ownerId = req.user.id;
+    const { supabaseService } = require('../config');
+    
+    // Buscar todas as mensagens onde o owner está envolvido
+    const { data: messages, error } = await supabaseService
+      .from('chat_messages')
+      .select(`
+        id,
+        created_at,
+        sender_id,
+        recipient_id,
+        content,
+        is_admin_message,
+        sender_profile:sender_id(first_name, last_name, email),
+        recipient_profile:recipient_id(first_name, last_name, email)
+      `)
+      .or(`sender_id.eq.${ownerId},recipient_id.eq.${ownerId}`)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching chat history:', error);
+      return res.status(500).json({ error: 'Failed to fetch chat history.' });
+    }
+
+    // Agrupar mensagens por thread (por cliente)
+    const threads = {};
+    const clients = new Set();
+    
+    messages.forEach(msg => {
+      const clientId = msg.sender_id === ownerId ? msg.recipient_id : msg.sender_id;
+      const clientProfile = msg.sender_id === ownerId ? msg.recipient_profile : msg.sender_profile;
+      
+      if (!clients.has(clientId)) {
+        clients.add(clientId);
+        threads[clientId] = {
+          id: clientId,
+          name: clientProfile ? `${clientProfile.first_name || ''} ${clientProfile.last_name || ''}`.trim() || 'Cliente' : 'Cliente',
+          lastMessage: {
+            text: msg.content,
+            timestamp: msg.created_at,
+            sender: msg.sender_id === ownerId ? 'owner' : 'client'
+          },
+          unreadCount: 0,
+          messages: []
+        };
+      }
+      
+      const thread = threads[clientId];
+      thread.messages.push({
+        id: msg.id,
+        sender: msg.sender_id === ownerId ? 'owner' : 'client',
+        text: msg.content,
+        timestamp: msg.created_at
+      });
+      
+      // Atualizar última mensagem
+      if (new Date(msg.created_at) > new Date(thread.lastMessage.timestamp)) {
+        thread.lastMessage = {
+          text: msg.content,
+          timestamp: msg.created_at,
+          sender: msg.sender_id === ownerId ? 'owner' : 'client'
+        };
+      }
+      
+      // Contar não lidas (mensagens de cliente que não são do owner)
+      if (msg.sender_id !== ownerId && !msg.is_admin_message) {
+        thread.unreadCount++;
+      }
+    });
+
+    const chatHistory = Object.values(threads);
+    
+    res.status(200).json(chatHistory);
+  } catch (error) {
+    console.error('Error in getChatHistory:', error);
+    res.status(500).json({ error: 'Failed to fetch chat history.' });
+  }
+};
+
 module.exports = {
   getOwnerMetrics,
   getMercadoPagoAuthUrl,
   handleMercadoPagoCallback,
   disconnectMercadoPago,
+  getChatHistory,
 };

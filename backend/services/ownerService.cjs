@@ -2,7 +2,6 @@ const { supabaseService } = require('../config');
 const fetch = require('node-fetch'); 
 const mercadopago = require('mercadopago');
 
-// Updated CLIENT_ROLES to match actual database roles
 const CLIENT_ROLES = ['free', 'starter', 'pro'];
 
 async function fetchOwnerMetrics(ownerId) {
