@@ -39,6 +39,7 @@ async function generateImage(detailedPrompt) {
       generationConfig: {
         responseMimeType: "image/png"
       }
+      // REMOVED: imageConfig is not supported by this endpoint.
     };
 
     const response = await axios.post(GEMINI_IMAGE_URL, payload, {
