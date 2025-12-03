@@ -96,6 +96,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   const starterPlan = plans.find(p => p.id === 'starter');
   const proPlan = plans.find(p => p.id === 'pro');
 
+  // NEW: Função de rolagem para o CTA principal
+  const handleScrollToPlans = () => {
+    const plansSection = document.getElementById('precos');
+    if (plansSection) {
+      plansSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
 
   // Componente de Card de Recurso Reutilizável
   const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string, color: 'primary' | 'secondary' | 'accent' }> = ({ icon, title, description, color }) => {
@@ -159,7 +167,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <button onClick={onLogin} className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
               Entrar
             </button>
-            <Button onClick={onShowPlans} className="hidden md:block text-sm font-medium px-5 py-2 rounded-full">
+            <Button onClick={handleScrollToPlans} className="hidden md:block text-sm font-medium px-5 py-2 rounded-full">
               Criar Conta
             </Button>
           </div>
@@ -167,7 +175,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       </nav>
 
       <main>
-        <HeroSection onGetStarted={onShowPlans} />
+        <HeroSection onGetStarted={handleScrollToPlans} />
 
         {/* Marquee Gallery (Infinite Scroll) */}
         <section className="py-10 border-y border-white/5 bg-black/30 overflow-hidden relative">
@@ -357,7 +365,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
                     Comece a gerar artes de alta conversão em segundos com a inteligência artificial do Flow Designer.
                 </p>
-                <Button onClick={onShowPlans} className="h-14 px-10 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20">
+                <Button onClick={handleScrollToPlans} className="h-14 px-10 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20">
                     Quero Minhas Artes Agora <ChevronRight className="ml-2" />
                 </Button>
             </div>

@@ -154,7 +154,7 @@ export const App: React.FC = () => {
       <>
         <Toaster position="top-right" richColors />
         <LandingPage 
-          onGetStarted={handleShowPlans} // CTA principal leva para a página de planos
+          onGetStarted={() => {}} // LandingPage agora gerencia a rolagem internamente
           onLogin={() => setView('AUTH')} 
           onSelectPlan={handleSelectPlan} // Seleção de plano na seção de preços leva para AUTH
           onShowPlans={handleShowPlans} // Botão Criar Conta na navbar leva para a página de planos
