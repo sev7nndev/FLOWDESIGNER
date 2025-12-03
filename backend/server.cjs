@@ -110,7 +110,7 @@ const express = require('express');
           .eq('id', user.id)
           .single();
 
-        if (error || !profile || !['admin', 'dev'].includes(profile.role)) {
+        if (error || !profile || !['admin', 'dev', 'owner'].includes(profile.role)) {
           return res.status(403).json({ error: 'Acesso negado. Apenas administradores e desenvolvedores podem realizar esta ação.' });
         }
         next();
@@ -438,7 +438,8 @@ Diretrizes de design:
           .remove([imageUrl]);
 
         if (storageError) {
-          console.error(`Error deleting image from storage (${imageUrl}):`, storageError);
+          // Log the error but don't throw, as the DB record might still need deletion
+          console.warn(`Warning: Failed to delete image from storage (${imageUrl}): ${storageError.message}`);
         }
 
         // 2. Delete from Supabase Database
@@ -547,7 +548,8 @@ Diretrizes de design:
           .remove([imagePath]);
 
         if (storageError) {
-          console.error(`Error deleting landing image from storage (${imagePath}):`, storageError);
+          // Log the error but continue to delete the DB record, as the storage might be inconsistent
+          console.warn(`Warning: Failed to delete image from storage (${imagePath}): ${storageError.message}`);
         }
 
         // 2. Delete from Supabase Database
@@ -561,8 +563,10 @@ Diretrizes de design:
           throw new Error(dbError.message);
         }
 
+        // SUCCESS: Return JSON response
         res.json({ message: 'Imagem da landing page deletada com sucesso.' });
       } catch (error) {
+        // ERROR: Pass to global error handler which returns JSON
         next(error);
       }
     });
