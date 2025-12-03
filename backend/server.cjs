@@ -928,6 +928,94 @@ app.post('/api/subscribe', authenticateToken, async (req, res, next) => {
     }
 });
 
+// NEW: Mercado Pago Webhook/IPN Endpoint
+app.post('/api/mp-webhook', async (req, res) => {
+    const { type, data } = req.body;
+    
+    // Mercado Pago sends notifications with 'type' and 'data.id' (resource ID)
+    if (type === 'payment' && data && data.id) {
+        const paymentId = data.id;
+        console.log(`[WEBHOOK] Received payment notification for ID: ${paymentId}`);
+        
+        try {
+            // 1. Get Owner's Access Token (required to query MP API)
+            const { data: ownerAccount, error: mpError } = await supabaseService
+                .from('owners_payment_accounts')
+                .select('access_token')
+                .eq('owner_id', MP_OWNER_ID)
+                .single();
+                
+            if (mpError || !ownerAccount) {
+                console.error("[WEBHOOK] Owner MP configuration missing.");
+                return res.status(500).send('Owner configuration missing');
+            }
+            
+            // 2. Fetch Payment Details from Mercado Pago
+            const mpAccessToken = ownerAccount.access_token;
+            const paymentResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+                headers: {
+                    'Authorization': `Bearer ${mpAccessToken}`
+                }
+            });
+            
+            const payment = paymentResponse.data;
+            const status = payment.status; // e.g., 'approved', 'pending', 'rejected'
+            const userId = payment.external_reference; // This is the user ID we passed
+            const planId = payment.items[0]?.title?.includes('Pro') ? 'pro' : 
+                           payment.items[0]?.title?.includes('Starter') ? 'starter' : null;
+                           
+            console.log(`[WEBHOOK] Payment Status: ${status}, User ID: ${userId}, Plan ID: ${planId}`);
+
+            if (status === 'approved' && userId && planId) {
+                // 3. Update User Profile and Usage in Supabase
+                
+                // 3a. Update Profile Role
+                const { error: profileError } = await supabaseService
+                    .from('profiles')
+                    .update({ role: planId })
+                    .eq('id', userId);
+                    
+                if (profileError) {
+                    console.error(`[WEBHOOK] Failed to update profile role for ${userId}:`, profileError);
+                    return res.status(500).send('Failed to update profile');
+                }
+                
+                // 3b. Update User Usage (Set new plan, reset usage, start new cycle)
+                const { error: usageError } = await supabaseService
+                    .from('user_usage')
+                    .update({ 
+                        plan_id: planId,
+                        current_usage: 0,
+                        cycle_start_date: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('user_id', userId);
+                    
+                if (usageError) {
+                    console.error(`[WEBHOOK] Failed to update user usage for ${userId}:`, usageError);
+                    return res.status(500).send('Failed to update usage');
+                }
+                
+                console.log(`[WEBHOOK] SUCCESS: User ${userId} upgraded to plan ${planId}.`);
+            } else if (status === 'rejected') {
+                console.log(`[WEBHOOK] Payment rejected for user ${userId}. No action taken.`);
+                // Optionally, you could downgrade the user if they were previously on a paid plan
+            }
+            
+            // Mercado Pago expects a 200 OK response to confirm receipt
+            res.status(200).send('OK');
+            
+        } catch (error) {
+            console.error("[WEBHOOK] Error processing payment notification:", error.response ? error.response.data : error.message);
+            // Return 500 so Mercado Pago retries the notification
+            res.status(500).send('Internal Server Error');
+        }
+    } else {
+        // Ignore other types of notifications (e.g., merchant_order, subscription)
+        res.status(200).send('Notification type ignored');
+    }
+});
+
 
 // Global Error Handler
 app.use((err, req, res, next) => {
