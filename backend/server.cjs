@@ -187,38 +187,35 @@ Informações de contato e negócio:
 - Endereço: ${address}`;
 };
 
-// Geração de imagem com Google AI Studio (Imagen) - Corrigido e Verificado
+// Geração de imagem com Google AI Studio (Imagen 3) - Corrigido e Verificado
 async function generateImage(detailedPrompt) {
   if (!process.env.GEMINI_API_KEY) {
-    throw new Error('A chave GEMINI_API_KEY está ausente no .env.local.');
+    throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
   }
 
   try {
-    // Endpoint correto para geração de imagem (singular)
-    const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImage?key=${process.env.GEMINI_API_KEY}`;
-
+    // Endpoint atualizado do Imagen 3
+    const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0:generateImage?key=${process.env.GEMINI_API_KEY}`;
+    
+    // Payload compatível com a API atual
     const payload = {
       prompt: detailedPrompt,
-      size: "1024x1024", // Tamanho padrão para flyers verticais
+      size: "1024x1024",      
       mimeType: "image/png"
     };
 
     const response = await axios.post(IMAGEN_API_URL, payload, {
       headers: { 'Content-Type': 'application/json' },
-      timeout: 60000
+      timeout: 60000 // 60 segundos
     });
 
-    // Acessando o base64 via generatedImages[0].image.imageBytes
-    if (response.data?.generatedImages?.length > 0) {
-      const base64Image = response.data.generatedImages[0].image.imageBytes;
-      return `data:image/png;base64,${base64Image}`;
-    } else {
-      throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
-    }
+    // A API retorna base64 no campo generatedImage.imageBytes
+    const base64Image = response.data?.generatedImage?.imageBytes;
+    if (!base64Image) throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
 
+    return `data:image/png;base64,${base64Image}`;
   } catch (error) {
     console.error('Erro ao gerar imagem com Google AI Studio:', error.response?.data || error.message);
-    // Se o erro for o JSON inválido, ele deve ser capturado aqui.
     throw new Error('Falha ao gerar imagem. Verifique a chave GEMINI_API_KEY e o prompt.');
   }
 }
