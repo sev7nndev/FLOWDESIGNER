@@ -61,8 +61,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   const [plans, setPlans] = useState<EditablePlan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   
-  useEffect(() => {
-    const fetchPlans = async () => {
+  const fetchPlans = async () => {
       try {
         const fetchedPlans = await api.getPlanSettings();
         setPlans(fetchedPlans.sort((a, b) => a.price - b.price));
@@ -72,6 +71,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
         setIsLoadingPlans(false);
       }
     };
+    
+  useEffect(() => {
     fetchPlans();
   }, []);
   
