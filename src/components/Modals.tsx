@@ -115,7 +115,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Administrador', color: 'bg-red-600' },
     dev: { name: 'Desenvolvedor', color: 'bg-cyan-600' },
-    owner: { name: 'Dono', color: 'bg-purple-800' }, // ADDED owner
+    owner: { name: 'Dono', color: 'bg-purple-800' },
     client: { name: 'Cliente', color: 'bg-blue-600' },
     free: { name: 'Grátis', color: 'bg-gray-500' },
     starter: { name: 'Starter', color: 'bg-yellow-600' }, 
@@ -188,7 +188,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
             )}
 
             <Button type="submit" isLoading={isLoading} className="w-full h-12 rounded-xl" icon={!isLoading ? <Save size={18} /> : null}>
-                Salvar Alterações
+              Salvar Alterações
             </Button>
         </form>
       </div>
@@ -200,10 +200,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
 interface UpgradeModalProps {
     onClose: () => void;
     quotaResponse: QuotaCheckResponse;
-    refreshUsage: () => void;
 }
 
-export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaResponse, refreshUsage }) => {
+export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaResponse }) => {
     // quotaResponse now includes 'plans' array
     const { usage, plan, plans } = quotaResponse; 
     const [isSubscribing, setIsSubscribing] = useState(false);

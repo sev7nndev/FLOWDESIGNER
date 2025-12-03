@@ -12,7 +12,6 @@ import { useProfile } from './hooks/useProfile';
 import { GenerationForm } from './src/components/GenerationForm';
 import { AppHeader } from './src/components/AppHeader'; 
 import { useLandingImages } from './hooks/useLandingImages'; 
-import { DevPanelPage } from './src/pages/DevPanelPage'; 
 import { PlansPage } from './src/pages/PlansPage'; 
 import { useUsage } from './hooks/useUsage'; 
 import { Toaster } from 'sonner'; 

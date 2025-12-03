@@ -13,10 +13,9 @@ interface CheckoutPageProps {
     planId: string;
     plans: EditablePlan[];
     onBack: () => void;
-    onSuccess: () => void;
 }
 
-export const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, planId, plans, onBack, onSuccess }) => {
+export const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, planId, plans, onBack }) => {
     const selectedPlan = useMemo(() => plans.find(p => p.id === planId), [planId, plans]);
     const [isProcessing, setIsProcessing] = React.useState(false);
 
@@ -39,10 +38,10 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, planId, plans,
             
             toast.info("Redirecionando para o pagamento seguro...");
             
-            // 2. Redirect user to the payment gateway (Mercado Pago)
+            // 2. Redirect user to payment gateway (Mercado Pago)
             window.location.href = paymentUrl;
             
-            // Note: onSuccess is handled by the backend webhook after payment approval.
+            // Note: onSuccess is handled by backend webhook after payment approval.
             // We don't call onSuccess here, as the user is leaving the app.
             
         } catch (e: any) {

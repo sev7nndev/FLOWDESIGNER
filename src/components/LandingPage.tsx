@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
-import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2, ArrowLeft } from 'lucide-react';
+import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2 } from 'lucide-react';
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
@@ -10,10 +10,10 @@ import { HeroSection } from './Hero';
 import { api } from '@/services/api';
 
 interface LandingPageProps {
-  onGetStarted: () => void; // Agora leva para a página de planos
+  onGetStarted: () => void;
   onLogin: () => void;
-  onSelectPlan: (planId: string) => void; // Seleção de plano -> AUTH/CHECKOUT
-  onShowPlans: () => void; // Handler for generic start/show plans -> PLANS view
+  onSelectPlan: (planId: string) => void;
+  onShowPlans: () => void;
   landingImages: LandingImage[];
   isLandingImagesLoading: boolean;
 }
@@ -96,7 +96,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   const starterPlan = plans.find(p => p.id === 'starter');
   const proPlan = plans.find(p => p.id === 'pro');
 
-  // Revert to original behavior: onGetStarted now calls the prop function
+  // Revert to original behavior: onGetStarted now calls prop function
   const handleGetStarted = onGetStarted;
 
 

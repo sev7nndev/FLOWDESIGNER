@@ -1,7 +1,6 @@
 import React from 'react';
 import { LogOut, Settings, Sparkles, User as UserIcon, Code, Zap, AlertTriangle } from 'lucide-react';
 import { User, UserRole, QuotaStatus } from '@/types';
-import { Button } from './Button';
 
 interface AppHeaderProps {
   user: User | null;
@@ -9,17 +8,17 @@ interface AppHeaderProps {
   onLogout: () => void;
   onShowSettings: () => void;
   onShowDevPanel: () => void; 
-  onShowPlans: () => void; // New prop
-  quotaStatus: QuotaStatus; // New prop
-  currentUsage: number; // New prop
-  maxImages: number; // New prop
+  onShowPlans: () => void;
+  quotaStatus: QuotaStatus;
+  currentUsage: number;
+  maxImages: number;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel, onShowPlans, quotaStatus, currentUsage, maxImages }) => {
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Admin', color: 'bg-red-600' },
     dev: { name: 'Dev', color: 'bg-cyan-600' },
-    owner: { name: 'Owner', color: 'bg-purple-800' }, // ADDED owner
+    owner: { name: 'Owner', color: 'bg-purple-800' },
     client: { name: 'Client', color: 'bg-blue-600' },
     free: { name: 'Grátis', color: 'bg-gray-500' },
     starter: { name: 'Starter', color: 'bg-yellow-600' },
