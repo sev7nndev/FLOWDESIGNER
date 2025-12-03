@@ -187,36 +187,44 @@ Informações de contato e negócio:
 - Endereço: ${address}`;
 };
 
-// Geração de imagem com Google AI Studio (Imagen 3) - Corrigido e Verificado
+// Geração de imagem com Gemini 2.5 Image
 async function generateImage(detailedPrompt) {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
   }
 
   try {
-    // Endpoint CORRETO do Imagen 3
-    const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0:generateImage?key=${process.env.GEMINI_API_KEY}`;
-    
-    // Payload compatível com a API atual
+    // Endpoint correto para Gemini 2.5 Image
+    const GEMINI_IMAGE_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-image:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
     const payload = {
-      prompt: detailedPrompt,
-      size: "1024x1024",      
-      mimeType: "image/png"
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: detailedPrompt }
+          ]
+        }
+      ],
+      generationConfig: {
+        responseMimeType: "image/png",
+        size: "1024x1024" // Usando 1024x1024 como padrão
+      }
     };
 
-    const response = await axios.post(IMAGEN_API_URL, payload, {
+    const response = await axios.post(GEMINI_IMAGE_URL, payload, {
       headers: { 'Content-Type': 'application/json' },
-      timeout: 60000 // 60 segundos
+      timeout: 60000
     });
 
-    // A API retorna base64 no campo generatedImage.imageBytes
-    const base64Image = response.data?.generatedImage?.imageBytes;
-    if (!base64Image) throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
+    // A resposta vem em base64 dentro de candidates[0].content[0].inlineData.data
+    const base64Image = response.data?.candidates?.[0]?.content?.[0]?.inlineData?.data;
+    if (!base64Image) throw new Error('Nenhuma imagem gerada pelo Gemini.');
 
     return `data:image/png;base64,${base64Image}`;
   } catch (error) {
-    console.error('Erro ao gerar imagem com Google AI Studio:', error.response?.data || error.message);
-    throw new Error('Falha ao gerar imagem. Verifique a chave GEMINI_API_KEY e o prompt.');
+    console.error('Erro ao gerar imagem com Gemini:', error.response?.data || error.message);
+    throw new Error('Falha ao gerar imagem. Verifique a GEMINI_API_KEY e se ela tem acesso a imagens.');
   }
 }
 
