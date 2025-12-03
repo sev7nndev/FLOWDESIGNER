@@ -7,8 +7,7 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const sanitizeHtml = require('sanitize-html');
 const { v4: uuidv4 } = require('uuid');
-// Garantindo que o .env.local seja carregado corretamente
-require('dotenv').config({ path: '.env.local' });
+// Removido o require('dotenv').config() para confiar nas variáveis injetadas pelo ambiente Dyad/Vite.
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -24,9 +23,9 @@ const requiredEnvVars = [
 const missingEnvVars = requiredEnvVars.filter(v => !process.env[v]);
 
 if (missingEnvVars.length > 0) {
-  console.warn(`[AVISO] Variáveis de ambiente secretas ausentes: ${missingEnvVars.join(', ')}`);
-  console.warn('O backend iniciará, mas algumas funcionalidades (como geração de imagem) falharão.');
-  console.warn('Por favor, configure o arquivo .env.local com todas as chaves para funcionalidade completa.');
+  console.error(`[ERRO CRÍTICO] Variáveis de ambiente secretas ausentes: ${missingEnvVars.join(', ')}`);
+  console.error('O backend não pode iniciar sem estas chaves. Por favor, configure o arquivo .env.local ou o ambiente Dyad.');
+  // Se as chaves críticas estiverem faltando, o servidor deve falhar ou usar valores dummy para iniciar, mas com aviso.
 }
 
 // Variáveis de ambiente
@@ -37,19 +36,19 @@ const {
   GEMINI_API_KEY
 } = process.env;
 
-// Clientes Supabase
-// Se SUPABASE_URL ou SUPABASE_SERVICE_KEY estiverem faltando, a criação do cliente pode falhar,
-// mas o servidor ainda deve iniciar.
-const supabaseService = createClient(SUPABASE_URL || 'http://dummy.url', SUPABASE_SERVICE_KEY || 'dummy_key', {
+// Clientes Supabase (Usando valores dummy se as chaves estiverem faltando para evitar crash imediato, mas as funções falharão)
+const dummyUrl = 'http://dummy.url';
+const dummyKey = 'dummy_key';
+
+const supabaseService = createClient(SUPABASE_URL || dummyUrl, SUPABASE_SERVICE_KEY || dummyKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
-const supabaseAnon = createClient(SUPABASE_URL || 'http://dummy.url', SUPABASE_ANON_KEY || 'dummy_key', {
+const supabaseAnon = createClient(SUPABASE_URL || dummyUrl, SUPABASE_ANON_KEY || dummyKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
 // Cliente Gemini AI
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || 'dummy_key');
-// Não inicializamos o modelo aqui, mas sim na função generateDetailedPrompt
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || dummyKey);
 
 // Middleware
 app.use(cors({
@@ -90,9 +89,32 @@ const authenticateToken = async (req, res, next) => {
 };
 
 const checkImageQuota = async (userId) => {
-  if (!process.env.SUPABASE_SERVICE_KEY) {
-    throw new Error('Configuração do servidor incompleta: A chave SUPABASE_SERVICE_KEY está ausente no .env.local do backend.');
+  if (!SUPABASE_SERVICE_KEY) {
+    throw new Error('Configuração do servidor incompleta: A chave SUPABASE_SERVICE_KEY está ausente.');
   }
+  
+  // 1. Fetch all plans (needed for QuotaCheckResponse structure)
+  const { data: allPlansDetails, error: plansDetailsError } = await supabaseService
+    .from('plan_details')
+    .select('*');
+    
+  const { data: allPlansSettings, error: plansSettingsError } = await supabaseService
+    .from('plan_settings')
+    .select('*');
+    
+  if (plansDetailsError || plansSettingsError) {
+      console.error("[QUOTA] Falha ao carregar detalhes/configurações de planos:", plansDetailsError || plansSettingsError);
+      // Continue, mas com planos vazios
+  }
+  
+  const plansMap = new Map(allPlansSettings?.map(s => [s.id, s]));
+  const combinedPlans = allPlansDetails?.map(detail => ({
+      ...detail,
+      price: plansMap.get(detail.id)?.price || 0,
+      max_images_per_month: plansMap.get(detail.id)?.max_images_per_month || 0,
+  })) || [];
+
+
   try {
     console.log(`[QUOTA] Verificando quota para usuário ${userId}`);
     
@@ -123,13 +145,9 @@ const checkImageQuota = async (userId) => {
     const { plan_id: planId, current_usage: currentUsage, cycle_start_date: cycleStartDate } = usageData;
     console.log(`[QUOTA] Usuário ${userId} plano '${planId}' com ${currentUsage} imagens usadas.`);
 
-    const { data: planSettings, error: planError } = await supabaseService
-      .from('plan_settings')
-      .select('id, price, max_images_per_month')
-      .eq('id', planId)
-      .single();
+    const planSettings = combinedPlans.find(p => p.id === planId);
 
-    if (planError || !planSettings) {
+    if (!planSettings) {
       throw new Error(`Plano '${planId}' não configurado.`);
     }
 
@@ -155,13 +173,19 @@ const checkImageQuota = async (userId) => {
     const usagePercentage = maxImages > 0 ? (effectiveUsage / maxImages) * 100 : 0;
     console.log(`[QUOTA] Usuário ${userId} usou ${effectiveUsage}/${maxImages} (${usagePercentage.toFixed(1)}%).`);
 
+    const baseResponse = { 
+        usage: { ...usageData, current_usage: effectiveUsage }, 
+        plan: planSettings, // PlanSetting structure
+        plans: combinedPlans // EditablePlan[] structure
+    };
+
     if (effectiveUsage >= maxImages && maxImages > 0) {
-      return { status: 'BLOCKED', usage: { ...usageData, current_usage: effectiveUsage }, plan: planSettings, message: `Limite de ${maxImages} imagens atingido.` };
+      return { status: 'BLOCKED', message: `Limite de ${maxImages} imagens atingido.`, ...baseResponse };
     }
     if (usagePercentage >= 80 && maxImages > 0) {
-      return { status: 'NEAR_LIMIT', usage: { ...usageData, current_usage: effectiveUsage }, plan: planSettings, message: `Você está perto do limite (${effectiveUsage}/${maxImages}).` };
+      return { status: 'NEAR_LIMIT', message: `Você está perto do limite (${effectiveUsage}/${maxImages}).`, ...baseResponse };
     }
-    return { status: 'ALLOWED', usage: { ...usageData, current_usage: effectiveUsage }, plan: planSettings };
+    return { status: 'ALLOWED', ...baseResponse };
   } catch (error) {
     console.error(`[QUOTA] ERRO CRÍTICO:`, error);
     throw new Error(error.message || 'Erro ao verificar quota.');
@@ -170,7 +194,7 @@ const checkImageQuota = async (userId) => {
 
 // Geração de prompt detalhado
 async function generateDetailedPrompt(promptInfo) {
-  if (!process.env.GEMINI_API_KEY) {
+  if (!GEMINI_API_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
   }
   const { companyName, phone, addressStreet, addressNumber, addressNeighborhood, addressCity, details } = promptInfo;
@@ -207,7 +231,7 @@ Diretrizes de design:
 
 // Geração de imagem com Google AI Studio (Imagen)
 async function generateImage(detailedPrompt) {
-  if (!process.env.GEMINI_API_KEY) {
+  if (!GEMINI_API_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
   }
   try {
@@ -247,7 +271,7 @@ async function generateImage(detailedPrompt) {
 
 // Upload para Supabase Storage
 async function uploadImageToSupabase(imageDataUrl, userId) {
-  if (!process.env.SUPABASE_SERVICE_KEY) {
+  if (!SUPABASE_SERVICE_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave SUPABASE_SERVICE_KEY está ausente.');
   }
   try {
@@ -286,8 +310,8 @@ app.get('/api/check-quota', authenticateToken, async (req, res, next) => {
 });
 
 app.post('/api/generate', authenticateToken, generationLimiter, async (req, res, next) => {
-  if (!process.env.GEMINI_API_KEY || !process.env.SUPABASE_SERVICE_KEY) {
-    return next(new Error("Configuração do servidor incompleta. Verifique as chaves GEMINI_API_KEY e SUPABASE_SERVICE_KEY no arquivo .env.local do backend."));
+  if (!GEMINI_API_KEY || !SUPABASE_SERVICE_KEY) {
+    return next(new Error("Configuração do servidor incompleta. Verifique as chaves GEMINI_API_KEY e SUPABASE_SERVICE_KEY."));
   }
   
   const { promptInfo } = req.body;
@@ -318,6 +342,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res,
     // Verificar quota
     const quotaResponse = await checkImageQuota(user.id);
     if (quotaResponse.status === 'BLOCKED') {
+        // Retorna a resposta completa de quota para o frontend
         return res.status(403).json({ error: quotaResponse.message, quotaStatus: 'BLOCKED', ...quotaResponse });
     }
     
@@ -364,7 +389,13 @@ app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Erro interno do servidor.';
   
+  // Se o erro for uma falha de configuração crítica, use 503 (Service Unavailable)
+  if (message.includes('Configuração do servidor incompleta')) {
+      return res.status(503).json({ error: message });
+  }
+  
   if (err.quotaStatus) {
+      // Se for um erro de quota, retorna 403 (Forbidden) com a estrutura completa
       return res.status(403).json({ error: message, quotaStatus: err.quotaStatus, ...err });
   }
   
