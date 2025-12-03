@@ -243,29 +243,29 @@ async function generateImage(detailedPrompt) {
   console.log(`[GENERATE] Iniciando geração de imagem com o prompt: ${detailedPrompt.substring(0, 100)}...`);
   
   try {
-    // CORREÇÃO: Obter o modelo de imagem diretamente do SDK
-    const imageModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
-    
-    // CORREÇÃO: Usar 'aspectRatio' em vez de 'imageAspectRatio'
-    const result = await imageModel.generateContent({
-      contents: [{ parts: [{ text: detailedPrompt }] }],
-      generationConfig: {
-        responseMimeType: "image/png",
-        responseModalities: ["Image"],
-        aspectRatio: "3:4" // CORRIGIDO
+    // CORREÇÃO: Usar genAI.generateImages, que é o método correto para o modelo Imagen.
+    const result = await genAI.generateImages({
+      model: "imagen-3.0-generate-001",
+      prompt: detailedPrompt,
+      config: {
+        numberOfImages: 1,
+        aspectRatio: "3:4", // Este parâmetro é aceito aqui
       }
     });
 
-    if (result.response.candidates && result.response.candidates.length > 0 && result.response.candidates[0].content && result.response.candidates[0].content.parts && result.response.candidates[0].content.parts.length > 0) {
-      const base64Image = result.response.candidates[0].content.parts[0].inlineData.data;
-      return `data:image/png;base64,${base64Image}`;
+    if (result.generatedImages && result.generatedImages.length > 0) {
+      const image = result.generatedImages[0].image;
+      const base64Image = image.imageBytes;
+      const mimeType = image.mimeType || 'image/png';
+      
+      // Retorna no formato Data URL (Base64)
+      return `data:${mimeType};base64,${base64Image}`;
     } else {
       throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
     }
   } catch (error) {
     console.error(`[GENERATE] ERRO DURANTE A GERAÇÃO DE IMAGEM:`, error);
     
-    // O SDK do Google pode lançar um erro com mais detalhes
     if (error.message) {
         throw new Error(`Erro da API de Imagem: ${error.message}`);
     }
