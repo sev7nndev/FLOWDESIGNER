@@ -36,10 +36,6 @@ const {
   GEMINI_API_KEY
 } = process.env;
 
-console.log('[INIT] Inicializando servidor...');
-console.log('[INIT] SUPABASE_URL:', SUPABASE_URL ? 'OK' : 'MISSING');
-console.log('[INIT] GEMINI_API_KEY:', GEMINI_API_KEY ? 'OK' : 'MISSING');
-
 // Clientes Supabase
 const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -80,14 +76,11 @@ const authenticateToken = async (req, res, next) => {
   try {
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
     if (error || !user) {
-      console.log('[AUTH] Erro na autenticação:', error?.message || 'Usuário não encontrado');
       return res.status(403).json({ error: 'Token inválido ou expirado.' });
     }
     req.user = { id: user.id, email: user.email, token }; 
-    console.log('[AUTH] Usuário autenticado:', user.id);
     next();
   } catch (e) {
-    console.log('[AUTH] Erro ao verificar token:', e.message);
     return res.status(500).json({ error: 'Erro ao autenticar token.' });
   }
 };
@@ -96,19 +89,6 @@ const checkImageQuota = async (userId) => {
   try {
     console.log(`[QUOTA] Verificando quota para usuário ${userId}`);
     
-    // Primeiro, verificar se o usuário existe na tabela profiles
-    let { data: profile, error: profileError } = await supabaseService
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
-
-    if (profileError) {
-      console.log('[QUOTA] Perfil não encontrado, usando plano free padrão');
-      profile = { role: 'free' };
-    }
-
-    // Agora verificar o usage
     let { data: usageData, error: usageError } = await supabaseService
       .from('user_usage')
       .select('user_id, plan_id, current_usage, cycle_start_date')
@@ -120,22 +100,15 @@ const checkImageQuota = async (userId) => {
         console.log(`[QUOTA] Criando registro padrão 'free' para ${userId}`);
         const { data: newUsageData, error: insertError } = await supabaseService
           .from('user_usage')
-          .insert({ 
-            user_id: userId, 
-            plan_id: profile.role || 'free', 
-            current_usage: 0, 
-            cycle_start_date: new Date().toISOString() 
-          })
+          .insert({ user_id: userId, plan_id: 'free', current_usage: 0, cycle_start_date: new Date().toISOString() })
           .select()
           .single();
 
         if (insertError) {
-          console.error('[QUOTA] Erro ao criar registro de uso:', insertError);
           throw new Error('Falha ao inicializar plano de uso.');
         }
         usageData = newUsageData;
       } else {
-        console.error('[QUOTA] Erro ao verificar uso:', usageError);
         throw new Error('Falha ao verificar plano.');
       }
     }
@@ -143,7 +116,6 @@ const checkImageQuota = async (userId) => {
     const { plan_id: planId, current_usage: currentUsage, cycle_start_date: cycleStartDate } = usageData;
     console.log(`[QUOTA] Usuário ${userId} plano '${planId}' com ${currentUsage} imagens usadas.`);
 
-    // Buscar configurações do plano
     const { data: planSettings, error: planError } = await supabaseService
       .from('plan_settings')
       .select('id, price, max_images_per_month')
@@ -151,36 +123,7 @@ const checkImageQuota = async (userId) => {
       .single();
 
     if (planError || !planSettings) {
-      console.log('[QUOTA] Plano não encontrado em plan_settings, usando padrão free');
-      // Se não encontrar o plano, usar configuração padrão free
-      const defaultPlan = {
-        id: planId,
-        max_images_per_month: planId === 'free' ? 3 : 10 // 3 para free, 10 para outros
-      };
-      
-      const usagePercentage = defaultPlan.max_images_per_month > 0 ? (currentUsage / defaultPlan.max_images_per_month) * 100 : 0;
-      
-      if (currentUsage >= defaultPlan.max_images_per_month && defaultPlan.max_images_per_month > 0) {
-        return { 
-          status: 'BLOCKED', 
-          usage: { ...usageData, current_usage: currentUsage }, 
-          plan: defaultPlan, 
-          message: `Limite de ${defaultPlan.max_images_per_month} imagens atingido.` 
-        };
-      }
-      if (usagePercentage >= 80 && defaultPlan.max_images_per_month > 0) {
-        return { 
-          status: 'NEAR_LIMIT', 
-          usage: { ...usageData, current_usage: currentUsage }, 
-          plan: defaultPlan, 
-          message: `Você está perto do limite (${currentUsage}/${defaultPlan.max_images_per_month}).` 
-        };
-      }
-      return { 
-        status: 'ALLOWED', 
-        usage: { ...usageData, current_usage: currentUsage }, 
-        plan: defaultPlan 
-      };
+      throw new Error(`Plano '${planId}' não configurado.`);
     }
 
     const { max_images_per_month: maxImages } = planSettings;
@@ -254,7 +197,6 @@ Diretrizes de design:
 // Geração de imagem com Google AI Studio (Imagen)
 async function generateImage(detailedPrompt) {
   try {
-    console.log('[IMAGE] Iniciando geração de imagem com Google AI Studio...');
     // Usando a API REST do Imagen 3
     const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${GEMINI_API_KEY}`;
     
@@ -277,13 +219,12 @@ async function generateImage(detailedPrompt) {
     
     if (response.data?.generatedImages?.length > 0) {
       const base64Image = response.data.generatedImages[0].image.imageBytes;
-      console.log('[IMAGE] Imagem gerada com sucesso!');
       return `data:image/png;base64,${base64Image}`;
     } else {
       throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
     }
   } catch (error) {
-    console.error('[IMAGE] Erro ao gerar imagem com Google AI Studio:', error.response ? error.response.data : error.message);
+    console.error('Erro ao gerar imagem com Google AI Studio:', error.response ? error.response.data : error.message);
     throw new Error('Falha ao gerar imagem. Verifique a chave GEMINI_API_KEY.');
   }
 }
@@ -291,7 +232,6 @@ async function generateImage(detailedPrompt) {
 // Upload para Supabase Storage
 async function uploadImageToSupabase(imageDataUrl, userId) {
   try {
-    console.log('[UPLOAD] Iniciando upload para Supabase Storage...');
     const matches = imageDataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) throw new Error('Formato de base64 inválido.');
     const contentType = matches[1];
@@ -303,10 +243,9 @@ async function uploadImageToSupabase(imageDataUrl, userId) {
       .upload(filePath, imageBuffer, { contentType, upsert: false });
       
     if (error) throw new Error(`Erro no upload: ${error.message}`);
-    console.log('[UPLOAD] Upload concluído com sucesso!');
     return data.path; 
   } catch (error) {
-    console.error('[UPLOAD] Erro no upload da imagem:', error.message);
+    console.error('Erro no upload da imagem:', error.message);
     throw new Error('Falha ao salvar a imagem gerada.');
   }
 }
@@ -315,18 +254,14 @@ async function uploadImageToSupabase(imageDataUrl, userId) {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  console.log('[HEALTH] Health check requested');
   res.json({ status: 'OK', message: 'Backend está rodando!' });
 });
 
 app.get('/api/check-quota', authenticateToken, async (req, res, next) => {
   try {
-    console.log('[API] /api/check-quota - Iniciando verificação');
     const quotaResponse = await checkImageQuota(req.user.id);
-    console.log('[API] /api/check-quota - Sucesso:', quotaResponse.status);
     res.json(quotaResponse);
   } catch (error) {
-    console.error('[API] /api/check-quota - Erro:', error);
     next(error);
   }
 });
@@ -334,8 +269,6 @@ app.get('/api/check-quota', authenticateToken, async (req, res, next) => {
 app.post('/api/generate', authenticateToken, generationLimiter, async (req, res, next) => {
   const { promptInfo } = req.body;
   const user = req.user;
-
-  console.log('[API] /api/generate - Iniciando geração para usuário:', user.id);
 
   if (!promptInfo) return res.status(400).json({ error: "Objeto 'promptInfo' ausente." });
 
@@ -362,20 +295,19 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res,
     // Verificar quota
     const quotaResponse = await checkImageQuota(user.id);
     if (quotaResponse.status === 'BLOCKED') {
-        console.log('[API] /api/generate - Usuário bloqueado por quota');
         return res.status(403).json({ error: quotaResponse.message, quotaStatus: 'BLOCKED', ...quotaResponse });
     }
     
-    console.log('[GENERATE] Gerando prompt detalhado...');
+    console.log(`[GENERATE] Gerando prompt detalhado...`);
     const detailedPrompt = await generateDetailedPrompt(sanitizedPromptInfo);
     
-    console.log('[GENERATE] Gerando imagem...');
+    console.log(`[GENERATE] Gerando imagem...`);
     const generatedImageDataUrl = await generateImage(detailedPrompt);
     
-    console.log('[GENERATE] Fazendo upload...');
+    console.log(`[GENERATE] Fazendo upload...`);
     const imagePath = await uploadImageToSupabase(generatedImageDataUrl, user.id);
     
-    console.log('[GENERATE] Salvando no DB...');
+    console.log(`[GENERATE] Salvando no DB...`);
     const { data: image, error: dbError } = await supabaseService
       .from('images')
       .insert({ user_id: user.id, prompt: detailedPrompt, image_url: imagePath, business_info: sanitizedPromptInfo })
@@ -392,7 +324,6 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res,
     res.json({ message: 'Arte gerada com sucesso!', image });
 
   } catch (error) {
-    console.error('[GENERATE] Erro na geração:', error);
     next(error);
   }
 });
