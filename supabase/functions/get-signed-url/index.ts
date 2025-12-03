@@ -1,14 +1,25 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
-// Restringir a origem para o domínio do seu aplicativo em produção
-// Para fins de desenvolvimento, mantemos '*' mas é crucial restringir em produção.
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // Mudar para o domínio de produção (ex: 'https://flowdesigner.com')
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000', 
+  'https://ai.studio', // Domínio de desenvolvimento/produção
+];
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin');
+  
+  // Determine the allowed origin to reflect back
+  let allowedOrigin = ALLOWED_ORIGINS[1]; // Default to production domain
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+      allowedOrigin = origin;
+  }
+  
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  }
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
