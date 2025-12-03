@@ -139,6 +139,7 @@ export const api = {
         return combinedPlans;
     } catch (error) {
         console.error("Error fetching plan settings:", error);
+        // Return empty array instead of throwing, as this is used by the LandingPage too
         return [];
     }
   },
@@ -157,7 +158,17 @@ export const api = {
                 "Authorization": `Bearer ${session.access_token}` 
             }
         });
-        if (!response.ok) throw new Error("Falha ao verificar quota.");
+        
+        if (!response.ok) {
+            let errorMessage = "Falha ao verificar quota.";
+            try {
+                const err = await response.json();
+                errorMessage = err.error || errorMessage;
+            } catch (e) {
+                // Ignore if response body is not JSON
+            }
+            throw new Error(errorMessage);
+        }
         
         const data = await response.json();
         return data as QuotaCheckResponse;
