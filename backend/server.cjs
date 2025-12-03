@@ -48,9 +48,13 @@ const supabaseServiceRole = createClient(
 );
 
 // --- Mercado Pago Configuration ---
-mercadopago.configure({
-    access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN, // Assuming this ENV variable exists
-});
+if (process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+    mercadopago.configure({
+        access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN,
+    });
+} else {
+    console.warn("MERCADO_PAGO_ACCESS_TOKEN not found. Payment routes will be mocked or fail.");
+}
 
 // --- Middleware de Autenticação e Autorização ---
 
@@ -239,6 +243,10 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
 // Rota de Iniciação de Assinatura (Mercado Pago)
 app.post('/api/subscribe', verifyAuth, async (req, res) => {
     const { planId } = req.body;
+    
+    if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+        return res.status(500).json({ error: "Erro de configuração: Token do Mercado Pago não está definido no servidor." });
+    }
     
     // Placeholder: Lógica de criação de preferência de pagamento no Mercado Pago
     console.log(`User ${req.user.id} initiating subscription for plan ${planId}`);
@@ -433,6 +441,10 @@ app.delete('/api/admin/landing-images/:id', verifyAuth, authorizeAdmin, async (r
 
 // Rota Admin: Obter URL de Conexão Mercado Pago (Service Role required)
 app.get('/api/admin/mp-connect', verifyAuth, authorizeAdmin, async (req, res) => {
+    if (!process.env.MERCADO_PAGO_CLIENT_ID || !process.env.FRONTEND_URL) {
+        return res.status(500).json({ error: "Erro de configuração: MERCADO_PAGO_CLIENT_ID ou FRONTEND_URL não definidos." });
+    }
+    
     // Esta rota deve retornar a URL de OAuth do Mercado Pago
     
     // NOTE: O Mercado Pago exige que o redirect_uri seja configurado no painel do MP.
@@ -450,7 +462,7 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', service: 'Flow Designer Backend' });
 });
 
-// --- Inicia o Servidor (FIX CRÍTICO) ---
+// --- Inicia o Servidor ---
 app.listen(PORT, () => {
     console.log(`Flow Designer Backend running on port ${PORT}`);
 });
