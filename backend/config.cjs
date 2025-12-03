@@ -43,6 +43,8 @@ const mpAccessToken = process.env.MP_ACCESS_TOKEN;
 
 if (!mpAccessToken) {
   console.warn('⚠️ MP_ACCESS_TOKEN não configurado. Pagamentos não funcionarão.');
+} else {
+  console.log('✅ Mercado Pago configurado com access token');
 }
 
 mercadopago.configure({

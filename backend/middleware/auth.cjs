@@ -1,4 +1,4 @@
-const { supabaseAnon, supabaseService } = require('../config'); // Import supabaseService
+const { supabaseAnon, supabaseService } = require('../config');
 
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -26,7 +26,7 @@ const authenticateToken = async (req, res, next) => {
 
     // Get user profile using the SERVICE ROLE client for reliable access
     try {
-      const { data: profile, error: profileError } = await supabaseService // <-- CHANGED TO supabaseService
+      const { data: profile, error: profileError } = await supabaseService
         .from('profiles')
         .select('*')
         .eq('id', user.id)

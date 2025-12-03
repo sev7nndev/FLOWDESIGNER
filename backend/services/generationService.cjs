@@ -75,18 +75,23 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
       }
     ]);
     
+    console.log('🔍 Gemini response received, validating...');
+    
     const response = result.response;
     if (!response.candidates || response.candidates.length === 0) {
+      console.error('❌ No candidates in Gemini response');
       throw new Error('A IA não conseguiu gerar a imagem. Tente novamente.');
     }
 
     const candidate = response.candidates[0];
     if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+      console.error('❌ Invalid candidate structure:', candidate);
       throw new Error('Resposta inválida da API Gemini.');
     }
 
     const imageData = candidate.content.parts[0].inlineData;
     if (!imageData || !imageData.data) {
+      console.error('❌ No image data in response');
       throw new Error('A imagem não foi gerada corretamente.');
     }
 
@@ -95,10 +100,25 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
 
     console.log('✅ Image generated successfully, size:', imageBase64.length);
 
-    // 6. Save to Supabase Storage
-    const fileName = `${userId}/${Date.now()}.png`;
-    const imageBuffer = Buffer.from(imageBase64, 'base64');
+    // 6. Validate and convert base64 to Buffer
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      throw new Error('Dados da imagem inválidos.');
+    }
 
+    let imageBuffer;
+    try {
+      imageBuffer = Buffer.from(imageBase64, 'base64');
+      console.log('✅ Buffer created successfully, size:', imageBuffer.length);
+    } catch (bufferError) {
+      console.error('❌ Buffer creation error:', bufferError);
+      throw new Error('Falha ao processar dados da imagem.');
+    }
+
+    // 7. Save to Supabase Storage using service role
+    const fileName = `${userId}/${Date.now()}.png`;
+
+    console.log('💾 Uploading to Supabase storage:', fileName);
+    
     const { data: uploadData, error: uploadError } = await supabaseService.storage
       .from('generated-arts')
       .upload(fileName, imageBuffer, {
@@ -107,13 +127,13 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
       });
 
     if (uploadError) {
-      console.error('Upload error:', uploadError);
-      throw new Error('Falha ao salvar a imagem gerada.');
+      console.error('❌ Upload error:', uploadError);
+      throw new Error('Falha ao salvar a imagem gerada: ' + uploadError.message);
     }
 
     console.log('✅ Image uploaded to storage:', fileName);
 
-    // 7. Register generation in database
+    // 8. Register generation in database
     const { error: genError } = await supabaseService
       .from('image_generations')
       .insert({
@@ -121,21 +141,33 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
       });
 
     if (genError) {
-      console.error('Generation registration error:', genError);
+      console.error('⚠️ Generation registration error:', genError);
+      // Don't throw error, continue with image save
     }
 
-    // 8. Update user usage count
+    // 9. Update user usage count with better error handling
     if (!isUnlimited) {
-      const { error: usageError } = await supabaseService.rpc('increment_user_usage', {
-        user_id_input: userId
-      });
+      console.log('📊 Incrementing user usage...');
+      try {
+        const { error: usageError } = await supabaseService.rpc('increment_user_usage', {
+          user_id_input: userId
+        });
 
-      if (usageError) {
-        console.error('Usage update error:', usageError);
+        if (usageError) {
+          console.error('⚠️ Usage update error:', usageError);
+          // Don't fail the whole process if usage update fails
+          console.log('⚠️ Continuing without usage update...');
+        } else {
+          console.log('✅ Usage updated successfully');
+        }
+      } catch (rpcError) {
+        console.error('⚠️ RPC call error:', rpcError);
+        console.log('⚠️ Continuing without usage update...');
       }
     }
 
-    // 9. Save image record
+    // 10. Save image record
+    console.log('💾 Saving image record...');
     const { data: imageDataRecord, error: imageInsertError } = await supabaseService
       .from('images')
       .insert({
@@ -148,12 +180,13 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
       .single();
 
     if (imageInsertError) {
-      console.error('Image record error:', imageInsertError);
+      console.error('❌ Image record error:', imageInsertError);
+      throw new Error('Falha ao salvar registro da imagem: ' + imageInsertError.message);
     }
 
     console.log('✅ Image generation completed successfully');
 
-    // 10. Get public URL
+    // 11. Get public URL
     const { data: { publicUrl } } = supabaseService.storage
       .from('generated-arts')
       .getPublicUrl(fileName);

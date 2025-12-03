@@ -2,6 +2,7 @@ const { supabaseService } = require('../config');
 const fetch = require('node-fetch'); 
 const mercadopago = require('mercadopago');
 
+// Updated CLIENT_ROLES to match actual database roles
 const CLIENT_ROLES = ['free', 'starter', 'pro'];
 
 async function fetchOwnerMetrics(ownerId) {
@@ -13,7 +14,8 @@ async function fetchOwnerMetrics(ownerId) {
   let clientList = [];
 
   try {
-    // Verify user is owner
+    // Verify user is owner using service role
+    console.log('👑 Verifying owner role...');
     const { data: ownerProfile, error: ownerError } = await supabaseService
       .from('profiles')
       .select('role')
@@ -21,8 +23,11 @@ async function fetchOwnerMetrics(ownerId) {
       .single();
 
     if (ownerError || !ownerProfile || ownerProfile.role !== 'owner') {
+      console.error('❌ Owner verification failed:', ownerError);
       throw new Error('Acesso negado. Apenas proprietários podem acessar estas métricas.');
     }
+
+    console.log('✅ Owner verified successfully');
 
     // Fetch profiles with counts using service role
     console.log('📊 Fetching profile counts...');
@@ -71,7 +76,7 @@ async function fetchOwnerMetrics(ownerId) {
   }
 
   try {
-    // Fetch client list with full details
+    // Fetch client list with full details using service role
     console.log('👥 Fetching client list...');
     const { data: clients, error: clientsError } = await supabaseService
       .from('profiles_with_email')
