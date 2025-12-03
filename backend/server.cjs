@@ -127,7 +127,7 @@ const checkImageQuota = async (userId) => {
         console.log(`[QUOTA] Checking quota for user ${userId}`);
         
         // 1. Fetch usage data with explicit error handling
-        const { data: usageData, error: usageError } = await supabaseService
+        let { data: usageData, error: usageError } = await supabaseService
             .from('user_usage')
             .select('user_id, plan_id, current_usage, cycle_start_date')
             .eq('user_id', userId)
@@ -283,17 +283,12 @@ const checkImageQuota = async (userId) => {
 // NEW: Helper function to increment usage
 const incrementUsage = async (userId) => {
     try {
-        const { error } = await supabaseService
-            .from('user_usage')
-            .update({ 
-                updated_at: new Date().toISOString(),
-                current_usage: supabaseService.rpc('increment_user_usage', { user_id_input: userId })
-            })
-            .eq('user_id', userId);
-            
-        if (error) {
-            console.error(`Failed to increment usage for user ${userId}:`, error);
-            throw new Error('Falha ao registrar o uso da imagem.');
+        // Use RPC call directly, which is the standard and robust way
+        const { error: rpcError } = await supabaseService.rpc('increment_user_usage', { user_id_input: userId });
+        
+        if (rpcError) {
+            console.error(`Failed to call RPC increment_user_usage for user ${userId}:`, rpcError);
+            throw new Error('Falha ao registrar o uso da imagem via RPC.');
         }
         
         console.log(`Successfully incremented usage for user ${userId}`);
@@ -887,24 +882,34 @@ app.post('/api/subscribe', authenticateToken, async (req, res, next) => {
         // 2. Initialize Mercado Pago SDK with Owner's Token
         mercadopago.configure({ access_token: mpAccessToken });
         
-        // 3. Create Subscription/Payment (Placeholder Logic)
-        // This is where you would integrate the actual Mercado Pago API call 
-        // (e.g., creating a preference, subscription, or payment intent).
+        // 3. Get Plan Price from DB (Robustness check)
+        const { data: planSettings, error: planError } = await supabaseService
+            .from('plan_settings')
+            .select('price')
+            .eq('id', planId)
+            .single();
+            
+        if (planError || !planSettings) {
+            throw new Error('Preço do plano não encontrado no banco de dados.');
+        }
         
-        // Example: Create a simple preference (not a subscription, just a one-time payment example)
+        const planPrice = planSettings.price;
+        
+        // 4. Create Subscription/Payment (Preference)
         const preference = {
             items: [
                 {
                     title: `Assinatura Flow Designer - Plano ${planId.toUpperCase()}`,
                     quantity: 1,
                     currency_id: 'BRL',
-                    unit_price: planId === 'starter' ? 29.99 : 49.99, // Hardcoded price for example, should use plan_settings
+                    unit_price: parseFloat(planPrice), // Use price from DB
                 }
             ],
             payer: {
                 email: req.user.email,
             },
             back_urls: {
+                // Use the frontend URL for redirection after payment attempt
                 success: `${MP_REDIRECT_URI}?payment_status=success&plan=${planId}`,
                 failure: `${MP_REDIRECT_URI}?payment_status=failure&plan=${planId}`,
                 pending: `${MP_REDIRECT_URI}?payment_status=pending&plan=${planId}`,
@@ -915,7 +920,7 @@ app.post('/api/subscribe', authenticateToken, async (req, res, next) => {
         
         const mpResponse = await mercadopago.preferences.create(preference);
         
-        // 4. Return the payment URL to the frontend
+        // 5. Return the payment URL to the frontend
         res.json({ 
             message: 'Iniciando pagamento...',
             paymentUrl: mpResponse.body.init_point, // URL to redirect the user
@@ -924,7 +929,7 @@ app.post('/api/subscribe', authenticateToken, async (req, res, next) => {
         
     } catch (error) {
         console.error("Mercado Pago Subscription Error:", error.response ? error.response.data : error.message);
-        next(new Error('Falha ao iniciar o processo de pagamento.'));
+        next(new Error('Falha ao iniciar o processo de pagamento. Verifique se as chaves do Mercado Pago estão configuradas no .env.local e se o Owner está conectado no Dev Panel.'));
     }
 });
 
@@ -967,8 +972,11 @@ app.post('/api/mp-webhook', async (req, res) => {
             const payment = paymentResponse.data;
             const status = payment.status; // e.g., 'approved', 'pending', 'rejected'
             const userId = payment.external_reference; // This is the user ID we passed
-            const planId = payment.items[0]?.title?.includes('Pro') ? 'pro' : 
-                           payment.items[0]?.title?.includes('Starter') ? 'starter' : null;
+            
+            // Determine planId based on item title (assuming title contains 'Starter' or 'Pro')
+            const itemTitle = payment.items[0]?.title || '';
+            const planId = itemTitle.includes('Pro') ? 'pro' : 
+                           itemTitle.includes('Starter') ? 'starter' : null;
                            
             console.log(`[WEBHOOK] Payment Status: ${status}, User ID: ${userId}, Plan ID: ${planId}`);
 

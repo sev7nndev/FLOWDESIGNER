@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle, CreditCard, Loader2, Lock, Zap } from 'lucide-r
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
+import { api } from '@/services/api'; // Import API service
 
 interface CheckoutPageProps {
     user: User;
@@ -27,17 +28,29 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, planId, plans,
         );
     }
 
-    const handlePaymentSubmit = (e: React.FormEvent) => {
+    // --- REAL PAYMENT INITIATION ---
+    const handlePaymentInitiation = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsProcessing(true);
         
-        // Simulating payment processing
-        setTimeout(() => {
+        try {
+            // 1. Call backend to initiate subscription/payment preference
+            const { paymentUrl } = await api.initiateSubscription(planId);
+            
+            toast.info("Redirecionando para o pagamento seguro...");
+            
+            // 2. Redirect user to the payment gateway (Mercado Pago)
+            window.location.href = paymentUrl;
+            
+            // Note: onSuccess is handled by the backend webhook after payment approval.
+            // We don't call onSuccess here, as the user is leaving the app.
+            
+        } catch (e: any) {
+            console.error("Payment initiation failed:", e);
+            toast.error(e.message || "Falha ao iniciar o pagamento. Tente novamente mais tarde.");
+        } finally {
             setIsProcessing(false);
-            toast.success(`Assinatura do plano ${selectedPlan.display_name} realizada com sucesso!`);
-            // In a real application, this would trigger a backend update and refresh user profile/usage
-            onSuccess(); 
-        }, 2000);
+        }
     };
 
     const formatPrice = (price: number) => `R$ ${price.toFixed(2).replace('.', ',')}`;
@@ -85,42 +98,29 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, planId, plans,
                                 </ul>
                                 <div className="mt-6 p-4 bg-zinc-800 rounded-lg text-sm text-gray-400 flex items-center">
                                     <Lock size={16} className="mr-2 flex-shrink-0" />
-                                    Pagamento seguro e criptografado.
+                                    Pagamento seguro via Mercado Pago.
                                 </div>
                             </CardContent>
                         </Card>
                     </div>
 
-                    {/* Coluna 2: Formulário de Pagamento */}
+                    {/* Coluna 2: Formulário de Pagamento (Simplified to a CTA for MP Redirect) */}
                     <div className="lg:col-span-2">
                         <Card className="bg-zinc-900 border border-white/10">
                             <CardHeader>
                                 <CardTitle className="text-white flex items-center gap-2">
-                                    <CreditCard size={20} /> Informações de Pagamento
+                                    <CreditCard size={20} /> Redirecionamento de Pagamento
                                 </CardTitle>
                                 <CardDescription className="text-gray-400">
-                                    Preencha os dados do seu cartão de crédito.
+                                    Clique abaixo para ser redirecionado ao ambiente seguro do Mercado Pago e finalizar sua compra.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <form onSubmit={handlePaymentSubmit} className="space-y-6">
+                                <form onSubmit={handlePaymentInitiation} className="space-y-6">
+                                    {/* Removed unnecessary input fields as MP handles them */}
                                     <div className="space-y-2">
-                                        <Label htmlFor="cardName" className="text-gray-300">Nome no Cartão</Label>
-                                        <Input id="cardName" placeholder="Nome Completo" required className="bg-zinc-800 border-zinc-700 text-white" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="cardNumber" className="text-gray-300">Número do Cartão</Label>
-                                        <Input id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" required className="bg-zinc-800 border-zinc-700 text-white" />
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <div className="space-y-2 col-span-2">
-                                            <Label htmlFor="expiry" className="text-gray-300">Validade (MM/AA)</Label>
-                                            <Input id="expiry" placeholder="MM/AA" required className="bg-zinc-800 border-zinc-700 text-white" />
-                                        </div>
-                                        <div className="space-y-2 col-span-1">
-                                            <Label htmlFor="cvc" className="text-gray-300">CVC</Label>
-                                            <Input id="cvc" placeholder="123" required className="bg-zinc-800 border-zinc-700 text-white" />
-                                        </div>
+                                        <Label htmlFor="email" className="text-gray-300">Email do Pagador</Label>
+                                        <Input id="email" value={user.email} disabled className="bg-zinc-800 border-zinc-700 text-white/70" />
                                     </div>
                                     
                                     <div className="pt-4">
@@ -130,9 +130,9 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, planId, plans,
                                             disabled={isProcessing}
                                         >
                                             {isProcessing ? (
-                                                <><Loader2 size={20} className="animate-spin mr-2" /> Processando Pagamento...</>
+                                                <><Loader2 size={20} className="animate-spin mr-2" /> Preparando Pagamento...</>
                                             ) : (
-                                                `Pagar ${formatPrice(selectedPlan.price)} Agora`
+                                                `Pagar ${formatPrice(selectedPlan.price)} via Mercado Pago`
                                             )}
                                         </Button>
                                     </div>
