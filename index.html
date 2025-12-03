@@ -10,7 +10,7 @@
       /* Corrigindo o problema de overflow do iframe */
       html, body {
         width: 100%;
-        min-height: 100%; /* Usar min-height em vez de height: auto */
+        height: auto; /* Garante que o scroll funcione e não force 100vh */
         overflow-x: hidden; /* Evita scroll horizontal desnecessário */
       }
       

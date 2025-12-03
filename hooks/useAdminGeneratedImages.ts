@@ -34,7 +34,7 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
         }
 
         try {
-            // Chamada ao endpoint seguro no backend
+            // Chamada ao novo endpoint seguro no backend
             const response = await fetch(`${BACKEND_URL}/admin/images`, {
                 method: "GET",
                 headers: {
@@ -56,8 +56,6 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
             }
 
             const data = await response.json();
-            
-            // O backend retorna o objeto completo, incluindo a URL pública (url)
             setImages(data.images);
 
         } catch (e: any) {
@@ -82,15 +80,6 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error("Sessão não encontrada.");
 
-        // Extrai o path do storage a partir da URL pública
-        // Ex: '.../generated-arts/user-id/uuid.jpeg' -> 'user-id/uuid.jpeg'
-        const urlParts = imageUrl.split('/generated-arts/');
-        const imagePath = urlParts.length > 1 ? urlParts[1] : '';
-        
-        if (!imagePath) {
-            throw new Error("Caminho do arquivo inválido para exclusão.");
-        }
-
         try {
             const response = await fetch(`${BACKEND_URL}/admin/images/${imageId}`, {
                 method: "DELETE",
@@ -98,7 +87,7 @@ export const useAdminGeneratedImages = (userRole: UserRole) => {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${session.access_token}` 
                 },
-                body: JSON.stringify({ imagePath }) // Passa o path do storage
+                body: JSON.stringify({ imageUrl })
             });
 
             if (!response.ok) {

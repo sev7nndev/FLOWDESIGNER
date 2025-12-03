@@ -1,373 +1,72 @@
-import { supabase } from './supabaseClient';
-import { User } from '../types';
+import { User } from "../types";
+import { getSupabase } from "./supabaseClient";
+
+// We no longer store the full user object in localStorage, relying on Supabase SDK for session management.
+// const SESSION_KEY is now unused.
 
 export const authService = {
-  async login(email: string, password: string): Promise<User> {
-    try {
-      console.log('🔐 Attempting login for:', email);
-      
-      // Tentar login direto no Supabase Auth
-      console.log('🔑 Attempting Supabase auth...');
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+  init: () => {},
 
-      if (error) {
-        console.error('❌ Supabase auth error:', {
-          message: error.message,
-          status: error.status,
-          code: error.code
-        });
-        
-        // Tratamento específico de erros comuns
-        if (error.message?.includes('Invalid login credentials')) {
-          throw new Error('Email ou senha inválidos. Verifique suas credenciais e tente novamente.');
-        } else if (error.message?.includes('Email not confirmed')) {
-          throw new Error('Por favor, confirme seu email antes de fazer login.');
-        } else if (error.message?.includes('Too many requests')) {
-          throw new Error('Muitas tentativas. Aguarde um minuto e tente novamente.');
-        } else if (error.message?.includes('User not found')) {
-          throw new Error('Usuário não encontrado. Verifique o email ou cadastre-se.');
-        } else {
-          throw new Error(`Erro no login: ${error.message}`);
-        }
-      }
-
-      if (!data.user) {
-        console.error('❌ No user data returned from auth');
-        throw new Error('Login falhou. Nenhum usuário retornado.');
-      }
-
-      console.log('✅ Supabase auth successful for user:', data.user.id);
-
-      // Buscar ou criar o perfil completo após login bem-sucedido
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-
-        if (profileError && profileError.code === 'PGRST116') {
-          console.log('📝 Creating profile for authenticated user...');
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              role: 'free',
-              status: 'on',
-              first_name: '',
-              last_name: ''
-            })
-            .select()
-            .single();
-
-          if (createError) {
-            console.error('❌ Error creating profile:', createError);
-            // Continuar mesmo se não conseguir criar perfil
-          } else {
-            console.log('✅ Profile created successfully');
-          }
-        }
-
-        // Buscar o perfil novamente (recém-criado ou existente)
-        const { data: finalProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-
-        // Retorna o usuário completo com perfil
-        const userWithProfile: User = {
-          id: data.user.id,
-          email: data.user.email || email,
-          firstName: finalProfile?.first_name || '',
-          lastName: finalProfile?.last_name || '',
-          createdAt: data.user.created_at ? new Date(data.user.created_at).getTime() : Date.now(),
-          role: finalProfile?.role || 'free',
-        };
-
-        console.log('✅ Login successful:', userWithProfile.email, 'Role:', userWithProfile.role);
-        return userWithProfile;
-        
-      } catch (profileErr) {
-        console.error('❌ Error handling profile:', profileErr);
-        // Retornar usuário mesmo sem perfil
-        const userWithProfile: User = {
-          id: data.user.id,
-          email: data.user.email || email,
-          firstName: '',
-          lastName: '',
-          createdAt: data.user.created_at ? new Date(data.user.created_at).getTime() : Date.now(),
-          role: 'free',
-        };
-        return userWithProfile;
-      }
-      
-    } catch (error: any) {
-      console.error('❌ AuthService login error:', error);
-      throw new Error(error.message || 'Falha no login. Tente novamente.');
-    }
-  },
-
-  async register(firstName: string, lastName: string, email: string, password: string, planId?: string): Promise<void> {
-    try {
-      console.log('📝 Attempting registration for:', email, 'plan:', planId);
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          }
-        }
-      });
-
-      if (error) {
-        console.error('❌ Registration error:', error);
-        
-        if (error.message?.includes('User already registered')) {
-          throw new Error('Este e-mail já está cadastrado. Tente fazer login.');
-        } else if (error.message?.includes('Password should be at least')) {
-          throw new Error('A senha deve ter pelo menos 6 caracteres.');
-        } else if (error.message?.includes('Email rate limit exceeded')) {
-          throw new Error('Muitas tentativas de cadastro. Aguarde um minuto.');
-        } else {
-          throw new Error(error.message || 'Falha no registro. Tente novamente.');
-        }
-      }
-
-      if (!data.user) {
-        throw new Error('Registro falhou. Tente novamente.');
-      }
-
-      const newUserId = data.user.id;
-      const role = planId || 'free';
-
-      console.log('✅ Registration successful:', newUserId, 'role:', role);
-
-      // Criar perfil para o usuário
-      try {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: newUserId,
-            role: role,
-            status: 'on',
-            first_name: firstName,
-            last_name: lastName
-          })
-          .single();
-
-        if (profileError) {
-          console.error('❌ Profile creation error:', profileError);
-        } else {
-          console.log('✅ Profile created for user:', newUserId);
-        }
-      } catch (profileErr) {
-        console.error('❌ Error creating profile:', profileErr);
-      }
-
-      // Se for um plano pago, criar assinatura
-      if (planId && planId !== 'free') {
-        try {
-          console.log('💳 Creating subscription for plan:', planId);
-          const { data: planData, error: planError } = await supabase
-            .from('plans')
-            .select('id')
-            .ilike('name', planId)
-            .single();
-
-          if (!planError && planData) {
-            const { error: subscriptionError } = await supabase
-              .from('subscriptions')
-              .insert({
-                user_id: newUserId,
-                plan_id: planData.id,
-                status: 'active',
-                current_period_start: new Date().toISOString(),
-                current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-              })
-              .single();
-
-            if (subscriptionError) {
-              console.error('❌ Subscription creation error:', subscriptionError);
-            } else {
-              console.log('✅ Subscription created for plan:', planId);
-            }
-          }
-        } catch (subErr) {
-          console.error('❌ Error handling subscription:', subErr);
-        }
-      }
-
-    } catch (error: any) {
-      console.error('❌ AuthService registration error:', error);
-      throw new Error(error.message || 'Falha no registro. Tente novamente.');
-    }
-  },
-
-  async loginWithGoogle(): Promise<void> {
-    try {
-      console.log('🔗 Initiating Google login');
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
-      });
-
-      if (error) {
-        console.error('❌ Google login error:', error);
-        throw new Error('Falha no login com Google. Tente novamente.');
-      }
-
-      console.log('✅ Google login initiated');
-    } catch (error: any) {
-      console.error('❌ AuthService Google login error:', error);
-      throw new Error(error.message || 'Falha no login com Google.');
-    }
-  },
-
-  async logout(): Promise<void> {
-    try {
-      console.log('🚪 Initiating logout');
-      
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('❌ Logout error:', error);
-        throw new Error('Falha ao sair.');
-      }
-
-      console.log('✅ Logout successful');
-    } catch (error: any) {
-      console.error('❌ AuthService logout error:', error);
-      throw new Error(error.message || 'Falha ao sair.');
-    }
-  },
-
-  async getCurrentUser(): Promise<User | null> {
-    try {
-      console.log('👤 Getting current user');
-      
-      const { data: { user }, error } = await supabase.auth.getUser();
-      
-      if (error) {
-        console.error('❌ Get current user error:', error);
-        return null;
-      }
-
-      if (!user) {
-        console.log('👤 No user session found');
-        return null;
-      }
-
-      // Buscar perfil completo
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error('❌ Profile fetch error:', profileError);
-          if (profileError.code === 'PGRST116') {
-            // Perfil não encontrado, retorna usuário com role padrão
-            return {
-              id: user.id,
-              email: user.email || '',
-              firstName: '',
-              lastName: '',
-              createdAt: user.created_at ? new Date(user.created_at).getTime() : Date.now(),
-              role: 'free',
-            };
-          }
-          return null;
-        }
-
-        const userWithProfile: User = {
-          id: user.id,
-          email: user.email || '',
-          firstName: profile?.first_name || '',
-          lastName: profile?.last_name || '',
-          createdAt: user.created_at ? new Date(user.created_at).getTime() : Date.now(),
-          role: (profile?.role as any) || 'free',
-        };
-
-        console.log('✅ User with profile loaded:', userWithProfile.email, 'role:', userWithProfile.role);
-        return userWithProfile;
-      } catch (profileErr) {
-        console.error('❌ Error fetching profile:', profileErr);
-        return null;
-      }
-    } catch (error) {
-      console.error('❌ Get current user error:', error);
-      return null;
-    }
-  },
-
-  onAuthStateChange: (callback: (user: User | null) => void) => {
-    console.log('👂 Setting up auth state listener');
+  login: async (email: string, password: string): Promise<User | null> => {
+    const supabase = getSupabase();
     
-    return supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state changed:', event, session?.user?.id);
-      
-      if (session?.user) {
-        try {
-          // Buscar perfil completo quando o estado de autenticação mudar
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+    if (!supabase) {
+      throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
+    }
+    
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      throw new Error(error.message || 'Email ou senha inválidos.');
+    }
+    if (!data.user) return null;
+    
+    // We return null here. App.tsx will handle fetching the profile/role 
+    // and setting the final User state based on the verified session.
+    return null;
+  },
 
-          if (profileError) {
-            console.error('❌ Profile fetch error in auth state change:', profileError);
-            if (profileError.code === 'PGRST116') {
-              // Perfil não encontrado, retorna usuário com role padrão
-              callback({
-                id: session.user.id,
-                email: session.user.email || '',
-                firstName: '',
-                lastName: '',
-                createdAt: session.user.created_at ? new Date(session.user.created_at).getTime() : Date.now(),
-                role: 'free',
-              });
-              return;
-            }
-            callback(null);
-            return;
-          }
+  register: async (firstName: string, lastName: string, email: string, password: string): Promise<User | null> => {
+    const supabase = getSupabase();
 
-          const userWithProfile: User = {
-            id: session.user.id,
-            email: session.user.email || '',
-            firstName: profile?.first_name || '',
-            lastName: profile?.last_name || '',
-            createdAt: session.user.created_at ? new Date(session.user.created_at).getTime() : Date.now(),
-            role: (profile?.role as any) || 'free',
-          };
+    if (!supabase) {
+      throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
+    }
 
-          console.log('✅ Auth state changed - user authenticated:', userWithProfile.email, 'role:', userWithProfile.role);
-          callback(userWithProfile);
-        } catch (profileErr) {
-          console.error('❌ Error in auth state change profile fetch:', profileErr);
-          callback(null);
-        }
-      } else {
-        console.log('👤 Auth state changed - user logged out');
-        callback(null);
+    // SUPABASE REGISTER
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { first_name: firstName, last_name: lastName } }
+    });
+    
+    if (error) throw new Error(error.message);
+    if (!data.user) throw new Error("Erro ao criar usuário. Verifique seu email.");
+
+    // We return null here. App.tsx will handle fetching the profile/role 
+    // and setting the final User state based on the verified session.
+    return null;
+  },
+
+  logout: async () => {
+    const supabase = getSupabase();
+    if (supabase) await supabase.auth.signOut();
+  },
+
+  loginWithGoogle: async (): Promise<void> => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        // redirectTo: window.location.origin // Removido para usar a URL padrão configurada no Supabase, que está autorizada no Google.
       }
     });
-  }
+
+    if (error) {
+      throw new Error(error.message || 'Falha ao autenticar com o Google.');
+    }
+  },
 };

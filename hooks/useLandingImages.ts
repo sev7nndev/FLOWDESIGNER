@@ -38,7 +38,6 @@ export const useLandingImages = (userRole: UserRole) => {
         }
     }, [userRole]);
     
-    // CORREÇÃO: Agora aceita imagePath e o passa para a API
     const deleteImage = useCallback(async (id: string, path: string) => {
         if (userRole !== 'admin' && userRole !== 'dev') {
             throw new Error("Acesso negado. Apenas administradores e desenvolvedores podem deletar.");

@@ -33,7 +33,7 @@ export interface GenerationState {
   debugPrompt?: string;
 }
 
-export type UserRole = 'admin' | 'dev' | 'client' | 'free' | 'pro' | 'owner';
+export type UserRole = 'admin' | 'dev' | 'client' | 'free' | 'pro' | 'starter'; // Added 'starter'
 
 export interface User {
   id: string;
@@ -65,12 +65,32 @@ export interface LandingImage {
   sortOrder: number;
 }
 
-// NEW: Chat Message Type
-export interface ChatMessage {
-  id: string;
-  created_at: string;
-  sender_id: string;
-  recipient_id: string;
-  content: string;
-  is_admin_message: boolean;
+// NEW: Plan Settings Type
+export interface PlanSetting {
+  id: UserRole; // 'free', 'starter', 'pro'
+  price: number;
+  max_images_per_month: number;
+}
+
+// NEW: User Usage Type
+export interface UserUsage {
+  user_id: string;
+  plan_id: UserRole;
+  cycle_start_date: string;
+  current_usage: number;
+}
+
+// NEW: Quota Status
+export enum QuotaStatus {
+  ALLOWED = 'ALLOWED',
+  NEAR_LIMIT = 'NEAR_LIMIT',
+  BLOCKED = 'BLOCKED',
+}
+
+// NEW: Quota Check Response
+export interface QuotaCheckResponse {
+  status: QuotaStatus;
+  usage: UserUsage;
+  plan: PlanSetting;
+  message?: string;
 }

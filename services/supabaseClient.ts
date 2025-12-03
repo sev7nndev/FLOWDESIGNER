@@ -1,27 +1,26 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY;
+// Use variáveis de ambiente injetadas pelo Vite
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-console.log('🔗 Supabase URL:', supabaseUrl);
-console.log('🔑 Supabase Anon Key:', supabaseAnonKey ? 'Configured' : 'Missing');
+let supabaseInstance: SupabaseClient | null = null;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Missing Supabase environment variables');
-  console.error('Required: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
-}
+export const getSupabase = (): SupabaseClient | null => {
+  if (supabaseInstance) return supabaseInstance;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error("Supabase environment variables are not configured.");
+    return null;
   }
-});
 
-export const getSupabase = () => {
-  if (!supabase) {
-    throw new Error('Supabase client not initialized');
+  try {
+    supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return supabaseInstance;
+  } catch (e) {
+    console.error("Failed to init Supabase", e);
+    return null;
   }
-  return supabase;
 };
+
+export const isSupabaseConfigured = () => !!getSupabase();

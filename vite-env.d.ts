@@ -4,6 +4,8 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string
   readonly VITE_SUPABASE_ANON_KEY: string
   readonly VITE_SUPABASE_PROJECT_ID: string // Added Supabase Project ID
+  readonly VITE_MP_CLIENT_ID: string // NEW: Mercado Pago Client ID
+  readonly VITE_MP_REDIRECT_URI: string // NEW: Mercado Pago Redirect URI
   // Adicione outras variáveis de ambiente aqui
 }
 

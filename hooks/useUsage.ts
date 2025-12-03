@@ -1,90 +1,77 @@
-import { useState, useCallback, useEffect } from 'react';
-import { getSupabase } from '@/services/supabaseClient';
+import { useState, useEffect, useCallback } from 'react';
+import { api } from '../services/api';
+import { PlanSetting, QuotaCheckResponse, QuotaStatus, UserUsage, UserRole } from '../types';
 
-export interface UsageData {
-  currentUsage: number;
-  maxQuota: number;
-  planId: string;
-  isBlocked: boolean;
-  isNearLimit: boolean;
-  usagePercentage: number;
+interface UsageState {
+    plans: PlanSetting[];
+    quota: QuotaCheckResponse | null;
+    isLoading: boolean;
+    error: string | null;
 }
 
+const INITIAL_STATE: UsageState = {
+    plans: [],
+    quota: null,
+    isLoading: true,
+    error: null,
+};
+
 export const useUsage = (userId: string | undefined) => {
-  const [usage, setUsage] = useState<UsageData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const supabase = getSupabase();
+    const [state, setState] = useState<UsageState>(INITIAL_STATE);
 
-  const fetchUsage = useCallback(async () => {
-    if (!userId || !supabase) {
-      setUsage(null);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // RLS garante que o usuário só possa ler seus próprios dados.
-      const { data, error } = await supabase
-        .from('user_usage')
-        .select(`
-          current_usage,
-          plan_id,
-          plan_settings (
-            max_images_per_month
-          )
-        `)
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        // Se não encontrar, pode ser um usuário recém-criado antes do trigger rodar
-        if (error.code === 'PGRST116') {
-          setUsage({
-            currentUsage: 0,
-            maxQuota: 3, // Default free limit
-            planId: 'free',
-            isBlocked: false,
-            isNearLimit: false,
-            usagePercentage: 0
-          });
-          setIsLoading(false);
-          return;
+    const fetchUsageData = useCallback(async () => {
+        if (!userId) {
+            setState(prev => ({ ...prev, isLoading: false }));
+            return;
         }
-        throw error;
-      }
 
-      const maxQuota = (data.plan_settings as any)?.max_images_per_month || 0;
-      const currentUsage = data.current_usage || 0;
-      const planId = data.plan_id;
-      
-      const usagePercentage = maxQuota > 0 ? (currentUsage / maxQuota) * 100 : 0;
-      const isBlocked = maxQuota > 0 && currentUsage >= maxQuota;
-      const isNearLimit = !isBlocked && maxQuota > 0 && usagePercentage >= 80;
+        setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      setUsage({
-        currentUsage,
-        maxQuota,
-        planId,
-        isBlocked,
-        isNearLimit,
-        usagePercentage
-      });
-    } catch (e) {
-      console.error("Failed to fetch usage:", e);
-      setUsage(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId, supabase]);
+        try {
+            const [plans, quota] = await Promise.all([
+                api.getPlanSettings(),
+                api.checkQuota()
+            ]);
 
-  useEffect(() => {
-    fetchUsage();
-  }, [fetchUsage]);
+            setState({
+                plans,
+                quota,
+                isLoading: false,
+                error: null,
+            });
+        } catch (e: any) {
+            console.error("Failed to fetch usage data:", e);
+            setState(prev => ({ 
+                ...prev, 
+                isLoading: false, 
+                error: e.message || 'Falha ao carregar dados de uso e planos.' 
+            }));
+        }
+    }, [userId]);
+    
+    const refreshUsage = useCallback(() => {
+        fetchUsageData();
+    }, [fetchUsageData]);
 
-  return {
-    usage,
-    isLoadingUsage: isLoading,
-    refreshUsage: fetchUsage
-  };
+    useEffect(() => {
+        fetchUsageData();
+    }, [fetchUsageData]);
+    
+    // Helper to get current plan details
+    const currentPlan = state.plans.find(p => p.id === state.quota?.usage.plan_id);
+    
+    // Helper to calculate usage percentage
+    const usagePercentage = state.quota && currentPlan
+        ? (state.quota.usage.current_usage / currentPlan.max_images_per_month) * 100
+        : 0;
+
+    return {
+        ...state,
+        currentPlan,
+        usagePercentage,
+        refreshUsage,
+        quotaStatus: state.quota?.status || QuotaStatus.ALLOWED,
+        currentUsage: state.quota?.usage.current_usage || 0,
+        maxImages: currentPlan?.max_images_per_month || 0,
+    };
 };

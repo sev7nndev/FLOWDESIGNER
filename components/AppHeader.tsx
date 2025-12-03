@@ -1,31 +1,35 @@
 import React from 'react';
-import { LogOut, Settings, Sparkles, User as UserIcon, Code, MessageSquare } from 'lucide-react';
-import { User, UserRole } from '../types';
+import { LogOut, Settings, Sparkles, User as UserIcon, Code, Zap, AlertTriangle } from 'lucide-react';
+import { User, UserRole, QuotaStatus } from '../types';
 
 interface AppHeaderProps {
   user: User | null;
   profileRole: UserRole;
   onLogout: () => void;
   onShowSettings: () => void;
-  onShowDevPanel: () => void;
-  onShowChat: () => void; // New prop for client chat
+  onShowDevPanel: () => void; 
+  onShowPlans: () => void; // New prop
+  quotaStatus: QuotaStatus; // New prop
+  currentUsage: number; // New prop
+  maxImages: number; // New prop
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel, onShowChat }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel, onShowPlans, quotaStatus, currentUsage, maxImages }) => {
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Admin', color: 'bg-red-600' },
     dev: { name: 'Dev', color: 'bg-cyan-600' },
-    owner: { name: 'Owner', color: 'bg-yellow-600' }, // Adicionado 'owner'
     client: { name: 'Client', color: 'bg-blue-600' },
     free: { name: 'Grátis', color: 'bg-gray-500' },
+    starter: { name: 'Starter', color: 'bg-yellow-600' },
     pro: { name: 'Pro', color: 'bg-primary' },
   };
 
   const currentRole = roleDisplay[profileRole] || roleDisplay.free;
   const displayName = user?.firstName || user?.email?.split('@')[0] || 'Usuário';
   const isAdminOrDev = profileRole === 'admin' || profileRole === 'dev';
-  const isOwner = profileRole === 'owner';
-  const isClient = !isAdminOrDev && !isOwner;
+  
+  const isNearLimit = quotaStatus === QuotaStatus.NEAR_LIMIT;
+  const isBlocked = quotaStatus === QuotaStatus.BLOCKED;
 
   return (
     <header className="border-b border-white/5 bg-background/80 backdrop-blur-xl sticky top-0 z-[100] shadow-lg shadow-black/20">
@@ -41,17 +45,23 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
         
         {/* User Actions */}
         <div className="flex items-center gap-4">
-          
-          {/* Support Chat Button (Visible to Clients) */}
-          {isClient && (
-            <button 
-              onClick={onShowChat} 
-              className="p-2 text-accent hover:text-accent/80 transition-colors rounded-lg hover:bg-white/5 border border-accent/30" 
-              title="Chat de Suporte"
-            >
-              <MessageSquare size={20} />
-            </button>
-          )}
+            
+          {/* Usage Indicator / Plans Button */}
+          <button 
+            onClick={onShowPlans} 
+            className={`hidden sm:flex items-center gap-2 px-3 py-1 rounded-full transition-all text-sm font-medium ${
+                isBlocked ? 'bg-red-600/20 text-red-400 border border-red-600/50 hover:bg-red-600/30' :
+                isNearLimit ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/50 hover:bg-yellow-600/30' :
+                'bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10'
+            }`}
+            title={`Uso: ${currentUsage}/${maxImages}`}
+          >
+            {isBlocked ? <AlertTriangle size={16} /> : <Zap size={16} />}
+            <span className="hidden md:inline">
+                {isBlocked ? 'Limite!' : isNearLimit ? 'Quase no Limite' : 'Meu Plano'}
+            </span>
+            <span className="text-xs font-bold ml-1">{currentUsage}/{maxImages}</span>
+          </button>
           
           {/* Dev Panel Button (Visible only to Admin/Dev) */}
           {isAdminOrDev && (
