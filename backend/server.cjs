@@ -170,29 +170,31 @@ const authorizeAdmin = async (req, res, next) => {
 
 // --- Helper Functions ---
 
-// Geração de prompt detalhado
+// Geração de prompt detalhado (Simplificado para evitar caracteres problemáticos)
 const generateDetailedPrompt = (promptInfo) => {
     const { companyName, phone, addressStreet, addressNumber, addressNeighborhood, addressCity, details } = promptInfo;
+    
     const address = [addressStreet, addressNumber, addressNeighborhood, addressCity].filter(Boolean).join(', ');
-    const servicesList = details.split('.').map(s => s.trim()).filter(s => s.length > 5).join('; ');
+    // Limpa e formata os detalhes em uma lista simples
+    const servicesList = details.split(/[.;]/).map(s => s.trim()).filter(s => s.length > 5).join(', ');
 
-    return `Você é um designer profissional de social media. Gere uma arte de FLYER VERTICAL em alta qualidade.  
-Nicho: ${details}.  
-Dados que devem aparecer:  
-- Nome: ${companyName}  
-- Serviços: ${servicesList}  
-- Telefone/WhatsApp: ${phone}  
+    return `Você é um designer profissional de social media. Gere uma arte de FLYER VERTICAL em alta qualidade, estilo moderno e atraente.
+Nicho: ${details}.
+Informações de contato e negócio:
+- Nome da Empresa: ${companyName}
+- Serviços/Detalhes: ${servicesList}
+- Telefone/WhatsApp: ${phone}
 - Endereço: ${address}`;
 };
 
-// Geração de imagem com Google AI Studio (Imagen) - corrigido
+// Geração de imagem com Google AI Studio (Imagen) - Corrigido e Verificado
 async function generateImage(detailedPrompt) {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error('A chave GEMINI_API_KEY está ausente no .env.local.');
   }
 
   try {
-    // Corrigido: Usando o endpoint generateImage (singular) e payload simplificado
+    // Endpoint correto para geração de imagem (singular)
     const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImage?key=${process.env.GEMINI_API_KEY}`;
 
     const payload = {
@@ -206,7 +208,7 @@ async function generateImage(detailedPrompt) {
       timeout: 60000
     });
 
-    // Corrigido: Acessando o base64 via generatedImages[0].image.imageBytes
+    // Acessando o base64 via generatedImages[0].image.imageBytes
     if (response.data?.generatedImages?.length > 0) {
       const base64Image = response.data.generatedImages[0].image.imageBytes;
       return `data:image/png;base64,${base64Image}`;
@@ -216,6 +218,7 @@ async function generateImage(detailedPrompt) {
 
   } catch (error) {
     console.error('Erro ao gerar imagem com Google AI Studio:', error.response?.data || error.message);
+    // Se o erro for o JSON inválido, ele deve ser capturado aqui.
     throw new Error('Falha ao gerar imagem. Verifique a chave GEMINI_API_KEY e o prompt.');
   }
 }
