@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink } from 'lucide-react';
+import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage, PlanSetting, UserRole } from '../types';
 import { useLandingImages } from '../hooks/useLandingImages';
