@@ -234,7 +234,7 @@ Diretrizes de design:
   return response.text();
 }
 
-// Geração de imagem com Google AI Studio (Imagen) - TENTANDO CAMPO ALTERNATIVO
+// Geração de imagem com Google AI Studio (Imagen)
 async function generateImage(detailedPrompt) {
   if (!GEMINI_API_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
@@ -246,13 +246,13 @@ async function generateImage(detailedPrompt) {
     // CORREÇÃO: Obter o modelo de imagem diretamente do SDK
     const imageModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
     
-    // TENTATIVA: Usar 'imageAspectRatio' em vez de 'aspectRatio'
+    // CORREÇÃO: Usar 'aspectRatio' em vez de 'imageAspectRatio'
     const result = await imageModel.generateContent({
       contents: [{ parts: [{ text: detailedPrompt }] }],
       generationConfig: {
         responseMimeType: "image/png",
         responseModalities: ["Image"],
-        imageAspectRatio: "3:4" // CAMPO ALTERNATIVO
+        aspectRatio: "3:4" // CORRIGIDO
       }
     });
 
