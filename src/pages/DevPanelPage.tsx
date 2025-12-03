@@ -116,7 +116,8 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
         
         const signedImages = await Promise.all(images.map(async (img: any) => {
             try {
-                const signedUrl = await api.getDownloadUrl(img.image_url);
+                // O backend agora retorna a coluna image_url que é o path no storage
+                const signedUrl = await api.getDownloadUrl(img.image_url); 
                 return {
                     id: img.id,
                     url: signedUrl,
@@ -147,14 +148,15 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
         setDeletingId(image.id);
         setDeleteError(null);
         try {
-            const path = (allImages.find((img: GeneratedImage) => img.id === image.id) as any)?.image_url;
+            // O hook useAdminGeneratedImages retorna a lista de imagens do backend, que inclui o image_url (path)
+            const imageToDelete = allImages.find((img: GeneratedImage) => img.id === image.id);
             
-            if (!path) {
+            if (!imageToDelete) {
                 throw new Error("Caminho do arquivo não encontrado no cache.");
             }
             
-            await deleteImage(image.id, path);
-            setImagesWithSignedUrls((prev: (GeneratedImage & { userId: string })[]) => prev.filter((img: GeneratedImage & { userId: string }) => img.id !== image.id));
+            // Passamos o path do storage para o backend
+            await deleteImage(image.id, (imageToDelete as any).image_url); 
         } catch (e: any) {
             setDeleteError(e.message || "Falha ao deletar arte.");
         } finally {
@@ -224,6 +226,7 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
         setDeletingId(image.id);
         setDeleteError(null);
         try {
+            // O image_url retornado pelo hook é a URL pública, precisamos extrair o path do storage
             const urlParts = image.url.split('/landing-carousel/');
             const path = urlParts.length > 1 ? urlParts[1] : '';
             
@@ -497,8 +500,16 @@ const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
         return null; // Não renderiza nada se não for o owner
     }
     
-    const handleConnect = () => {
-        window.location.href = api.getMercadoPagoConnectUrl();
+    const handleConnect = async () => {
+        setIsLoading(true);
+        try {
+            // FIX 3: Call the async API function to get the URL from the backend
+            const connectUrl = await api.getMercadoPagoConnectUrl();
+            window.location.href = connectUrl;
+        } catch (e: any) {
+            toast.error(e.message || "Falha ao obter URL de conexão.");
+            setIsLoading(false);
+        }
     };
     
     const handleDisconnect = () => {

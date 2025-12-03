@@ -70,7 +70,7 @@ const generationLimiter = rateLimit({
   legacyHeaders: false, 
 });
 
-// --- Funções Auxiliares ---
+// --- Funções Auxiliares de Autenticação e Autorização ---
 
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -91,6 +91,38 @@ const authenticateToken = async (req, res, next) => {
     console.error("Erro durante a autenticação do token:", e);
     return res.status(500).json({ error: 'Erro interno ao verificar autenticação.' });
   }
+};
+
+const authorizeAdminOrDev = async (req, res, next) => {
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Usuário não autenticado.' });
+    }
+    
+    try {
+        // 1. Usar supabaseService (Service Role Key) para ignorar RLS e obter a role real
+        const { data: profile, error } = await supabaseService
+            .from('profiles')
+            .select('role')
+            .eq('id', req.user.id)
+            .single();
+            
+        if (error || !profile) {
+            console.warn(`[AUTH] Perfil não encontrado para o usuário ${req.user.id}`);
+            return res.status(403).json({ error: 'Acesso negado: Perfil não encontrado.' });
+        }
+        
+        const role = profile.role;
+        
+        if (['admin', 'dev', 'owner'].includes(role)) {
+            req.user.role = role; // Adiciona a role ao objeto user
+            next();
+        } else {
+            return res.status(403).json({ error: 'Acesso negado: Permissão insuficiente.' });
+        }
+    } catch (e) {
+        console.error("[AUTH] Erro ao verificar permissão de administrador:", e);
+        return res.status(500).json({ error: 'Erro interno ao verificar permissões.' });
+    }
 };
 
 const checkImageQuota = async (userId) => {
@@ -121,7 +153,7 @@ const checkImageQuota = async (userId) => {
 
 
   try {
-    console.log(`[QUOTA] Verificando quota para usuário ${userId}`);
+    // console.log(`[QUOTA] Verificando quota para usuário ${userId}`); // Removido para evitar log excessivo
     
     let { data: usageData, error: usageError } = await supabaseService
       .from('user_usage')
@@ -148,7 +180,7 @@ const checkImageQuota = async (userId) => {
     }
 
     const { plan_id: planId, current_usage: currentUsage, cycle_start_date: cycleStartDate } = usageData;
-    console.log(`[QUOTA] Usuário ${userId} plano '${planId}' com ${currentUsage} imagens usadas.`);
+    // console.log(`[QUOTA] Usuário ${userId} plano '${planId}' com ${currentUsage} imagens usadas.`); // Removido para evitar log excessivo
 
     const planSettings = combinedPlans.find(p => p.id === planId);
 
@@ -157,7 +189,7 @@ const checkImageQuota = async (userId) => {
     }
 
     const { max_images_per_month: maxImages } = planSettings;
-    console.log(`[QUOTA] Plano '${planId}' permite ${maxImages} imagens/mês.`);
+    // console.log(`[QUOTA] Plano '${planId}' permite ${maxImages} imagens/mês.`); // Removido para evitar log excessivo
 
     const cycleStart = new Date(cycleStartDate);
     const now = new Date();
@@ -176,7 +208,7 @@ const checkImageQuota = async (userId) => {
     }
 
     const usagePercentage = maxImages > 0 ? (effectiveUsage / maxImages) * 100 : 0;
-    console.log(`[QUOTA] Usuário ${userId} usou ${effectiveUsage}/${maxImages} (${usagePercentage.toFixed(1)}%).`);
+    // console.log(`[QUOTA] Usuário ${userId} usou ${effectiveUsage}/${maxImages} (${usagePercentage.toFixed(1)}%).`); // Removido para evitar log excessivo
 
     const baseResponse = { 
         usage: { ...usageData, current_usage: effectiveUsage }, 
@@ -208,7 +240,9 @@ async function generateDetailedPrompt(promptInfo) {
     .filter(Boolean)
     .join(', ');
     
-  const servicesList = details.split('.').map(s => s.trim()).filter(s => s.length > 5).join('; ');
+  // 4. Reforçar a Sanitização do Prompt: Usar replace para remover quebras de linha e aspas duplas que podem quebrar o contexto da IA.
+  const cleanDetails = details.replace(/[\r\n]+/g, ' ').replace(/"/g, '');
+  const servicesList = cleanDetails.split('.').map(s => s.trim()).filter(s => s.length > 5).join('; ');
   
   const prompt = `Você é um designer profissional de social media. Gere uma arte de FLYER VERTICAL em alta qualidade, com aparência profissional.  
 Use como referência o nível de qualidade de flyers modernos de pet shop, oficina mecânica, barbearia, lanchonete, salão de beleza, imobiliária e clínica, com:  
@@ -216,7 +250,7 @@ Use como referência o nível de qualidade de flyers modernos de pet shop, ofici
 - tipografia clara e hierarquia entre título, subtítulo e lista de serviços;  
 - ilustrações ou imagens relacionadas ao nicho;  
 - fundo bem trabalhado, mas sem poluir o texto.  
-Nicho do cliente: ${details}.  
+Nicho do cliente: ${cleanDetails}.  
 Dados que DEVEM aparecer no flyer:  
 - Nome da empresa: ${companyName}  
 - Serviços principais: ${servicesList}  
@@ -238,7 +272,7 @@ Diretrizes de design:
 async function generateImage(detailedPrompt) {
   if (!GEMINI_API_KEY) throw new Error('Chave GEMINI_API_KEY ausente.');
 
-  console.log(`[GENERATE] Iniciando geração de imagem com o prompt: ${detailedPrompt.substring(0, 120)}...`);
+  // console.log(`[GENERATE] Iniciando geração de imagem com o prompt: ${detailedPrompt.substring(0, 120)}...`); // Removido para evitar log excessivo
 
   try {
     // Usando o modelo de geração de imagem via getGenerativeModel
@@ -344,16 +378,16 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res,
         return res.status(403).json({ error: quotaResponse.message, quotaStatus: 'BLOCKED', ...quotaResponse });
     }
     
-    console.log(`[GENERATE] Gerando prompt detalhado...`);
+    // console.log(`[GENERATE] Gerando prompt detalhado...`); // Removido para evitar log excessivo
     const detailedPrompt = await generateDetailedPrompt(sanitizedPromptInfo);
     
-    console.log(`[GENERATE] Gerando imagem...`);
+    // console.log(`[GENERATE] Gerando imagem...`); // Removido para evitar log excessivo
     const generatedImageDataUrl = await generateImage(detailedPrompt);
     
-    console.log(`[GENERATE] Fazendo upload...`);
+    // console.log(`[GENERATE] Fazendo upload...`); // Removido para evitar log excessivo
     const imagePath = await uploadImageToSupabase(generatedImageDataUrl, user.id);
     
-    console.log(`[GENERATE] Salvando no DB...`);
+    // console.log(`[GENERATE] Salvando no DB...`); // Removido para evitar log excessivo
     const { data: image, error: dbError } = await supabaseService
       .from('images')
       .insert({ user_id: user.id, prompt: detailedPrompt, image_url: imagePath, business_info: sanitizedPromptInfo })
@@ -366,7 +400,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res,
     const { error: incrementError } = await supabaseService.rpc('increment_user_usage', { user_id_input: user.id });
     if (incrementError) console.error('Erro ao incrementar uso:', incrementError);
     
-    console.log(`[GENERATE] Sucesso! Imagem ID: ${image.id}`);
+    // console.log(`[GENERATE] Sucesso! Imagem ID: ${image.id}`); // Removido para evitar log excessivo
     res.json({ message: 'Arte gerada com sucesso!', image });
 
   } catch (error) {
@@ -374,11 +408,176 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res,
   }
 });
 
-// --- Admin Endpoints (Placeholder for brevity, assuming they exist) ---
-// ... (other admin endpoints)
+// --- Admin Endpoints ---
+
+// Endpoint 1: Listar todas as imagens geradas (para DevPanelPage)
+app.get('/api/admin/images', authenticateToken, authorizeAdminOrDev, async (req, res, next) => {
+    try {
+        // Usar supabaseService para ignorar RLS e buscar todas as imagens
+        const { data, error } = await supabaseService
+            .from('images')
+            .select('id, user_id, prompt, image_url, business_info, created_at')
+            .order('created_at', { ascending: false });
+            
+        if (error) throw new Error(error.message);
+        
+        // Nota: O frontend (useAdminGeneratedImages) é responsável por gerar as URLs assinadas.
+        res.json({ images: data });
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Endpoint 2: Deletar uma imagem gerada (para DevPanelPage)
+app.delete('/api/admin/images/:imageId', authenticateToken, authorizeAdminOrDev, async (req, res, next) => {
+    const { imageId } = req.params;
+    const { imageUrl } = req.body; // imagePath no storage
+    
+    if (!imageId || !imageUrl) {
+        return res.status(400).json({ error: "ID da imagem e URL são obrigatórios." });
+    }
+    
+    try {
+        // 1. Deletar do Storage (usando Service Role Key)
+        const { error: storageError } = await supabaseService.storage
+            .from('generated-arts')
+            .remove([imageUrl]);
+            
+        if (storageError) {
+            // Se o erro for 'The resource was not found', podemos ignorar e seguir para o DB
+            if (storageError.message !== 'The resource was not found') {
+                console.error("Erro ao deletar do Storage:", storageError);
+                throw new Error(`Falha ao deletar arquivo do storage: ${storageError.message}`);
+            }
+        }
+        
+        // 2. Deletar do Banco de Dados (usando Service Role Key)
+        const { error: dbError } = await supabaseService
+            .from('images')
+            .delete()
+            .eq('id', imageId);
+            
+        if (dbError) throw new Error(`Falha ao deletar do DB: ${dbError.message}`);
+        
+        res.status(204).send(); // No Content
+        
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Endpoint 3: Upload de imagem da Landing Page (para DevPanelPage)
+app.post('/api/admin/landing-images/upload', authenticateToken, authorizeAdminOrDev, async (req, res, next) => {
+    const { fileBase64, fileName, userId } = req.body;
+    
+    if (!fileBase64 || !fileName || !userId) {
+        return res.status(400).json({ error: "Dados de arquivo e ID do usuário são obrigatórios." });
+    }
+    
+    try {
+        // 1. Upload para o Storage 'landing-carousel'
+        const matches = fileBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) throw new Error('Formato de base64 inválido.');
+        const contentType = matches[1];
+        const imageBuffer = Buffer.from(matches[2], 'base64');
+        
+        // Cria um caminho único no bucket 'landing-carousel'
+        const filePath = `${uuidv4()}-${fileName}`; 
+        
+        const { data: uploadData, error: uploadError } = await supabaseService.storage
+          .from('landing-carousel')
+          .upload(filePath, imageBuffer, { contentType, upsert: false });
+          
+        if (uploadError) throw new Error(`Erro no upload para o carrossel: ${uploadError.message}`);
+        
+        // 2. Obter a ordem de classificação máxima atual
+        const { data: maxOrderData, error: maxOrderError } = await supabaseService
+            .from('landing_carousel_images')
+            .select('sort_order')
+            .order('sort_order', { ascending: false })
+            .limit(1)
+            .single();
+            
+        const nextSortOrder = (maxOrderData?.sort_order || 0) + 1;
+        
+        // 3. Inserir no Banco de Dados
+        const { data: image, error: dbError } = await supabaseService
+          .from('landing_carousel_images')
+          .insert({ 
+              image_url: uploadData.path, 
+              created_by: userId,
+              sort_order: nextSortOrder
+          })
+          .select('id, image_url, sort_order')
+          .single();
+
+        if (dbError) throw new Error(`Erro ao salvar no DB: ${dbError.message}`);
+        
+        // 4. Gerar URL pública para retorno ao frontend
+        const { data: { publicUrl } } = supabaseAnon.storage
+            .from('landing-carousel')
+            .getPublicUrl(image.image_url);
+            
+        res.json({ 
+            message: 'Upload de imagem da landing page realizado com sucesso!', 
+            image: {
+                id: image.id,
+                url: publicUrl,
+                sortOrder: image.sort_order
+            }
+        });
+        
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Endpoint 4: Deletar imagem da Landing Page (para DevPanelPage)
+app.delete('/api/admin/landing-images/:imageId', authenticateToken, authorizeAdminOrDev, async (req, res, next) => {
+    const { imageId } = req.params;
+    const { imagePath } = req.body; // imagePath no storage
+    
+    if (!imageId || !imagePath) {
+        return res.status(400).json({ error: "ID da imagem e caminho do storage são obrigatórios." });
+    }
+    
+    try {
+        // 1. Deletar do Storage (usando Service Role Key)
+        const { error: storageError } = await supabaseService.storage
+            .from('landing-carousel')
+            .remove([imagePath]);
+            
+        if (storageError && storageError.message !== 'The resource was not found') {
+            console.error("Erro ao deletar do Storage:", storageError);
+            throw new Error(`Falha ao deletar arquivo do storage: ${storageError.message}`);
+        }
+        
+        // 2. Deletar do Banco de Dados (usando Service Role Key)
+        const { error: dbError } = await supabaseService
+            .from('landing_carousel_images')
+            .delete()
+            .eq('id', imageId);
+            
+        if (dbError) throw new Error(`Falha ao deletar do DB: ${dbError.message}`);
+        
+        res.status(204).send(); // No Content
+        
+    } catch (error) {
+        next(error);
+    }
+});
+
 
 // --- Mercado Pago Endpoints (Placeholder for brevity, assuming they exist) ---
-// ... (other MP endpoints)
+app.post('/api/subscribe', authenticateToken, async (req, res, next) => {
+    // Placeholder for subscription initiation
+    res.status(501).json({ error: "Endpoint de assinatura não implementado." });
+});
+
+app.get('/api/admin/mp-connect', authenticateToken, authorizeAdminOrDev, async (req, res, next) => {
+    // Placeholder for MP OAuth Connect URL
+    res.status(501).json({ error: "Endpoint de conexão MP não implementado." });
+});
 
 
 // Error Handler

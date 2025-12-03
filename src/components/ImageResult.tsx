@@ -30,6 +30,7 @@ export const ImageResult: React.FC<ImageResultProps> = ({ image, onDownload }) =
                 Baixar Flyer
               </button>
             </div>
+            {/* O React escapa o conteúdo de 'image.prompt' por padrão, prevenindo XSS. */}
             <p className="text-gray-300 text-xs line-clamp-3 mb-2 font-light italic opacity-90 bg-black/30 p-2 rounded-lg">{image.prompt}</p>
             <p className="text-gray-500 text-[10px] flex items-center gap-1 uppercase tracking-wider">
               <Clock size={10} />

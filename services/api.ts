@@ -265,9 +265,32 @@ export const api = {
     }
   },
   
-  // NEW: Mercado Pago OAuth Connect URL (for Dev Panel)
-  getMercadoPagoConnectUrl: () => {
-    return `${BACKEND_URL}/admin/mp-connect`;
+  // FIX 3: Call backend endpoint to get the full MP Connect URL
+  getMercadoPagoConnectUrl: async (): Promise<string> => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase not configured.");
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Acesso negado. Faça login como administrador.");
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/mp-connect`, {
+            headers: {
+                "Authorization": `Bearer ${session.access_token}` 
+            }
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || `Falha ao obter URL de conexão MP: Status ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data.connectUrl;
+    } catch (error) {
+        console.error("Error fetching MP connect URL:", error);
+        throw error;
+    }
   },
 
   getLandingImages: async (): Promise<LandingImage[]> => {
