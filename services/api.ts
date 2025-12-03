@@ -339,8 +339,16 @@ export const api = {
         });
 
         if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || `Falha ao deletar imagem da landing page: Status ${response.status}`);
+            // Try to read JSON error body, but fallback gracefully if it's empty
+            let errorMessage = `Falha ao deletar imagem da landing page: Status ${response.status}`;
+            try {
+                const err = await response.json();
+                errorMessage = err.error || errorMessage;
+            } catch (e) {
+                // If JSON parsing fails (e.g., empty body), use the default message
+                console.warn("Failed to parse JSON error response, assuming empty body.");
+            }
+            throw new Error(errorMessage);
         }
     } catch (error) {
         console.error("Error deleting landing image via backend:", error);
