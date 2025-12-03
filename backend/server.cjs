@@ -126,15 +126,31 @@ const express = require('express');
         const now = new Date().toISOString();
         
         // 1. Fetch usage data (including plan_id)
-        const { data: usageData, error: usageError } = await supabaseService
+        let { data: usageData, error: usageError } = await supabaseService
             .from('user_usage')
             .select('*')
             .eq('user_id', userId)
             .single();
 
-        if (usageError || !usageData) {
-            console.error(`Quota check failed for user ${userId}:`, usageError?.message || 'Usage data not found.');
+        if (usageError && usageError.code !== 'PGRST116') { // PGRST116 means 'no rows found'
+            console.error(`Quota check failed for user ${userId}:`, usageError.message);
             return { status: 'BLOCKED', usage: null, plan: null, message: 'Falha ao verificar plano. Tente novamente.' };
+        }
+        
+        // If no usage data found, create a default 'free' record
+        if (!usageData) {
+            console.log(`[${userId}] Creating default 'free' usage record.`);
+            const { data: newUsageData, error: insertError } = await supabaseService
+                .from('user_usage')
+                .insert({ user_id: userId, plan_id: 'free', current_usage: 0, cycle_start_date: now })
+                .select('*')
+                .single();
+                
+            if (insertError || !newUsageData) {
+                console.error(`Failed to create default usage record for user ${userId}:`, insertError?.message);
+                return { status: 'BLOCKED', usage: null, plan: null, message: 'Falha ao inicializar plano de uso. Contate o suporte.' };
+            }
+            usageData = newUsageData;
         }
         
         const usage = usageData;
