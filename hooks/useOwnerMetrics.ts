@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSupabase } from './../services/supabaseClient';
-import { User } from './../types';
+import { getSupabase } from '@/services/supabaseClient';
+import { User } from '@/types';
 
 const BACKEND_URL = "/api";
 
