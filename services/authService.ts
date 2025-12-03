@@ -77,13 +77,13 @@ export const authService = {
       const userWithProfile: User = {
         id: data.user.id,
         email: data.user.email || '',
-        firstName: '',
-        lastName: '',
+        firstName: profile?.first_name || '',
+        lastName: profile?.last_name || '',
         createdAt: data.user.created_at ? new Date(data.user.created_at).getTime() : Date.now(),
-        role: 'free', // Role padrão
+        role: profile?.role || 'free',
       };
 
-      console.log('✅ Login successful:', userWithProfile.id);
+      console.log('✅ Login successful:', userWithProfile.id, 'Role:', userWithProfile.role);
       return userWithProfile;
     } catch (error: any) {
       console.error('AuthService login error:', error);
@@ -301,7 +301,7 @@ export const authService = {
     }
   },
 
-  onAuthStateChange(callback: (user: User | null) => void) {
+  onAuthStateChange(callback: (user: User | null) => void) => {
     console.log('👂 Setting up auth state listener');
     
     return supabase.auth.onAuthStateChange(async (event, session) => {
