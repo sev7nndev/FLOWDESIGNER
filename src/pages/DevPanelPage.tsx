@@ -51,9 +51,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUpload }) => {
         setUploadError(null);
         setUploadSuccess(false);
         try {
-            // The original file used `onUpload(file)` which doesn't pass userId, but the prop is defined.
-            // The wrapper function `handleUploadWrapper` below handles the user.id.
-            // Since ImageUpload is used inside LandingImagesManager, I will rely on the wrapper.
             await onUpload(file); 
             setUploadSuccess(true);
             setFile(null);
