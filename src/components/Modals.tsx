@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GeneratedImage, User, UserRole, QuotaCheckResponse, QuotaStatus, EditablePlan } from '@/types';
 import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download, Zap, ArrowLeft } from 'lucide-react';
 import { Button } from './Button';
-import { api } from '../services/api';
+import { api } from '@/services/api';
 import { toast } from 'sonner';
 
 // --- Generic Modal Wrapper ---

@@ -7,7 +7,7 @@ import { Accordion } from './Accordion';
 import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
 import { LandingImage, EditablePlan } from '@/types';
 import { HeroSection } from './Hero'; 
-import { api } from '../services/api';
+import { api } from '@/services/api';
 
 interface LandingPageProps {
   onGetStarted: () => void; // Agora leva para a página de planos
