@@ -3,9 +3,9 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
 const { v4: uuidv4 } = require('uuid');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const rateLimit = require('express-rate-limit');
 const sanitizeHtml = require('sanitize-html');
+const axios = require('axios'); // Adicionado axios
 
 // Tenta carregar o Mercado Pago. Se falhar, o erro será capturado aqui.
 let mercadopago;
@@ -87,13 +87,10 @@ if (MP_ACCESS_TOKEN && mercadopago) {
 
 // --- Gemini AI Client ---
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-let genAI = null;
-if (GEMINI_API_KEY) {
-    genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    console.log("Gemini AI client initialized.");
-} else {
+if (!GEMINI_API_KEY) {
     console.warn("WARNING: GEMINI_API_KEY not found. AI generation routes will fail.");
 }
+
 
 // --- Rate Limiting ---
 const generationLimiter = rateLimit({ 
@@ -188,39 +185,39 @@ Dados que devem aparecer:
 - Endereço: ${address}`;
 };
 
-// Geração de imagem (Imagen 3)
+// Geração de imagem (Imagen 3) - CORRIGIDO PARA CHAMADA AXIOS DIRETA
 async function generateImage(detailedPrompt) {
-    if (!genAI) throw new Error('Gemini AI client not initialized.');
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('A chave GEMINI_API_KEY está ausente no .env.local.');
+  }
 
-    console.log(`[GENERATE] Iniciando geração de imagem com prompt: ${detailedPrompt.substring(0, 120)}...`);
+  const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${process.env.GEMINI_API_KEY}`;
 
-    try {
-        const imageModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
-
-        const result = await imageModel.generateContent({
-            model: "imagen-3.0-generate-001",
-            contents: detailedPrompt,
-            config: {
-                numberOfImages: 1,
-                outputMimeType: "image/png",
-                aspectRatio: "3:4" // Vertical flyer aspect ratio
-            }
-        });
-
-        // The image data is returned as imageBytes (Base64 string)
-        const imageBase64 = result.response?.candidates?.[0]?.image?.imageBytes;
-
-        if (!imageBase64) {
-            console.error("API Response:", JSON.stringify(result.response, null, 2));
-            throw new Error("A API não retornou a imagem corretamente.");
+  try {
+    const response = await axios.post(
+      IMAGEN_API_URL,
+      {
+        prompt: [{ text: detailedPrompt }], 
+        imageConfig: {
+          mimeType: "image/png",    
+          resolution: "768x1024"    
         }
+      },
+      { headers: { 'Content-Type': 'application/json' }, timeout: 60000 }
+    );
 
-        return `data:image/png;base64,${imageBase64}`;
-
-    } catch (error) {
-        console.error("[GENERATE] ERRO DURANTE A GERAÇÃO DE IMAGEM:", error);
-        throw new Error(`Erro da API de Imagem: ${error.message || 'Erro desconhecido.'}`);
+    // Verifica se a imagem foi gerada
+    if (response.data?.images?.length > 0) {
+      const base64Image = response.data.images[0].imageBytes;
+      return `data:image/png;base64,${base64Image}`;
+    } else {
+      throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
     }
+
+  } catch (error) {
+    console.error('Erro ao gerar imagem com Google AI Studio:', error.response?.data || error.message);
+    throw new Error('Falha ao gerar imagem. Verifique a chave GEMINI_API_KEY e o prompt.');
+  }
 }
 
 // Upload Supabase
