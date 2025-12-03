@@ -125,28 +125,38 @@ const express = require('express');
     const checkImageQuota = async (userId) => {
         const now = new Date().toISOString();
         
-        // 1. Fetch usage and plan data
+        // 1. Fetch usage data (including plan_id)
         const { data: usageData, error: usageError } = await supabaseService
             .from('user_usage')
-            .select('*, plan_settings(max_images_per_month, price)')
+            .select('*')
             .eq('user_id', userId)
             .single();
 
         if (usageError || !usageData) {
             console.error(`Quota check failed for user ${userId}:`, usageError?.message || 'Usage data not found.');
-            // Default to BLOCKED if data is missing for safety
             return { status: 'BLOCKED', usage: null, plan: null, message: 'Falha ao verificar plano. Tente novamente.' };
         }
         
         const usage = usageData;
+        const planId = usage.plan_id;
         
-        // Ensure plan_settings is an object and not null/undefined
-        const plan = usageData.plan_settings || {}; 
+        // 2. Fetch plan settings separately using plan_id
+        const { data: planSettings, error: planError } = await supabaseService
+            .from('plan_settings')
+            .select('max_images_per_month, price')
+            .eq('id', planId)
+            .single();
+            
+        if (planError || !planSettings) {
+            console.error(`Plan settings not found for plan ID ${planId}:`, planError?.message || 'Plan settings missing.');
+            // Fallback plan object with 0 limit
+            const fallbackPlan = { max_images_per_month: 0, price: 0 };
+            return { status: 'BLOCKED', usage: usage, plan: fallbackPlan, message: 'Plano não configurado corretamente. Contate o suporte.' };
+        }
         
-        // Use 0 as fallback if max_images_per_month is missing
+        const plan = planSettings;
         const maxImages = plan.max_images_per_month || 0; 
         const currentUsage = usage.current_usage;
-        const planId = usage.plan_id;
         
         // Check if cycle needs renewal (simple monthly check based on cycle_start_date)
         const cycleStartDate = new Date(usage.cycle_start_date);
@@ -170,8 +180,7 @@ const express = require('express');
             }
         }
         
-        // 2. Determine Quota Status
-        // Handle division by zero if maxImages is 0 (e.g., if plan_settings failed to load)
+        // 3. Determine Quota Status
         const usagePercentage = maxImages > 0 ? (usageToUse / maxImages) * 100 : 0;
         
         if (usageToUse >= maxImages && maxImages > 0) {
@@ -181,10 +190,6 @@ const express = require('express');
         if (usagePercentage >= 80 && maxImages > 0) {
             return { status: 'NEAR_LIMIT', usage: { ...usage, current_usage: usageToUse }, plan, message: `Você está perto do limite (${usageToUse}/${maxImages}).` };
         }
-        
-        // If maxImages is 0, it means the plan data is missing or misconfigured, but we allow it if usage is 0
-        // If maxImages is 0 and usage is > 0, it should have been caught by the BLOCKED check if maxImages was > 0.
-        // Since we set maxImages to 0 if missing, we rely on the frontend to handle the 0/0 display if data is truly missing.
         
         return { status: 'ALLOWED', usage: { ...usage, current_usage: usageToUse }, plan };
     };
@@ -494,7 +499,7 @@ Diretrizes de design:
       }
 
       if (user.id !== userId) {
-        return res.status(403).json({ error: "Ação não autorizada para o usuário especificado." });
+        return res.status(403).json({ error: "Ação não autorizada para o usuário especificada." });
       }
 
       try {
