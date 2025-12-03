@@ -5,21 +5,8 @@ export const authService = {
   async login(email: string, password: string): Promise<User> {
     try {
       console.log('🔐 Attempting login for:', email);
-      console.log('🔍 Checking if user exists in profiles table...');
       
-      // Primeiro, verificar se o usuário existe na tabela profiles
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', email)
-        .single();
-
-      if (profileError) {
-        console.log('📝 Profile not found, will create after login');
-      } else {
-        console.log('✅ Profile found:', profile.email, 'Role:', profile.role);
-      }
-      
+      // Tentar login direto no Supabase Auth
       console.log('🔑 Attempting Supabase auth...');
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -56,15 +43,18 @@ export const authService = {
 
       // Buscar ou criar o perfil completo após login bem-sucedido
       try {
-        let userProfile = profile;
-        
-        if (!userProfile) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError && profileError.code === 'PGRST116') {
           console.log('📝 Creating profile for authenticated user...');
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
             .insert({
               id: data.user.id,
-              email: data.user.email || email,
               role: 'free',
               status: 'on',
               first_name: '',
@@ -75,23 +65,27 @@ export const authService = {
 
           if (createError) {
             console.error('❌ Error creating profile:', createError);
-            throw new Error('Erro ao criar perfil de usuário.');
+            // Continuar mesmo se não conseguir criar perfil
+          } else {
+            console.log('✅ Profile created successfully');
           }
-          
-          userProfile = newProfile;
-          console.log('✅ Profile created successfully');
-        } else {
-          console.log('✅ Using existing profile');
         }
+
+        // Buscar o perfil novamente (recém-criado ou existente)
+        const { data: finalProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
 
         // Retorna o usuário completo com perfil
         const userWithProfile: User = {
           id: data.user.id,
           email: data.user.email || email,
-          firstName: userProfile.first_name || '',
-          lastName: userProfile.last_name || '',
+          firstName: finalProfile?.first_name || '',
+          lastName: finalProfile?.last_name || '',
           createdAt: data.user.created_at ? new Date(data.user.created_at).getTime() : Date.now(),
-          role: userProfile.role || 'free',
+          role: finalProfile?.role || 'free',
         };
 
         console.log('✅ Login successful:', userWithProfile.email, 'Role:', userWithProfile.role);
@@ -99,7 +93,16 @@ export const authService = {
         
       } catch (profileErr) {
         console.error('❌ Error handling profile:', profileErr);
-        throw new Error('Erro ao processar perfil do usuário.');
+        // Retornar usuário mesmo sem perfil
+        const userWithProfile: User = {
+          id: data.user.id,
+          email: data.user.email || email,
+          firstName: '',
+          lastName: '',
+          createdAt: data.user.created_at ? new Date(data.user.created_at).getTime() : Date.now(),
+          role: 'free',
+        };
+        return userWithProfile;
       }
       
     } catch (error: any) {
@@ -152,7 +155,6 @@ export const authService = {
           .from('profiles')
           .insert({
             id: newUserId,
-            email: data.user.email,
             role: role,
             status: 'on',
             first_name: firstName,
