@@ -171,7 +171,7 @@ const checkImageQuota = async (userId) => {
         .from('user_usage')
         .update({ current_usage: 0, cycle_start_date: now.toISOString() })
         .eq('user_id', userId);
-      if (resetError) console.error(`[QUOTA] Falha ao resetar uso para ${userId}:`, resetError);
+      if (resetError) console.error('Erro ao resetar uso:', resetError);
       else effectiveUsage = 0;
     }
 
@@ -234,7 +234,7 @@ Diretrizes de design:
   return response.text();
 }
 
-// Geração de imagem com Google AI Studio (Imagen)
+// Geração de imagem com Google AI Studio (Gemini 2.5 Flash)
 async function generateImage(detailedPrompt) {
   if (!GEMINI_API_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
@@ -243,26 +243,25 @@ async function generateImage(detailedPrompt) {
   console.log(`[GENERATE] Iniciando geração de imagem com o prompt: ${detailedPrompt.substring(0, 100)}...`);
   
   try {
-    // CORREÇÃO: Usar genAI.generateImages, que é o método correto para o modelo Imagen.
-    const result = await genAI.generateImages({
-      model: "imagen-3.0-generate-001",
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+    });
+
+    // Usando 'prompt' e 'generationConfig' conforme o formato fornecido pelo usuário
+    const result = await model.generateContent({
       prompt: detailedPrompt,
-      config: {
-        numberOfImages: 1,
-        aspectRatio: "3:4", // Este parâmetro é aceito aqui
+      generationConfig: {
+        responseMimeType: "image/png"
       }
     });
 
-    if (result.generatedImages && result.generatedImages.length > 0) {
-      const image = result.generatedImages[0].image;
-      const base64Image = image.imageBytes;
-      const mimeType = image.mimeType || 'image/png';
-      
-      // Retorna no formato Data URL (Base64)
-      return `data:${mimeType};base64,${base64Image}`;
-    } else {
-      throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
-    }
+    // Extração do base64 conforme o formato fornecido pelo usuário
+    const base64Image = result.response.candidates[0].content[0].asset.data;
+    const mimeType = "image/png"; 
+
+    // Retorna no formato Data URL (Base64)
+    return `data:${mimeType};base64,${base64Image}`;
+
   } catch (error) {
     console.error(`[GENERATE] ERRO DURANTE A GERAÇÃO DE IMAGEM:`, error);
     
