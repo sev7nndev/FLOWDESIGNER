@@ -132,13 +132,8 @@ const express = require('express');
             .eq('user_id', userId)
             .single();
 
-        if (usageError && usageError.code !== 'PGRST116') { // PGRST116 means 'no rows found'
-            console.error(`Quota check failed for user ${userId}:`, usageError.message);
-            return { status: 'BLOCKED', usage: null, plan: null, message: 'Falha ao verificar plano. Tente novamente.' };
-        }
-        
         // If no usage data found, create a default 'free' record
-        if (!usageData) {
+        if (usageError && usageError.code === 'PGRST116') { 
             console.log(`[${userId}] Creating default 'free' usage record.`);
             const { data: newUsageData, error: insertError } = await supabaseService
                 .from('user_usage')
@@ -148,9 +143,14 @@ const express = require('express');
                 
             if (insertError || !newUsageData) {
                 console.error(`Failed to create default usage record for user ${userId}:`, insertError?.message);
+                // If insertion fails, we must block access
                 return { status: 'BLOCKED', usage: null, plan: null, message: 'Falha ao inicializar plano de uso. Contate o suporte.' };
             }
             usageData = newUsageData;
+        } else if (usageError) {
+             // Handle other unexpected errors during fetch
+            console.error(`Quota check failed for user ${userId}:`, usageError.message);
+            return { status: 'BLOCKED', usage: null, plan: null, message: 'Falha ao verificar plano. Tente novamente.' };
         }
         
         const usage = usageData;
@@ -337,14 +337,34 @@ Diretrizes de design:
     // NEW: Get Plan Settings
     app.get('/api/plan-settings', async (req, res, next) => {
         try {
-            const { data, error } = await supabaseService
+            // Fetch both settings and details to provide the full EditablePlan structure
+            const { data: settingsData, error: settingsError } = await supabaseService
                 .from('plan_settings')
-                .select('*')
-                .order('price', { ascending: true });
+                .select('*');
                 
-            if (error) throw new Error(error.message);
+            if (settingsError) throw new Error(settingsError.message);
             
-            res.json({ plans: data });
+            const { data: detailsData, error: detailsError } = await supabaseService
+                .from('plan_details')
+                .select('*');
+                
+            if (detailsError) throw new Error(detailsError.message);
+            
+            const settingsMap = new Map(settingsData.map(s => [s.id, s]));
+            
+            const combinedPlans = detailsData.map(detail => {
+                const setting = settingsMap.get(detail.id);
+                return {
+                    id: detail.id,
+                    display_name: detail.display_name,
+                    description: detail.description,
+                    features: detail.features,
+                    price: setting?.price || 0,
+                    max_images_per_month: setting?.max_images_per_month || 0,
+                };
+            });
+            
+            res.json({ plans: combinedPlans });
         } catch (error) {
             next(error);
         }
@@ -354,6 +374,14 @@ Diretrizes de design:
     app.get('/api/check-quota', authenticateToken, async (req, res, next) => {
         try {
             const quotaResponse = await checkImageQuota(req.user.id);
+            
+            // If the quota check failed internally (e.g., DB error), it returns a BLOCKED status.
+            if (quotaResponse.status === 'BLOCKED' && !quotaResponse.usage) {
+                 // If usage is null, it means a critical failure occurred during initialization/fetch.
+                 return res.status(500).json({ error: quotaResponse.message || 'Erro interno ao inicializar o plano de uso.' });
+            }
+            
+            // If successful or near limit/blocked (but usage data is present)
             res.json(quotaResponse);
         } catch (error) {
             next(error);
@@ -627,7 +655,8 @@ Diretrizes de design:
         }
         
         try {
-            const updates = plans.map(plan => ({
+            // 1. Update plan_settings (limits/price)
+            const settingsUpdates = plans.map(plan => ({
                 id: plan.id,
                 price: plan.price,
                 max_images_per_month: plan.max_images_per_month,
@@ -635,14 +664,31 @@ Diretrizes de design:
                 updated_at: new Date().toISOString()
             }));
             
-            // Use upsert to update existing or insert new plans
-            const { error } = await supabaseService
+            const { error: settingsError } = await supabaseService
                 .from('plan_settings')
-                .upsert(updates, { onConflict: 'id' });
+                .upsert(settingsUpdates, { onConflict: 'id' });
                 
-            if (error) {
-                console.error("Error updating plan settings:", error);
-                throw new Error(error.message);
+            if (settingsError) {
+                console.error("Error updating plan_settings:", settingsError);
+                throw new Error(settingsError.message);
+            }
+            
+            // 2. Update plan_details (marketing info)
+            const detailsUpdates = plans.map(plan => ({
+                id: plan.id,
+                display_name: plan.display_name,
+                description: plan.description,
+                features: plan.features,
+                updated_at: new Date().toISOString()
+            }));
+            
+            const { error: detailsError } = await supabaseService
+                .from('plan_details')
+                .upsert(detailsUpdates, { onConflict: 'id' });
+                
+            if (detailsError) {
+                console.error("Error updating plan_details:", detailsError);
+                throw new Error(detailsError.message);
             }
             
             res.json({ message: 'Configurações de planos atualizadas com sucesso.' });
