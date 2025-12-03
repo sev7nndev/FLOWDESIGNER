@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save } from 'lucide-react';
 import { Button } from '../components/Button';
-import { LandingImage, User, GeneratedImage, PlanSetting, UserRole } from '../types';
+import { LandingImage, User, GeneratedImage, PlanSetting, UserRole, EditablePlan } from '../types';
 import { useLandingImages } from '../hooks/useLandingImages';
 import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
 import { api } from '../services/api';
@@ -295,7 +295,7 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
 
 // --- Componente de Gerenciamento de Planos (Apenas Dev) ---
 const PlanSettingsManager: React.FC = () => {
-    const [plans, setPlans] = useState<PlanSetting[]>([]);
+    const [plans, setPlans] = useState<EditablePlan[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -305,6 +305,7 @@ const PlanSettingsManager: React.FC = () => {
         setError(null);
         try {
             const fetchedPlans = await api.getPlanSettings();
+            // Sort by price for consistent display
             setPlans(fetchedPlans.sort((a, b) => a.price - b.price));
         } catch (e: any) {
             setError(e.message || "Falha ao carregar planos.");
@@ -318,10 +319,23 @@ const PlanSettingsManager: React.FC = () => {
         fetchPlans();
     }, [fetchPlans]);
 
-    const handleInputChange = (id: UserRole, field: keyof PlanSetting, value: string) => {
-        setPlans(prev => prev.map(p => 
-            p.id === id ? { ...p, [field]: field === 'price' ? parseFloat(value) : parseInt(value) } : p
-        ));
+    const handleInputChange = (id: UserRole, field: keyof EditablePlan, value: string) => {
+        setPlans(prev => prev.map(p => {
+            if (p.id !== id) return p;
+            
+            if (field === 'price') {
+                return { ...p, price: parseFloat(value) || 0 };
+            }
+            if (field === 'max_images_per_month') {
+                return { ...p, max_images_per_month: parseInt(value) || 0 };
+            }
+            if (field === 'features') {
+                // Convert textarea content (newline separated) back to string array
+                return { ...p, features: value.split('\n').map(f => f.trim()).filter(f => f.length > 0) };
+            }
+            
+            return { ...p, [field]: value };
+        }));
     };
 
     const handleSave = async () => {
@@ -332,7 +346,9 @@ const PlanSettingsManager: React.FC = () => {
             const validPlans = plans.map(p => ({
                 ...p,
                 price: parseFloat(p.price.toFixed(2)),
-                max_images_per_month: Math.max(0, p.max_images_per_month)
+                max_images_per_month: Math.max(0, p.max_images_per_month),
+                // Ensure features is an array of strings
+                features: Array.isArray(p.features) ? p.features : (p.features as string).split('\n').map(f => f.trim()).filter(f => f.length > 0)
             }));
             
             await api.updatePlanSettings(validPlans);
@@ -356,10 +372,21 @@ const PlanSettingsManager: React.FC = () => {
             {error && <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{error}</div>}
 
             <div className="space-y-6">
-                {plans.map((plan: PlanSetting) => (
+                {plans.map((plan: EditablePlan) => (
                     <div key={plan.id} className="p-4 bg-zinc-800/50 rounded-lg border border-white/5">
                         <h4 className="text-lg font-semibold text-white uppercase mb-3">{plan.id}</h4>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Display Name */}
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Nome de Exibição</label>
+                                <input 
+                                    type="text" 
+                                    value={plan.display_name}
+                                    onChange={(e) => handleInputChange(plan.id as UserRole, 'display_name', e.target.value)}
+                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-primary outline-none"
+                                />
+                            </div>
+                            {/* Price */}
                             <div>
                                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Preço (R$)</label>
                                 <input 
@@ -370,6 +397,17 @@ const PlanSettingsManager: React.FC = () => {
                                     className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-primary outline-none"
                                 />
                             </div>
+                            {/* Description */}
+                            <div className="md:col-span-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Descrição Curta</label>
+                                <input 
+                                    type="text" 
+                                    value={plan.description}
+                                    onChange={(e) => handleInputChange(plan.id as UserRole, 'description', e.target.value)}
+                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-primary outline-none"
+                                />
+                            </div>
+                            {/* Max Images */}
                             <div>
                                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Limite Mensal (Imagens)</label>
                                 <input 
@@ -377,6 +415,16 @@ const PlanSettingsManager: React.FC = () => {
                                     value={plan.max_images_per_month}
                                     onChange={(e) => handleInputChange(plan.id as UserRole, 'max_images_per_month', e.target.value)}
                                     className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-primary outline-none"
+                                />
+                            </div>
+                            {/* Features (Textarea) */}
+                            <div className="md:col-span-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Recursos (Um por linha)</label>
+                                <textarea 
+                                    rows={4}
+                                    value={plan.features.join('\n')}
+                                    onChange={(e) => handleInputChange(plan.id as UserRole, 'features', e.target.value)}
+                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-primary outline-none resize-none"
                                 />
                             </div>
                         </div>

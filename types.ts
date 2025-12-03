@@ -33,7 +33,7 @@ export interface GenerationState {
   debugPrompt?: string;
 }
 
-export type UserRole = 'admin' | 'dev' | 'client' | 'free' | 'pro' | 'starter'; // Added 'starter'
+export type UserRole = 'admin' | 'dev' | 'client' | 'free' | 'pro' | 'starter' | 'owner'; // Added 'owner'
 
 export interface User {
   id: string;
@@ -65,12 +65,24 @@ export interface LandingImage {
   sortOrder: number;
 }
 
-// NEW: Plan Settings Type
+// NEW: Plan Settings Type (Limits and Price)
 export interface PlanSetting {
   id: UserRole; // 'free', 'starter', 'pro'
   price: number;
   max_images_per_month: number;
 }
+
+// NEW: Plan Details Type (Marketing info)
+export interface PlanDetail {
+  id: UserRole;
+  display_name: string;
+  description: string;
+  features: string[]; // Array of strings for features
+}
+
+// NEW: Combined Plan Type for Dev Panel
+export interface EditablePlan extends PlanSetting, PlanDetail {}
+
 
 // NEW: User Usage Type
 export interface UserUsage {

@@ -1,4 +1,4 @@
-import { GeneratedImage, BusinessInfo, LandingImage, PlanSetting, QuotaCheckResponse } from "../types";
+import { GeneratedImage, BusinessInfo, LandingImage, PlanSetting, QuotaCheckResponse, PlanDetail, EditablePlan } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // URL do seu Backend Node.js local (ou deployado)
@@ -101,13 +101,42 @@ export const api = {
     return historyWithUrls.filter((item): item is GeneratedImage => item !== null);
   },
   
-  // NEW: Fetch all plan settings
-  getPlanSettings: async (): Promise<PlanSetting[]> => {
+  // NEW: Fetch all plan settings (combined limits and details)
+  getPlanSettings: async (): Promise<EditablePlan[]> => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase not configured.");
+    
     try {
-        const response = await fetch(`${BACKEND_URL}/plan-settings`);
-        if (!response.ok) throw new Error("Falha ao carregar configurações de planos.");
-        const data = await response.json();
-        return data.plans as PlanSetting[];
+        // Fetch limits/prices
+        const { data: settingsData, error: settingsError } = await supabase
+            .from('plan_settings')
+            .select('*');
+            
+        if (settingsError) throw new Error(settingsError.message);
+        
+        // Fetch marketing details
+        const { data: detailsData, error: detailsError } = await supabase
+            .from('plan_details')
+            .select('*');
+            
+        if (detailsError) throw new Error(detailsError.message);
+        
+        const settingsMap = new Map(settingsData.map(s => [s.id, s]));
+        
+        // Combine data
+        const combinedPlans: EditablePlan[] = detailsData.map(detail => {
+            const setting = settingsMap.get(detail.id);
+            return {
+                id: detail.id as any,
+                display_name: detail.display_name,
+                description: detail.description,
+                features: detail.features,
+                price: setting?.price || 0,
+                max_images_per_month: setting?.max_images_per_month || 0,
+            };
+        });
+        
+        return combinedPlans;
     } catch (error) {
         console.error("Error fetching plan settings:", error);
         return [];
@@ -138,8 +167,8 @@ export const api = {
     }
   },
   
-  // NEW: Admin update plan settings
-  updatePlanSettings: async (plans: PlanSetting[]): Promise<void> => {
+  // NEW: Admin update plan settings (now handles both tables)
+  updatePlanSettings: async (plans: EditablePlan[]): Promise<void> => {
     const supabase = getSupabase();
     if (!supabase) throw new Error("Supabase not configured.");
     
@@ -147,19 +176,40 @@ export const api = {
     if (!session) throw new Error("Acesso negado.");
 
     try {
-        const response = await fetch(`${BACKEND_URL}/admin/plan-settings/update`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${session.access_token}` 
-            },
-            body: JSON.stringify({ plans })
-        });
-
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || `Falha ao atualizar planos: Status ${response.status}`);
+        // 1. Prepare updates for plan_settings (limits/price)
+        const settingsUpdates = plans.map(p => ({
+            id: p.id,
+            price: p.price,
+            max_images_per_month: p.max_images_per_month,
+            updated_by: session.user.id,
+            updated_at: new Date().toISOString()
+        }));
+        
+        // 2. Prepare updates for plan_details (marketing info)
+        const detailsUpdates = plans.map(p => ({
+            id: p.id,
+            display_name: p.display_name,
+            description: p.description,
+            features: p.features,
+            updated_at: new Date().toISOString()
+        }));
+        
+        // Execute updates in parallel
+        const [settingsResult, detailsResult] = await Promise.all([
+            supabase.from('plan_settings').upsert(settingsUpdates, { onConflict: 'id' }),
+            supabase.from('plan_details').upsert(detailsUpdates, { onConflict: 'id' })
+        ]);
+        
+        if (settingsResult.error) {
+            console.error("Error updating plan_settings:", settingsResult.error);
+            throw new Error(settingsResult.error.message);
         }
+        
+        if (detailsResult.error) {
+            console.error("Error updating plan_details:", detailsResult.error);
+            throw new Error(detailsResult.error.message);
+        }
+        
     } catch (error) {
         console.error("Error updating plan settings via backend:", error);
         throw error;
