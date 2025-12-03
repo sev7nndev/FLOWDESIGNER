@@ -149,7 +149,7 @@ const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, sendMessage
 };
 
 // --- Componente Principal OwnerChatPanel ---
-export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner }) => {
+export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner: _owner }) => {
   const { chatHistory, isLoading, error, refreshHistory, sendMessage } = useOwnerChat();
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   

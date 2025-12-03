@@ -156,7 +156,7 @@ export const useOwnerChat = (): UseOwnerChatResult => {
                     if (thread.id === senderId) {
                         const newMsg: Message = {
                             id: newMessage.id,
-                            sender: 'client',
+                            sender: 'client', // Explicitamente tipado como 'client'
                             text: newMessage.content,
                             timestamp: newMessage.created_at
                         };
