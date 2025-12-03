@@ -87,7 +87,8 @@ if (MP_ACCESS_TOKEN && mercadopago) {
 // 1. Verifica o JWT e anexa o UID do usuário à requisição
 const verifyAuth = async (req, res, next) => {
     if (!supabaseAnon) {
-        return res.status(500).json({ error: 'Internal Server Error: Supabase Anon Client not initialized.' });
+        // Se o cliente anon não foi inicializado (chaves ausentes), o backend não pode verificar o token.
+        return res.status(401).json({ error: 'Unauthorized: Supabase configuration missing on backend.' });
     }
     
     const authHeader = req.headers.authorization;
@@ -120,7 +121,8 @@ const authorizeAdmin = async (req, res, next) => {
     }
     
     if (!supabaseServiceRole) {
-        return res.status(500).json({ error: 'Internal Server Error: Supabase Service Role Client not initialized.' });
+        // Se o cliente Service Role não foi inicializado (chaves ausentes), o backend não pode acessar o DB.
+        return res.status(403).json({ error: 'Forbidden: Supabase Service Role configuration missing on backend.' });
     }
     
     try {
