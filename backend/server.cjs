@@ -10,8 +10,6 @@ try {
     mercadopago = require('mercadopago');
 } catch (e) {
     console.error("FATAL ERROR: Failed to load 'mercadopago'. Please run 'npm install'.", e);
-    // Se o require falhar, o processo Node.js deve sair com erro 1, que é o que está acontecendo.
-    // Se o require for bem-sucedido, mas a configuração falhar, o erro será capturado abaixo.
 }
 
 dotenv.config();
@@ -42,25 +40,34 @@ app.use(express.json({ limit: '1mb' }));
 app.set('trust proxy', 1);
 
 // --- Supabase Clients ---
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    console.warn("WARNING: Supabase keys are missing. Backend routes requiring Service Role will fail.");
+let supabaseAnon = null;
+let supabaseServiceRole = null;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_KEY) {
+    console.warn("WARNING: Supabase environment variables (URL, ANON_KEY, SERVICE_KEY) are missing. Backend routes requiring Supabase will fail.");
+} else {
+    try {
+        // Cria clientes Supabase
+        supabaseAnon = createClient(
+            SUPABASE_URL,
+            SUPABASE_ANON_KEY
+        );
+        
+        supabaseServiceRole = createClient(
+            SUPABASE_URL,
+            SUPABASE_SERVICE_KEY
+        );
+        console.log("Supabase clients initialized.");
+    } catch (e) {
+        console.error("FATAL ERROR: Failed to initialize Supabase clients:", e);
+        // Se a inicialização falhar aqui, o servidor deve parar.
+        process.exit(1);
+    }
 }
-
-// Cria clientes Supabase, usando strings vazias se as chaves estiverem ausentes.
-// O SDK do Supabase pode lançar um erro se a URL for vazia, mas a versão 2.x é mais tolerante.
-const supabaseAnon = createClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY
-);
-
-const supabaseServiceRole = createClient(
-    SUPABASE_URL,
-    SUPABASE_SERVICE_KEY
-);
 
 // --- Mercado Pago Configuration ---
 const MP_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN;
@@ -77,6 +84,10 @@ if (MP_ACCESS_TOKEN && mercadopago) {
 
 // 1. Verifica o JWT e anexa o UID do usuário à requisição
 const verifyAuth = async (req, res, next) => {
+    if (!supabaseAnon) {
+        return res.status(500).json({ error: 'Internal Server Error: Supabase Anon Client not initialized.' });
+    }
+    
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Unauthorized: Missing token.' });
@@ -106,8 +117,8 @@ const authorizeAdmin = async (req, res, next) => {
         return res.status(403).json({ error: 'Forbidden: Authentication required.' });
     }
     
-    if (!SUPABASE_SERVICE_KEY) {
-        return res.status(500).json({ error: 'Internal Server Error: Service Role Key is missing for authorization check.' });
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Internal Server Error: Supabase Service Role Client not initialized.' });
     }
     
     try {
@@ -139,8 +150,8 @@ const authorizeAdmin = async (req, res, next) => {
 
 // Rota de Geração de Imagem
 app.post('/api/generate', verifyAuth, async (req, res) => {
-    if (!SUPABASE_SERVICE_KEY) {
-        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
     }
     
     console.log(`User ${req.user.id} requested image generation.`);
@@ -163,8 +174,8 @@ app.post('/api/generate', verifyAuth, async (req, res) => {
 
 // Rota de Verificação de Quota
 app.get('/api/check-quota', verifyAuth, async (req, res) => {
-    if (!SUPABASE_SERVICE_KEY) {
-        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
     }
     
     console.log(`User ${req.user.id} checked quota.`);
@@ -237,13 +248,13 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
         if (allPlansError) throw new Error("Failed to fetch all plans.");
         
         const plans = allPlans.map(p => ({
-            id: p.id,
-            display_name: p.display_name,
-            description: p.description,
-            features: p.features,
-            price: p.plan_settings.price,
-            max_images_per_month: p.plan_settings.max_images_per_month
-        }));
+                id: p.id,
+                display_name: p.display_name,
+                description: p.description,
+                features: p.features,
+                price: p.plan_settings.price,
+                max_images_per_month: p.plan_settings.max_images_per_month
+            }));
 
         res.json({
             status: status,
@@ -271,8 +282,8 @@ app.post('/api/subscribe', verifyAuth, async (req, res) => {
         return res.status(500).json({ error: "Erro de configuração: Token do Mercado Pago não está definido no servidor." });
     }
     
-    if (!SUPABASE_SERVICE_KEY) {
-        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
     }
     
     console.log(`User ${req.user.id} initiating subscription for plan ${planId}`);
@@ -322,8 +333,8 @@ app.post('/api/subscribe', verifyAuth, async (req, res) => {
 
 // Rota Admin: Listar todas as imagens (Service Role required)
 app.get('/api/admin/images', verifyAuth, authorizeAdmin, async (req, res) => {
-    if (!SUPABASE_SERVICE_KEY) {
-        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
     }
     
     console.log(`Admin ${req.user.id} fetching all images.`);
@@ -345,8 +356,8 @@ app.get('/api/admin/images', verifyAuth, authorizeAdmin, async (req, res) => {
 
 // Rota Admin: Deletar imagem (Service Role required)
 app.delete('/api/admin/images/:imageId', verifyAuth, authorizeAdmin, async (req, res) => {
-    if (!SUPABASE_SERVICE_KEY) {
-        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
     }
     
     const { imageId } = req.params;
@@ -379,8 +390,8 @@ app.delete('/api/admin/images/:imageId', verifyAuth, authorizeAdmin, async (req,
 
 // Rota Admin: Upload de imagem da Landing Page (Service Role required)
 app.post('/api/admin/landing-images/upload', verifyAuth, authorizeAdmin, async (req, res) => {
-    if (!SUPABASE_SERVICE_KEY) {
-        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
     }
     
     const { fileBase64, fileName, userId } = req.body;
@@ -416,6 +427,7 @@ app.post('/api/admin/landing-images/upload', verifyAuth, authorizeAdmin, async (
             
         if (dbError) throw dbError;
         
+        // Note: We use supabaseAnon here to get the public URL, as it's a public bucket.
         const { data: { publicUrl } } = supabaseAnon.storage
             .from('landing-carousel')
             .getPublicUrl(insertedImage.image_url);
@@ -437,8 +449,8 @@ app.post('/api/admin/landing-images/upload', verifyAuth, authorizeAdmin, async (
 
 // Rota Admin: Deletar imagem da Landing Page (Service Role required)
 app.delete('/api/admin/landing-images/:id', verifyAuth, authorizeAdmin, async (req, res) => {
-    if (!SUPABASE_SERVICE_KEY) {
-        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
     }
     
     const { id } = req.params;
