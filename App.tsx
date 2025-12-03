@@ -18,7 +18,7 @@ import { useUsage } from './hooks/useUsage';
 import { Toaster } from 'sonner'; 
 import { CheckoutPage } from './src/pages/CheckoutPage'; 
 
-// Define a minimal structure for the authenticated user before profile is loaded
+// Define a minimal structure for authenticated user before profile is loaded
 interface AuthUser {
   id: string;
   email: string;
