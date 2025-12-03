@@ -28,11 +28,11 @@ interface AuthUser {
 export const App: React.FC = () => {
   // Auth State
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'PLANS' | 'CHECKOUT'>('LANDING'); // Added 'CHECKOUT' view
+  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'PLANS' | 'CHECKOUT'>('LANDING');
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState<QuotaCheckResponse | null>(null); // State for Upgrade Modal
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null); // NEW: Track selected plan before auth
+  const [showUpgradeModal, setShowUpgradeModal] = useState<QuotaCheckResponse | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   
   // Profile Hook
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
@@ -75,26 +75,24 @@ export const App: React.FC = () => {
   // Landing Images Hook (Used by LandingPage and DevPanel)
   const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
 
-  // NEW: Handle plan selection from Landing Page or Plans Page
+  // Handle plan selection from Landing Page or Plans Page
   const handleSelectPlan = useCallback((planId: string) => {
       setSelectedPlanId(planId);
       if (planId === 'free') {
-          setView('AUTH'); // Free plan -> Auth/Signup
+          setView('AUTH');
       } else {
-          // Paid plan -> Checkout. If user is already logged in, proceed to checkout. If not, they will be prompted to log in/sign up first.
           if (authUser) {
               setView('CHECKOUT');
           } else {
-              setView('AUTH'); // If not logged in, go to auth first. Checkout logic will handle redirection after successful auth.
+              setView('AUTH');
           }
       }
   }, [authUser]);
   
-  // NEW: Handle generic start/show plans (Leads to PLANS screen)
+  // Handle generic start/show plans (Leads to PLANS screen)
   const handleShowPlans = useCallback(() => {
       setView('PLANS');
   }, []);
-
 
   const fetchAuthUser = (supabaseUser: any) => {
     const newAuthUser: AuthUser = {
@@ -104,13 +102,12 @@ export const App: React.FC = () => {
     };
     setAuthUser(newAuthUser);
     
-    // If a plan was selected before authentication, redirect to checkout immediately after successful login
     if (selectedPlanId && selectedPlanId !== 'free') {
         setView('CHECKOUT');
     } else {
         setView('APP');
     }
-    setSelectedPlanId(null); // Clear selected plan after successful login/redirection
+    setSelectedPlanId(null);
   };
 
   // Init Auth & History
@@ -169,10 +166,10 @@ export const App: React.FC = () => {
       <div className="app-container">
         <Toaster position="top-right" richColors />
         <LandingPage 
-          onGetStarted={handleShowPlans} // CTA principal agora leva para a página de planos
+          onGetStarted={handleShowPlans}
           onLogin={() => setView('AUTH')} 
-          onSelectPlan={handleSelectPlan} // Seleção de plano na seção de preços leva para AUTH/CHECKOUT
-          onShowPlans={handleShowPlans} // Botão Criar Conta na navbar leva para a página de planos
+          onSelectPlan={handleSelectPlan}
+          onShowPlans={handleShowPlans}
           landingImages={landingImages}
           isLandingImagesLoading={isLandingImagesLoading}
         />
@@ -187,8 +184,8 @@ export const App: React.FC = () => {
         <AuthScreens 
             onSuccess={() => {}} 
             onBack={() => { setView('LANDING'); setSelectedPlanId(null); }} 
-            selectedPlanId={selectedPlanId} // Pass selected plan
-            plans={plans} // Pass plans for context
+            selectedPlanId={selectedPlanId}
+            plans={plans}
         />
       </div>
     );
@@ -211,7 +208,6 @@ export const App: React.FC = () => {
   
   if (view === 'CHECKOUT') {
       if (!selectedPlanId || !user) {
-          // If no plan selected or user is not logged in, redirect to plans page
           setView('PLANS');
           return null;
       }
@@ -231,7 +227,6 @@ export const App: React.FC = () => {
   
   // MAIN APP UI (Protected)
   if (!user) {
-      // Should not happen if auth flow is correct, but handles fallback
       return <div className="app-container min-h-screen bg-zinc-950" />;
   }
   
@@ -259,7 +254,6 @@ export const App: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 relative z-20 mt-[-2rem] md:mt-[-4rem] p-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* Coluna 1: Formulário de Geração */}
           <div className="lg:col-span-7">
             <GenerationForm 
                 form={form}
@@ -277,7 +271,6 @@ export const App: React.FC = () => {
             />
           </div>
 
-          {/* Coluna 2: Resultado e Histórico */}
           <div className="lg:col-span-5">
             <ResultDisplay 
                 state={state}

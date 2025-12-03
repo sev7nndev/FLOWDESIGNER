@@ -4,7 +4,7 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Reset e Correções para Iframe */
+/* Reset básico */
 * {
   box-sizing: border-box;
 }
@@ -15,7 +15,6 @@ html, body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  overflow-y: auto;
 }
 
 body {
@@ -30,36 +29,14 @@ body {
   width: 100%;
   min-height: 100vh;
   overflow-x: hidden;
-  overflow-y: auto;
 }
 
-/* Shadcn/ui CSS Variables (Mapped to existing theme) */
-@layer base {
-  :root {
-    --background: 90 5% 4%; /* #09090b (zinc-950) */
-    --foreground: 0 0% 98%; /* #fafafa (white) */
-    
-    --card: 240 4% 10%; /* #18181b (zinc-900/surface) */
-    --card-foreground: 0 0% 98%;
-    
-    --muted: 240 4% 10%;
-    --muted-foreground: 240 5% 64.9%; /* #a1a1aa (zinc-400) */
-    
-    --border: 240 3.7% 15.9%; /* #27272a (zinc-800) */
-    --input: 240 3.7% 15.9%;
-    --ring: 262 83% 60%; /* #8b5cf6 (primary) */
-    
-    --primary: 262 83% 60%;
-    --secondary: 290 80% 60%;
-    --accent: 185 94% 31%;
-  }
-}
-
-/* Grid Background Effect */
-.bg-grid {
-  background-size: 40px 40px;
-  mask-image: linear-gradient(to bottom, transparent, 10%, black, 90%, transparent);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, 10%, black, 90%, transparent);
+/* Container principal */
+.app-container {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
 }
 
 /* Custom Scrollbar */
@@ -77,36 +54,26 @@ body {
   background: #52525b;
 }
 
-/* Utility for Modals */
-.custom-scrollbar {
-    scrollbar-width: thin;
+/* Grid Background */
+.bg-grid-pattern {
+  background-image: linear-gradient(to right, #27272a 1px, transparent 1px), linear-gradient(to bottom, #27272a 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
-/* Hide scrollbar for Marquee */
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
-}
-.no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+/* Animações */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Correções específicas para o container principal */
-.app-container {
-  width: 100%;
-  min-height: 100vh;
-  overflow-x: hidden;
-  overflow-y: auto;
-  position: relative;
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out forwards;
 }
 
-/* Para telas muito pequenas */
-@media (max-width: 640px) {
-  html, body {
-    overflow-x: hidden;
-  }
-  
-  .app-container {
-    overflow-x: hidden;
-  }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
