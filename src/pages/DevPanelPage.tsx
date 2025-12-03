@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info } from 'lucide-react';
 import { Button } from '../components/Button';
-import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '../types';
-import { useLandingImages } from '../hooks/useLandingImages';
-import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
-import { api } from '../services/api';
+import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '@/types';
+import { useLandingImages } from '@/hooks/useLandingImages';
+import { useAdminGeneratedImages } from '@/hooks/useAdminGeneratedImages';
+import { api } from '@/services/api';
 import { toast } from 'sonner';
-import { getSupabase } from '../services/supabaseClient';
+import { getSupabase } from '@/services/supabaseClient';
 
 interface DevPanelPageProps {
   user: User | null;
@@ -132,7 +132,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
         }));
         
         setIsSigning(false);
-        return signedImages.filter((img): img is GeneratedImage & { userId: string } => img !== null);
+        return signedImages.filter((img: GeneratedImage & { userId: string } | null): img is GeneratedImage & { userId: string } => img !== null);
     }, []);
 
     useEffect(() => {
@@ -332,7 +332,7 @@ const PlanSettingsManager: React.FC = () => {
             }
             if (field === 'features') {
                 // Convert textarea content (newline separated) back to string array
-                return { ...p, features: value.split('\n').map(f => f.trim()).filter(f => f.length > 0) };
+                return { ...p, features: value.split('\n').map((f: string) => f.trim()).filter((f: string) => f.length > 0) };
             }
             
             return { ...p, [field]: value };
@@ -349,7 +349,7 @@ const PlanSettingsManager: React.FC = () => {
                 price: parseFloat(p.price.toFixed(2)),
                 max_images_per_month: Math.max(0, p.max_images_per_month),
                 // Ensure features is an array of strings
-                features: Array.isArray(p.features) ? p.features : (p.features as string).split('\n').map(f => f.trim()).filter(f => f.length > 0)
+                features: Array.isArray(p.features) ? p.features : (p.features as string).split('\n').map((f: string) => f.trim()).filter((f: string) => f.length > 0)
             }));
             
             await api.updatePlanSettings(validPlans);

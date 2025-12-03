@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { User, EditablePlan } from '../types';
+import { User, EditablePlan } from '@/types';
 import { Button } from '../components/Button';
 import { ArrowLeft, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
 import { PricingCard } from '../components/PricingCard';
@@ -22,7 +22,7 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlan
     const formatFeatures = (plan: EditablePlan) => {
         const quotaFeature = `${plan.max_images_per_month} imagens por mês`;
         // Filtra features para remover duplicatas de quota e adiciona a quota no início
-        const filteredFeatures = plan.features.filter(f => !f.toLowerCase().includes('imagens'));
+        const filteredFeatures = plan.features.filter((f: string) => !f.toLowerCase().includes('imagens'));
         return [quotaFeature, ...filteredFeatures];
     };
 

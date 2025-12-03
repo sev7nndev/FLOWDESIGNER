@@ -132,7 +132,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
         }));
         
         setIsSigning(false);
-        return signedImages.filter((img): img is GeneratedImage & { userId: string } => img !== null);
+        return signedImages.filter((img: GeneratedImage & { userId: string } | null): img is GeneratedImage & { userId: string } => img !== null);
     }, []);
 
     useEffect(() => {
