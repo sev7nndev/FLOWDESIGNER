@@ -185,30 +185,30 @@ Dados que devem aparecer:
 - Endereço: ${address}`;
 };
 
-// Geração de imagem (Imagen 3) - CORRIGIDO PARA CHAMADA AXIOS DIRETA
+// Geração de imagem com Google AI Studio (Imagen) - corrigido
 async function generateImage(detailedPrompt) {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error('A chave GEMINI_API_KEY está ausente no .env.local.');
   }
 
-  const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${process.env.GEMINI_API_KEY}`;
-
   try {
-    const response = await axios.post(
-      IMAGEN_API_URL,
-      {
-        prompt: [{ text: detailedPrompt }], 
-        imageConfig: {
-          mimeType: "image/png",    
-          resolution: "768x1024"    
-        }
-      },
-      { headers: { 'Content-Type': 'application/json' }, timeout: 60000 }
-    );
+    // Corrigido: Usando o endpoint generateImage (singular) e payload simplificado
+    const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImage?key=${process.env.GEMINI_API_KEY}`;
 
-    // Verifica se a imagem foi gerada
-    if (response.data?.images?.length > 0) {
-      const base64Image = response.data.images[0].imageBytes;
+    const payload = {
+      prompt: detailedPrompt,
+      size: "1024x1024", // Tamanho padrão para flyers verticais
+      mimeType: "image/png"
+    };
+
+    const response = await axios.post(IMAGEN_API_URL, payload, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 60000
+    });
+
+    // Corrigido: Acessando o base64 via generatedImages[0].image.imageBytes
+    if (response.data?.generatedImages?.length > 0) {
+      const base64Image = response.data.generatedImages[0].image.imageBytes;
       return `data:image/png;base64,${base64Image}`;
     } else {
       throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
