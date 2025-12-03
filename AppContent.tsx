@@ -28,9 +28,7 @@ export const AppContent: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
-  const [showTest, setShowTest] = useState(true); // Mostrar teste inicialmente
-  
-  const [lastView, setLastView] = useLocalStorage<ViewType>('lastView', 'LANDING');
+  const [showTest, setShowTest] = useState(true);
   
   const { updateProfile } = useProfile(user?.id);
   const profileRole = (user?.role || 'free') as UserRole;
@@ -48,144 +46,128 @@ export const AppContent: React.FC = () => {
     
     switch (role) {
       case 'owner':
-        console.log('👑 Redirecting to OWNER_PANEL');
         return 'OWNER_PANEL';
       case 'admin':
       case 'dev':
-        console.log('👨‍💻 Redirecting to DEV_PANEL');
         return 'DEV_PANEL';
       default:
-        console.log('👤 Redirecting to APP');
         return 'APP';
     }
   };
 
-  // 1. Initialization and Auth Listener
+  // 1. Initialize app and check auth state
   useEffect(() => {
-    const initializeAuth = async () => {
+    const initializeApp = async () => {
       try {
         console.log('🚀 Initializing app...');
         
+        // Check environment variables
         if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
           throw new Error('Supabase não configurado. Verifique as variáveis de ambiente.');
         }
         
+        // Check URL params for payment success
         const urlParams = new URLSearchParams(window.location.search);
         const planFromUrl = urlParams.get('plan');
         const paymentStatus = urlParams.get('status');
 
-        // Se retornar do Mercado Pago com sucesso, forçamos a tela de AUTH
         if (planFromUrl && paymentStatus === 'success') {
-          console.log(`✅ Pagamento aprovado para o plano: ${planFromUrl}. Redirecionando para cadastro.`);
+          console.log(`✅ Payment success for plan: ${planFromUrl}`);
           setView('AUTH');
-        } else {
-          // Check current session
-          console.log('🔍 Checking current session...');
-          const currentUser = await authService.getCurrentUser();
-          if (currentUser) {
-            console.log('✅ User found:', currentUser.email, 'Role:', currentUser.role);
-            setUser(currentUser);
-            // Define a view baseada no role imediatamente
-            const roleView = getRoleBasedView(currentUser.role);
-            setView(roleView);
-            setLastView(roleView);
-          } else {
-            console.log('👤 No user session, showing landing');
-            setView('LANDING');
-          }
+          setIsInitialized(true);
+          return;
         }
+        
+        // Check current session
+        console.log('🔍 Checking current session...');
+        const currentUser = await authService.getCurrentUser();
+        
+        if (currentUser) {
+          console.log('✅ User found:', currentUser.email, 'Role:', currentUser.role);
+          setUser(currentUser);
+          const roleView = getRoleBasedView(currentUser.role);
+          setView(roleView);
+        } else {
+          console.log('👤 No user session, showing landing');
+          setView('LANDING');
+        }
+        
+        setIsInitialized(true);
+        
       } catch (error) {
-        console.error('❌ Error initializing auth:', error);
+        console.error('❌ Error initializing app:', error);
         setInitError(error instanceof Error ? error.message : 'Erro ao inicializar aplicação');
-      } finally {
         setIsInitialized(true);
       }
     };
 
-    initializeAuth();
+    initializeApp();
+  }, []);
 
-    // Set up auth state listener
+  // 2. Set up auth state listener
+  useEffect(() => {
     const { data: { subscription } } = authService.onAuthStateChange((authUser) => {
       console.log('🔄 Auth state changed:', authUser?.email, authUser?.role);
       
       if (authUser) {
-        console.log('✅ User authenticated, setting user state');
+        console.log('✅ User authenticated:', authUser.email);
         setUser(authUser);
-        // Define a view baseada no role imediatamente
         const roleView = getRoleBasedView(authUser.role);
         setView(roleView);
-        setLastView(roleView);
       } else {
-        console.log('👤 User logged out, clearing state');
+        console.log('👤 User logged out');
         setUser(null);
         setView('LANDING');
-        setLastView('LANDING');
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. Redirection Effect (Simplified and more robust)
+  // 3. Handle view redirection
   useEffect(() => {
-    // Só prosseguimos se o app estiver inicializado e o objeto user (com a role) estiver disponível
-    if (isInitialized && user && user.role) {
+    if (!isInitialized) return;
+    
+    if (user && user.role) {
       const roleView = getRoleBasedView(profileRole);
       
-      // Redireciona se estiver atualmente em LANDING, AUTH, ou se a visualização atual estiver incorreta para a função
-      const shouldRedirect = view === 'LANDING' || view === 'AUTH' || (view !== 'CHAT' && view !== roleView);
-      
-      if (shouldRedirect) {
-        console.log(`🔄 Redirecting user ${user.id} (Role: ${profileRole}) from ${view} to ${roleView}`);
+      // Only redirect if current view doesn't match role view
+      if (view !== roleView && view !== 'CHAT') {
+        console.log(`🔄 Redirecting to ${roleView}`);
         setView(roleView);
-        setLastView(roleView);
       }
       
-      // Carrega o histórico uma vez autenticado
+      // Load history for APP view
       if (roleView === 'APP') {
         loadHistory();
       }
-    } else if (isInitialized && !user) {
-      // Se o usuário sair ou não estiver autenticado, garante que estamos em LANDING ou AUTH
-      if (view !== 'AUTH' && view !== 'LANDING') {
-        console.log('👤 No user, redirecting to LANDING');
-        setView('LANDING');
-      }
     }
-  }, [isInitialized, user, profileRole, view, setLastView, loadHistory]);
+  }, [isInitialized, user, profileRole, view, loadHistory]);
 
-  // 3. Save view to localStorage when it changes
-  useEffect(() => {
-    if (view !== 'AUTH') { // Não salva a visualização de autenticação
-      setLastView(view);
-    }
-  }, [view, setLastView]);
-
+  // 4. Handle logout
   const handleLogout = async () => {
     try {
       await authService.logout();
-      // O listener de mudança de estado lida com o resto
     } catch (error) {
       console.error('Logout error:', error);
     }
   };
 
+  // 5. Handle auth success
   const handleAuthSuccess = (authUser: User | null) => {
     if (authUser) {
-      console.log('✅ Auth successful, setting user:', authUser.email, authUser.role);
+      console.log('✅ Auth successful:', authUser.email);
       setUser(authUser);
-      // Define a view baseada no role imediatamente
       const roleView = getRoleBasedView(authUser.role);
       setView(roleView);
-      setLastView(roleView);
-      // Limpa a URL para remover parâmetros de pagamento
+      // Clear URL params
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
 
+  // 6. Handle plan selection
   const handlePlanSelection = async (planId: string) => {
     if (planId === 'free') {
-      console.log('🆓 Free plan selected, redirecting to auth');
       setView('AUTH');
       return;
     }
@@ -193,23 +175,19 @@ export const AppContent: React.FC = () => {
     const toastId = toast.loading('Redirecionando para o pagamento...');
     
     try {
-      // A returnUrl é a URL para onde o Mercado Pago deve redirecionar após o pagamento.
-      // Usa a porta correta do frontend (5173) em vez de 3000
       const returnUrl = `${window.location.origin}/`; 
-      
       const checkoutUrl = await api.createPaymentPreference(planId, returnUrl);
       
       toast.success('Tudo pronto! Abrindo checkout seguro.', { id: toastId });
       window.location.href = checkoutUrl;
     } catch (error: any) {
       console.error('Failed to create payment preference:', error);
-      toast.error(error.message || 'Não foi possível iniciar o pagamento. Tente novamente.', { id: toastId });
+      toast.error(error.message || 'Não foi possível iniciar o pagamento.', { id: toastId });
     }
   };
 
-  // Loading state (Initial or Profile Loading)
-  // Verificamos se o objeto user está presente E se a role está populada
-  if (!isInitialized || (user && !user.role)) { 
+  // Loading state
+  if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950">
         <div className="flex flex-col items-center gap-4">
@@ -234,15 +212,13 @@ export const AppContent: React.FC = () => {
             <button onClick={() => window.location.reload()} className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-colors">
               Recarregar Página
             </button>
-            <button onClick={() => { setInitError(null); setIsInitialized(false); setTimeout(() => setIsInitialized(true), 100); }} className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
-              Tentar Novamente
-            </button>
           </div>
         </div>
       </div>
     );
   }
 
+  // Main App component
   const MainApp = () => (
     <div className="min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
       <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
@@ -251,14 +227,8 @@ export const AppContent: React.FC = () => {
         profileRole={profileRole} 
         onLogout={handleLogout} 
         onShowSettings={() => setShowSettings(true)} 
-        onShowDevPanel={() => {
-          console.log('👨‍💻 Manual navigation to DEV_PANEL');
-          setView('DEV_PANEL');
-        }} 
-        onShowChat={() => {
-          console.log('💬 Manual navigation to CHAT');
-          setView('CHAT');
-        }} 
+        onShowDevPanel={() => setView('DEV_PANEL')} 
+        onShowChat={() => setView('CHAT')} 
       />
       <div className="relative z-10 -mt-8 md:-mt-10">
         <AppTitleHeader />
@@ -290,6 +260,7 @@ export const AppContent: React.FC = () => {
     </div>
   );
 
+  // Render view based on current state
   const renderView = () => {
     console.log('🎬 Rendering view:', view, 'User role:', profileRole);
     

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { getSupabase } from '../services/supabaseClient';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, RefreshCw } from 'lucide-react';
 
 export const SupabaseTest: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const [users, setUsers] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
 
   useEffect(() => {
     testConnection();
@@ -18,22 +19,21 @@ export const SupabaseTest: React.FC = () => {
     try {
       const supabase = getSupabase();
       
-      // Test 1: Verificar se o cliente foi inicializado
       if (!supabase) {
         throw new Error('Cliente Supabase não inicializado');
       }
       
-      // Test 2: Verificar conexão básica
-      const { data, error } = await supabase
+      // Test 1: Verificar conexão básica
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, role, status')
-        .limit(5);
+        .select('id, role, status, first_name, last_name')
+        .limit(10);
       
-      if (error) {
-        throw new Error(`Erro na consulta: ${error.message}`);
+      if (profilesError) {
+        throw new Error(`Erro na consulta de perfis: ${profilesError.message}`);
       }
       
-      // Test 3: Verificar usuários na auth.users
+      // Test 2: Verificar usuários na auth.users
       const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
       
       if (authError) {
@@ -42,8 +42,9 @@ export const SupabaseTest: React.FC = () => {
         setUsers(authUsers.users || []);
       }
       
+      setProfiles(profilesData || []);
       setStatus('success');
-      setMessage(`Conexão OK! Encontrados ${data?.length || 0} perfis e ${authUsers?.users?.length || 0} usuários`);
+      setMessage(`Conexão OK! ${profilesData?.length || 0} perfis e ${authUsers?.users?.length || 0} usuários`);
       
     } catch (error: any) {
       setStatus('error');
@@ -60,7 +61,7 @@ export const SupabaseTest: React.FC = () => {
       const supabase = getSupabase();
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       });
       
       if (error) {
@@ -81,22 +82,98 @@ export const SupabaseTest: React.FC = () => {
     }
   };
 
+  const createTestUser = async () => {
+    setStatus('loading');
+    setMessage('Criando usuário de teste...');
+    
+    try {
+      const supabase = getSupabase();
+      
+      // Criar usuário de teste
+      const { data, error } = await supabase.auth.signUp({
+        email: 'teste@flowdesigner.com',
+        password: '123456',
+        options: {
+          data: {
+            first_name: 'Teste',
+            last_name: 'User'
+          }
+        }
+      });
+      
+      if (error) {
+        if (error.message.includes('already registered')) {
+          // Usuário já existe, tentar fazer login
+          const { data: loginData } = await supabase.auth.signInWithPassword({
+            email: 'teste@flowdesigner.com',
+            password: '123456'
+          });
+          
+          if (loginData.user) {
+            // Criar perfil
+            await supabase
+              .from('profiles')
+              .upsert({
+                id: loginData.user.id,
+                role: 'free',
+                status: 'on',
+                first_name: 'Teste',
+                last_name: 'User'
+              });
+            
+            setStatus('success');
+            setMessage('Usuário de teste criado/atualizado com sucesso!');
+          }
+        } else {
+          throw new Error(error.message);
+        }
+      } else if (data.user) {
+        // Criar perfil
+        await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            role: 'free',
+            status: 'on',
+            first_name: 'Teste',
+            last_name: 'User'
+          });
+        
+        setStatus('success');
+        setMessage('Usuário de teste criado com sucesso!');
+      }
+      
+    } catch (error: any) {
+      setStatus('error');
+      setMessage(error.message || 'Erro ao criar usuário');
+    }
+  };
+
   return (
     <div className="fixed top-4 right-4 z-50 bg-zinc-900 border border-white/10 rounded-lg p-4 max-w-sm">
-      <h3 className="text-white font-bold mb-3 flex items-center gap-2">
-        Teste Supabase
-        {status === 'loading' && <Loader2 size={16} className="animate-spin" />}
-        {status === 'success' && <CheckCircle size={16} className="text-green-500" />}
-        {status === 'error' && <XCircle size={16} className="text-red-500" />}
-      </h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-white font-bold flex items-center gap-2">
+          Teste Supabase
+          {status === 'loading' && <Loader2 size={16} className="animate-spin" />}
+          {status === 'success' && <CheckCircle size={16} className="text-green-500" />}
+          {status === 'error' && <XCircle size={16} className="text-red-500" />}
+        </h3>
+        <button 
+          onClick={() => setShowTest(false)}
+          className="text-gray-400 hover:text-white"
+        >
+          ✕
+        </button>
+      </div>
       
       <p className="text-xs text-gray-400 mb-3">{message}</p>
       
       <div className="space-y-2">
         <button
           onClick={testConnection}
-          className="w-full px-3 py-1 bg-primary text-white text-xs rounded hover:bg-primary/80"
+          className="w-full px-3 py-1 bg-primary text-white text-xs rounded hover:bg-primary/80 flex items-center gap-2"
         >
+          <RefreshCw size={12} />
           Testar Conexão
         </button>
         
@@ -105,32 +182,39 @@ export const SupabaseTest: React.FC = () => {
             onClick={() => testLogin('admin@flowdesigner.com', '123456')}
             className="w-full px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
           >
-            Testar Login Admin
+            Testar Admin
           </button>
           
           <button
             onClick={() => testLogin('dev@flowdesigner.com', '123456')}
             className="w-full px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
           >
-            Testar Login Dev
+            Testar Dev
           </button>
           
           <button
             onClick={() => testLogin('owner@flowdesigner.com', '123456')}
             className="w-full px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700"
           >
-            Testar Login Owner
+            Testar Owner
           </button>
         </div>
+        
+        <button
+          onClick={createTestUser}
+          className="w-full px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+        >
+          Criar Usuário Teste
+        </button>
       </div>
       
-      {users.length > 0 && (
+      {profiles.length > 0 && (
         <div className="mt-3 pt-3 border-t border-white/10">
-          <p className="text-xs text-gray-400 mb-1">Usuários encontrados:</p>
+          <p className="text-xs text-gray-400 mb-1">Perfis encontrados:</p>
           <div className="space-y-1 max-h-20 overflow-y-auto">
-            {users.map((user: any) => (
-              <p key={user.id} className="text-xs text-gray-300">
-                {user.email} ({user.user_metadata?.first_name || 'N/A'})
+            {profiles.map((profile: any) => (
+              <p key={profile.id} className="text-xs text-gray-300">
+                {profile.first_name} {profile.last_name} ({profile.role})
               </p>
             ))}
           </div>
