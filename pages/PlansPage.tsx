@@ -1,195 +1,109 @@
-import React from 'react';
-import { User, EditablePlan } from '../types';
-import { useUsage } from '../hooks/useUsage';
-import { Button } from '../components/Button';
-import { Zap, Loader2, CheckCircle2, ArrowLeft, Info } from 'lucide-react';
-import { PricingCard } from '../components/PricingCard';
-import { toast } from 'sonner';
-import { api } from '../services/api';
+import React, { useMemo } from 'react';
+import { User, EditablePlan } from '../src/types';
+import { Button } from '../src/components/Button';
+import { ArrowLeft, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
+import { PricingCard } from '../src/components/PricingCard';
 
 interface PlansPageProps {
-    user: User | null; // Pode ser null se não autenticado
+    user: User | null;
+    plans: EditablePlan[];
+    isLoadingPlans: boolean;
     onBackToApp: () => void;
-    onSelectPlan?: (planId: string) => void; // NEW: Handler para selecionar plano e ir para AUTH
-    plans?: EditablePlan[]; // NEW: Planos passados via prop se o usuário não estiver logado
-    isLoadingPlans?: boolean; // NEW: Estado de carregamento se o usuário não estiver logado
+    onSelectPlan: (planId: string) => void;
 }
 
-export const PlansPage: React.FC<PlansPageProps> = ({ user, onBackToApp, onSelectPlan, plans: plansProp, isLoadingPlans: isLoadingPlansProp }) => {
+export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlans, onBackToApp, onSelectPlan }) => {
     
-    // Se o usuário estiver autenticado, use o hook useUsage
-    const { 
-        plans: hookPlans, 
-        quota, 
-        isLoading: isHookLoading, 
-        error, 
-        currentPlan, 
-        usagePercentage, 
-        currentUsage, 
-        maxImages,
-        refreshUsage
-    } = useUsage(user?.id, user?.role); 
-    
-    // Determina qual conjunto de dados usar
-    const isAuthenticated = !!user;
-    const plans = isAuthenticated ? hookPlans : plansProp || [];
-    const isLoading = isAuthenticated ? isHookLoading : isLoadingPlansProp;
+    const freePlan = useMemo(() => plans.find(p => p.id === 'free'), [plans]);
+    const starterPlan = useMemo(() => plans.find(p => p.id === 'starter'), [plans]);
+    const proPlan = useMemo(() => plans.find(p => p.id === 'pro'), [plans]);
 
-    const [isSubscribing, setIsSubscribing] = React.useState(false);
-
-    const handleSubscribe = async (planId: string) => {
-        if (!isAuthenticated) {
-            // Se não estiver autenticado, use o handler de seleção para ir para AUTH
-            if (onSelectPlan) {
-                onSelectPlan(planId);
-            }
-            return;
-        }
-        
-        // Lógica de assinatura para usuários autenticados
-        setIsSubscribing(true);
-        try {
-            const { paymentUrl } = await api.initiateSubscription(planId);
-            
-            // Redirect user to Mercado Pago
-            window.location.href = paymentUrl;
-            
-        } catch (e: any) {
-            toast.error(e.message || "Falha ao iniciar pagamento. Verifique a conexão do Mercado Pago no Painel Dev.");
-        } finally {
-            setIsSubscribing(false);
-        }
+    // Helper para formatar features, garantindo que o limite de imagens seja o primeiro item
+    const formatFeatures = (plan: EditablePlan) => {
+        const quotaFeature = `${plan.max_images_per_month} imagens por mês`;
+        // Filtra features para remover duplicatas de quota e adiciona a quota no início
+        const filteredFeatures = plan.features.filter((f: string) => !f.toLowerCase().includes('imagens'));
+        return [quotaFeature, ...filteredFeatures];
     };
-    
-    const sortedPlans = plans.sort((a, b) => a.price - b.price);
-
-    if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-zinc-950">
-                <Loader2 size={32} className="animate-spin text-primary" />
-            </div>
-        );
-    }
-    
-    // Se autenticado, verifica erros de quota
-    const showQuotaError = isAuthenticated && error && !quota;
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-gray-100 pt-20 pb-16 relative">
-            <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
+        <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center pt-16 pb-10 px-4 relative">
+            <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
             
-            <div className="max-w-7xl mx-auto px-4 md:px-6 relative z-10">
+            <div className="w-full max-w-7xl relative z-10">
+                <Button 
+                    variant="ghost" 
+                    onClick={onBackToApp} 
+                    className="absolute top-4 left-0 text-gray-400 hover:text-white hidden md:flex"
+                >
+                    <ArrowLeft size={16} className="mr-2" /> {user ? 'Voltar ao App' : 'Voltar à Home'}
+                </Button>
                 
-                {/* Header da Página */}
-                <div className="flex items-center justify-between border-b border-primary/50 pb-4 mb-8">
-                    <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-                        <Zap size={28} className="text-primary" /> Planos e Uso
-                    </h1>
-                    <Button variant="secondary" onClick={onBackToApp} icon={<ArrowLeft size={16} />}>
-                        {isAuthenticated ? 'Voltar para o App' : 'Voltar para a Landing'}
-                    </Button>
+                <div className="text-center mb-16 mt-12">
+                    <Sparkles size={32} className="text-primary mx-auto mb-4" />
+                    <h1 className="text-4xl md:text-5xl font-bold text-white">Escolha Seu Plano</h1>
+                    <p className="text-gray-400 mt-3 text-lg">
+                        {user ? `Olá, ${user.firstName}! Seu plano atual é ${user.role}.` : 'Comece grátis ou libere recursos ilimitados.'}
+                    </p>
                 </div>
 
-                {showQuotaError && (
-                    <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl mb-8 max-w-4xl mx-auto flex items-start gap-3">
-                        <Info size={20} className="flex-shrink-0 mt-0.5" />
-                        <div>
-                            <h4 className="font-bold text-white">Erro ao Carregar Uso Atual</h4>
-                            <p className="text-sm mt-1">{error}</p>
-                            <button onClick={refreshUsage} className="text-xs mt-2 underline hover:text-red-300">Tentar Recarregar Uso</button>
-                        </div>
+                {isLoadingPlans ? (
+                    <div className="text-center py-20">
+                        <Loader2 size={32} className="animate-spin text-primary" />
+                        <p className="text-gray-400 mt-4">Carregando planos...</p>
                     </div>
-                )}
+                ) : plans.length === 0 ? (
+                    <div className="text-center py-20 max-w-md mx-auto p-6 bg-red-500/10 border border-red-500/20 rounded-xl">
+                        <AlertTriangle size={32} className="text-red-400 mx-auto mb-4" />
+                        <p className="text-red-300 font-medium">Falha ao carregar os planos de preço.</p>
+                        <p className="text-red-400 text-sm mt-2">Verifique se o backend está rodando e se as tabelas `plan_settings` e `plan_details` no Supabase estão preenchidas corretamente.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-end">
+                        
+                        {freePlan && (
+                            <PricingCard 
+                                name={freePlan.display_name}
+                                price="R$ 0"
+                                period=""
+                                description={freePlan.description}
+                                buttonText={user?.role === 'free' ? 'Plano Atual' : 'Começar Grátis'}
+                                features={formatFeatures(freePlan)}
+                                onClick={() => onSelectPlan('free')} 
+                                disabled={user?.role === 'free'}
+                            />
+                        )}
 
-                {/* Seção de Uso Atual (Só mostra se o quota foi carregado com sucesso E autenticado) */}
-                {isAuthenticated && currentPlan && quota && !showQuotaError && (
-                    <div className="bg-zinc-900/50 p-8 rounded-2xl border border-white/10 shadow-xl mb-12 max-w-4xl mx-auto">
-                        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                            <CheckCircle2 size={24} className="text-primary" /> Seu Plano Atual: <span className={`text-white text-lg font-bold uppercase px-3 py-1 rounded-full ${currentPlan.id === 'free' ? 'bg-gray-500' : currentPlan.id === 'starter' ? 'bg-yellow-600' : 'bg-primary'}`}>{currentPlan.display_name}</span>
-                        </h2>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                            <div>
-                                <p className="text-gray-400 text-sm mb-2">Imagens Usadas no Ciclo:</p>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-4xl font-extrabold text-white">{currentUsage}</span>
-                                    <span className="text-gray-500">/ {maxImages}</span>
-                                </div>
-                                
-                                <div className="w-full bg-white/10 rounded-full h-2.5 mt-3">
-                                    <div 
-                                        className={`h-2.5 rounded-full transition-all duration-500 ${usagePercentage >= 80 ? 'bg-red-500' : 'bg-primary'}`} 
-                                        style={{ width: `${Math.min(usagePercentage, 100)}%` }}
-                                    />
-                                </div>
-                                <p className="text-xs text-gray-500 mt-2">Ciclo iniciado em: {new Date(quota.usage.cycle_start_date).toLocaleDateString()}</p>
-                            </div>
-                            
-                            <div className="space-y-3">
-                                <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-2">Benefícios do Plano</h3>
-                                <ul className="space-y-2">
-                                    {currentPlan.features.map((feature, index) => (
-                                        <li key={index} className="flex items-center gap-2 text-sm text-gray-300">
-                                            <CheckCircle2 size={16} className="text-green-500 flex-shrink-0" />
-                                            {feature}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        {quota.status === 'NEAR_LIMIT' && (
-                            <div className="mt-6 p-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm rounded-lg flex items-start gap-2">
-                                <Info size={16} className="flex-shrink-0 mt-0.5" />
-                                <p>Atenção: Você está perto de atingir o limite de gerações do seu plano. Considere o upgrade abaixo.</p>
-                            </div>
+                        {starterPlan && (
+                            <PricingCard 
+                                name={starterPlan.display_name}
+                                price={`R$ ${starterPlan.price.toFixed(2)}`}
+                                period="/mês"
+                                description={starterPlan.description}
+                                buttonText={user?.role === 'starter' ? 'Plano Atual' : 'Assinar Start'}
+                                features={formatFeatures(starterPlan)}
+                                highlight={false}
+                                onClick={() => onSelectPlan('starter')} 
+                                disabled={user?.role === 'starter'}
+                            />
+                        )}
+
+                        {proPlan && (
+                            <PricingCard 
+                                name={proPlan.display_name}
+                                price={`R$ ${proPlan.price.toFixed(2)}`}
+                                period="/mês"
+                                description={proPlan.description}
+                                buttonText={user?.role === 'pro' ? 'Plano Atual' : 'Assinar Pro'}
+                                features={formatFeatures(proPlan)}
+                                highlight={true}
+                                badge="Melhor Custo-Benefício"
+                                onClick={() => onSelectPlan('pro')} 
+                                disabled={user?.role === 'pro'}
+                            />
                         )}
                     </div>
                 )}
-                
-                {!isAuthenticated && (
-                    <div className="text-center mb-12">
-                        <span className="text-accent text-xs font-bold uppercase tracking-widest">Comece Agora</span>
-                        <h3 className="text-3xl md:text-4xl font-bold text-white mt-2">Escolha seu Plano</h3>
-                        <p className="text-gray-400 mt-4">Selecione um plano para criar sua conta e começar a gerar artes.</p>
-                    </div>
-                )}
-
-                {/* Seção de Upgrade */}
-                {isAuthenticated && (
-                    <div className="text-center mb-16">
-                        <span className="text-primary text-xs font-bold uppercase tracking-widest">Investimento</span>
-                        <h3 className="text-3xl md:text-4xl font-bold text-white mt-2">Mude para um Plano Ilimitado</h3>
-                    </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-end">
-                    {sortedPlans.map((plan: EditablePlan) => (
-                        <PricingCard 
-                            key={plan.id}
-                            name={plan.display_name} // Use display_name
-                            price={plan.price === 0 ? 'Grátis' : `R$ ${plan.price.toFixed(2)}`}
-                            period={plan.price === 0 ? '' : '/mês'}
-                            description={plan.description} // Use description
-                            buttonText={isAuthenticated && currentPlan?.id === plan.id ? 'Plano Atual' : plan.id === 'free' ? 'Começar Grátis' : 'Assinar Agora'}
-                            features={plan.features} // Use features
-                            highlight={plan.id === 'pro'}
-                            badge={plan.id === 'pro' ? 'Melhor Custo-Benefício' : undefined}
-                            onClick={() => {
-                                if (!isAuthenticated) {
-                                    handleSubscribe(plan.id); // Leva para AUTH
-                                } else if (currentPlan?.id !== plan.id && plan.id !== 'free') {
-                                    handleSubscribe(plan.id); // Inicia pagamento
-                                } else if (plan.id === 'free' && currentPlan?.id !== 'free') {
-                                    toast.info("Você já está em um plano pago. Não é possível fazer downgrade automático.");
-                                } else if (plan.id === 'free' && currentPlan?.id === 'free') {
-                                    toast.info("Você já está no plano Grátis.");
-                                }
-                            }}
-                            disabled={isAuthenticated && (currentPlan?.id === plan.id || isSubscribing)}
-                        />
-                    ))}
-                </div>
             </div>
         </div>
     );

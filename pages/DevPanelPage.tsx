@@ -1,15 +1,15 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info } from 'lucide-react';
-import { Button } from '../components/Button';
-import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '../types';
-import { useLandingImages } from '../hooks/useLandingImages';
-import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
-import { api } from '../services/api';
+import { Button } from '../src/components/Button';
+import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '../src/types';
+import { useLandingImages } from '../src/hooks/useLandingImages';
+import { useAdminGeneratedImages } from '../src/hooks/useAdminGeneratedImages';
+import { api } from '../src/services/api';
 import { toast } from 'sonner';
-import { getSupabase } from '../services/supabaseClient'; // Import getSupabase directly
+import { getSupabase } from '../src/services/supabaseClient';
 
 interface DevPanelPageProps {
-  user: User | null; // User can be null if profile is still loading or not authenticated
+  user: User | null;
   onBackToApp: () => void;
   onLogout: () => void;
 }
@@ -307,7 +307,7 @@ const PlanSettingsManager: React.FC = () => {
         try {
             const fetchedPlans = await api.getPlanSettings();
             // Sort by price for consistent display
-            setPlans(fetchedPlans.sort((a, b) => a.price - b.price));
+            setPlans(fetchedPlans.sort((a: EditablePlan, b: EditablePlan) => a.price - b.price));
         } catch (e: any) {
             setError(e.message || "Falha ao carregar planos.");
             toast.error("Falha ao carregar planos.");
@@ -332,7 +332,7 @@ const PlanSettingsManager: React.FC = () => {
             }
             if (field === 'features') {
                 // Convert textarea content (newline separated) back to string array
-                return { ...p, features: value.split('\n').map(f => f.trim()).filter(f => f.length > 0) };
+                return { ...p, features: value.split('\n').map((f: string) => f.trim()).filter((f: string) => f.length > 0) };
             }
             
             return { ...p, [field]: value };
@@ -349,7 +349,7 @@ const PlanSettingsManager: React.FC = () => {
                 price: parseFloat(p.price.toFixed(2)),
                 max_images_per_month: Math.max(0, p.max_images_per_month),
                 // Ensure features is an array of strings
-                features: Array.isArray(p.features) ? p.features : (p.features as string).split('\n').map(f => f.trim()).filter(f => f.length > 0)
+                features: Array.isArray(p.features) ? p.features : (p.features as string).split('\n').map((f: string) => f.trim()).filter((f: string) => f.length > 0)
             }));
             
             await api.updatePlanSettings(validPlans);
@@ -448,7 +448,7 @@ const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
     
     // Restrição de acesso: Apenas 'owner' pode ver e interagir com esta seção.
     const isOwner = user.role === 'owner';
-    const supabase = getSupabase(); // Use imported getSupabase
+    const supabase = getSupabase();
     
     // Check connection status (simplified: just check if tokens exist)
     const checkConnectionStatus = useCallback(async () => {
@@ -467,7 +467,7 @@ const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
                 .maybeSingle();
                 
             setIsConnected(!!data);
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to check MP connection status:", e);
             setIsConnected(false);
         } finally {
@@ -502,7 +502,7 @@ const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
     };
     
     const handleDisconnect = () => {
-        // NOTE: Disconnecting requires a backend endpoint to delete the tokens, 
+        // NOTE: Disconnecting requires a backend endpoint to delete tokens, 
         // which is not explicitly requested but necessary for a full flow.
         // For now, we simulate the action and rely on the dev to manually delete the row if needed.
         toast.info("Para desconectar, remova manualmente o registro na tabela 'owners_payment_accounts' no Supabase.");
@@ -550,7 +550,7 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
     // Conditional rendering for access control
     if (!user || (user.role !== 'admin' && user.role !== 'dev' && user.role !== 'owner')) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-gray-100 p-4 text-center">
+            <div className="app-container min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-gray-100 p-4 text-center">
                 <ShieldOff size={64} className="text-red-500 mb-6 opacity-50" />
                 <h1 className="text-3xl font-bold text-white mb-3">Acesso Negado</h1>
                 <p className="text-gray-400 mb-8">Você não tem permissão para acessar o Painel do Desenvolvedor.</p>
@@ -562,7 +562,7 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
     }
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-gray-100 pt-20 pb-16 relative">
+        <div className="app-container min-h-screen bg-zinc-950 text-gray-100 pt-20 pb-16 relative overflow-x-hidden">
             <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
             
             <div className="max-w-7xl mx-auto px-4 md:px-6 relative z-10">
