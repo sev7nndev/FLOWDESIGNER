@@ -183,9 +183,9 @@ const express = require('express');
     const incrementUsage = async (userId) => {
         const { error } = await supabaseService
             .from('user_usage')
-            .update({ current_usage: new Date().getTime() }) // Use current timestamp to force update
+            .update({ updated_at: new Date().toISOString() }) // Correctly update timestamp
             .eq('user_id', userId)
-            .increment('current_usage', 1);
+            .increment('current_usage', 1); // Correctly increment usage
             
         if (error) {
             console.error(`Failed to increment usage for user ${userId}:`, error);
