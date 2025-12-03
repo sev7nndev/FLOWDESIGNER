@@ -29,6 +29,11 @@ View your app in AI Studio: https://ai.studio/apps/drive/1A8UVm-5tINifrUBgaDIc6f
    SUPABASE_SERVICE_KEY="SUA_SUPABASE_SERVICE_KEY" # Chave secreta!
    GEMINI_API_KEY="SUA_GEMINI_API_KEY" # Chave secreta!
    FREEPIK_API_KEY="SUA_FREEPIK_API_KEY" # Chave secreta!
+   
+   # Chaves Mercado Pago
+   MERCADO_PAGO_ACCESS_TOKEN="SEU_MP_ACCESS_TOKEN" # Chave secreta!
+   MERCADO_PAGO_CLIENT_ID="SEU_MP_CLIENT_ID"
+   FRONTEND_URL="http://localhost:3000" # URL do frontend para redirecionamentos
    ```
 3. Run the app:
    `npm run dev`
