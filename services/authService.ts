@@ -38,13 +38,34 @@ export const authService = {
       try {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('role, status')
+          .select('*')
           .eq('id', data.user.id)
           .single();
 
         if (profileError) {
           console.error('Profile fetch error after login:', profileError);
-          // Não falhar o login se não conseguir buscar o perfil
+          
+          // Se perfil não existe, criar um perfil padrão
+          if (profileError.code === 'PGRST116') {
+            console.log('📝 Creating default profile after login');
+            const { error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                id: data.user.id,
+                email: data.user.email,
+                role: 'free',
+                status: 'on',
+                first_name: '',
+                last_name: ''
+              })
+              .single();
+
+            if (createError) {
+              console.error('Error creating default profile:', createError);
+            } else {
+              console.log('✅ Default profile created');
+            }
+          }
         } else {
           console.log('✅ Profile loaded:', profile);
         }
@@ -52,14 +73,14 @@ export const authService = {
         console.error('Error fetching profile after login:', profileErr);
       }
 
-      // Retorna o usuário completo com perfil
+      // Retorna o usuário completo com perfil (ou perfil padrão)
       const userWithProfile: User = {
         id: data.user.id,
         email: data.user.email || '',
         firstName: '',
         lastName: '',
         createdAt: data.user.created_at ? new Date(data.user.created_at).getTime() : Date.now(),
-        role: profile?.role || 'free',
+        role: 'free', // Role padrão
       };
 
       console.log('✅ Login successful:', userWithProfile.id);
@@ -108,51 +129,54 @@ export const authService = {
       }
 
       const newUserId = data.user.id;
-      const role = planId || 'free'; // O planId é o nome do plano em minúsculas ('starter', 'pro', ou 'free')
+      const role = planId || 'free';
 
       console.log('✅ Registration successful:', newUserId, 'role:', role);
 
-      // 1. Atualiza a role no perfil do usuário
+      // Criar perfil para o usuário
       try {
         const { error: profileError } = await supabase
           .from('profiles')
-          .update({ role: role })
-          .eq('id', newUserId);
+          .insert({
+            id: newUserId,
+            email: data.user.email,
+            role: role,
+            status: 'on',
+            first_name: firstName,
+            last_name: lastName
+          })
+          .single();
 
         if (profileError) {
-          console.error('Profile role update error:', profileError);
-          // Não lançar erro, pois o usuário já foi criado na autenticação
+          console.error('Profile creation error:', profileError);
         } else {
-          console.log('✅ Profile role updated to:', role);
+          console.log('✅ Profile created for user:', newUserId);
         }
       } catch (profileErr) {
-        console.error('Error updating profile role:', profileErr);
+        console.error('Error creating profile:', profileErr);
       }
 
-      // 2. Se for um plano pago, cria/atualiza a assinatura
+      // Se for um plano pago, criar assinatura
       if (planId && planId !== 'free') {
         try {
-          // Busca o ID do plano na tabela 'plans'
           const { data: planData, error: planError } = await supabase
             .from('plans')
             .select('id')
             .eq('name', planId)
             .single();
 
-          if (planError || !planData) {
-            console.error(`Plan '${planId}' not found:`, planError);
-          } else {
-            // Cria ou atualiza a assinatura para 'active'
+          if (!planError && planData) {
             const { error: subscriptionError } = await supabase
               .from('subscriptions')
-              .upsert({
+              .insert({
                 user_id: newUserId,
                 plan_id: planData.id,
                 status: 'active',
                 current_period_start: new Date().toISOString(),
-                current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 dias
-              }, { onConflict: 'user_id' });
-            
+                current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+              })
+              .single();
+
             if (subscriptionError) {
               console.error('Subscription creation error:', subscriptionError);
             } else {

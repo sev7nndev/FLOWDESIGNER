@@ -25,6 +25,8 @@ const authenticateToken = async (req, res, next) => {
       return res.status(403).json({ error: 'Usuário não encontrado.' });
     }
 
+    console.log('✅ Token verified for user:', user.id);
+
     // Get user profile using SERVICE ROLE client for reliable access
     try {
       const { data: profile, error: profileError } = await supabaseService
@@ -33,14 +35,41 @@ const authenticateToken = async (req, res, next) => {
         .eq('id', user.id)
         .single();
 
-      if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = No rows found
+      if (profileError) {
         console.error('❌ Profile fetch error:', profileError.message);
-        // If profile not found, default to 'free' role
-        req.user = { ...user, profile: { role: 'free' } };
+        
+        // Se perfil não existe, criar um perfil padrão
+        if (profileError.code === 'PGRST116') {
+          console.log('📝 Creating default profile for user:', user.id);
+          const { error: createError } = await supabaseService
+            .from('profiles')
+            .insert({
+              id: user.id,
+              email: user.email,
+              role: 'free',
+              status: 'on',
+              first_name: '',
+              last_name: ''
+            })
+            .single();
+
+          if (createError) {
+            console.error('❌ Error creating default profile:', createError.message);
+            return res.status(500).json({ error: 'Erro ao criar perfil padrão.' });
+          }
+
+          console.log('✅ Default profile created');
+          req.user = {
+            ...user,
+            profile: { role: 'free', status: 'on' }
+          };
+        } else {
+          return res.status(500).json({ error: 'Erro ao buscar perfil do usuário.' });
+        }
       } else {
         req.user = {
           ...user,
-          profile: profile || { role: 'free' } // Ensure profile is not null
+          profile: profile || { role: 'free', status: 'on' }
         };
       }
       

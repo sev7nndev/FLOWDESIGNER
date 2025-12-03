@@ -104,6 +104,7 @@ export const AppContent: React.FC = () => {
     // Set up auth state listener
     const { data: { subscription } } = authService.onAuthStateChange((authUser) => {
       console.log('🔄 Auth state changed:', authUser?.email, authUser?.role);
+      
       if (authUser) {
         console.log('✅ User authenticated, setting user state');
         setUser(authUser);
