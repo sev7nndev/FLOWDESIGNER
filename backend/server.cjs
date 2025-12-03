@@ -234,7 +234,7 @@ Diretrizes de design:
   return response.text();
 }
 
-// Geração de imagem com Google AI Studio (Imagen) - CHAMADA HTTP DIRETA
+// Geração de imagem com Google AI Studio (Imagen) - PAYLOAD CORRIGIDO
 async function generateImage(detailedPrompt) {
   if (!GEMINI_API_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
@@ -246,16 +246,18 @@ async function generateImage(detailedPrompt) {
   const IMAGEN_MODEL = 'imagen-3.0-generate-001';
   const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGEN_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   
+  // CORREÇÃO: Mover aspectRatio para o nível superior do payload
   const requestBody = {
     contents: [{
       parts: [{
         text: detailedPrompt
       }]
     }],
+    // CORREÇÃO: Mover aspectRatio para fora de generationConfig
+    aspectRatio: "3:4",
     generationConfig: {
       responseMimeType: "image/png",
-      responseModalities: ["Image"],
-      aspectRatio: "3:4"
+      responseModalities: ["Image"]
     }
   };
 
