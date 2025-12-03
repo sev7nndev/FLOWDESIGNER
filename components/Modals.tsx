@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GeneratedImage, User, UserRole, QuotaCheckResponse, QuotaStatus, EditablePlan } from '../types';
-import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download, Zap, Loader2, ArrowLeft } from 'lucide-react';
+import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download, Zap, ArrowLeft } from 'lucide-react';
 import { Button } from './Button';
 import { api } from '../services/api';
 import { toast } from 'sonner';
@@ -203,7 +203,7 @@ interface UpgradeModalProps {
     refreshUsage: () => void;
 }
 
-export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaResponse, refreshUsage }) => {
+export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaResponse }) => {
     // quotaResponse now includes 'plans' array
     const { usage, plan, plans } = quotaResponse; 
     const [isSubscribing, setIsSubscribing] = useState(false);

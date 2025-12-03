@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
-import { PlanSetting, QuotaCheckResponse, QuotaStatus, UserUsage, UserRole, EditablePlan } from '../types';
+import { QuotaCheckResponse, QuotaStatus, UserRole, EditablePlan } from '../types';
 
 interface UsageState {
     plans: EditablePlan[]; // Changed to EditablePlan
