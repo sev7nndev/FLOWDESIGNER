@@ -37,14 +37,22 @@ app.use(express.json({ limit: '1mb' }));
 app.set('trust proxy', 1);
 
 // --- Supabase Clients ---
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    console.warn("WARNING: SUPABASE_URL or SUPABASE_SERVICE_KEY is missing. Backend routes requiring Service Role will fail.");
+}
+
 const supabaseAnon = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
 );
 
 const supabaseServiceRole = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
+    SUPABASE_URL,
+    SUPABASE_SERVICE_KEY
 );
 
 // --- Mercado Pago Configuration ---
@@ -89,6 +97,10 @@ const authorizeAdmin = async (req, res, next) => {
         return res.status(403).json({ error: 'Forbidden: Authentication required.' });
     }
     
+    if (!SUPABASE_SERVICE_KEY) {
+        return res.status(500).json({ error: 'Internal Server Error: Service Role Key is missing for authorization check.' });
+    }
+    
     try {
         const { data: profile, error } = await supabaseServiceRole
             .from('profiles')
@@ -121,6 +133,10 @@ app.post('/api/generate', verifyAuth, async (req, res) => {
     // Placeholder: Implementação real da IA e salvamento no DB
     // A lógica de quota deve ser verificada aqui antes de chamar a IA.
     
+    if (!SUPABASE_SERVICE_KEY) {
+        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    }
+    
     console.log(`User ${req.user.id} requested image generation.`);
     
     // Simulação de sucesso (retorna um objeto de imagem válido)
@@ -141,7 +157,9 @@ app.post('/api/generate', verifyAuth, async (req, res) => {
 
 // Rota de Verificação de Quota
 app.get('/api/check-quota', verifyAuth, async (req, res) => {
-    // Placeholder: Implementação real da verificação de quota
+    if (!SUPABASE_SERVICE_KEY) {
+        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    }
     
     console.log(`User ${req.user.id} checked quota.`);
     
@@ -248,6 +266,10 @@ app.post('/api/subscribe', verifyAuth, async (req, res) => {
         return res.status(500).json({ error: "Erro de configuração: Token do Mercado Pago não está definido no servidor." });
     }
     
+    if (!SUPABASE_SERVICE_KEY) {
+        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    }
+    
     // Placeholder: Lógica de criação de preferência de pagamento no Mercado Pago
     console.log(`User ${req.user.id} initiating subscription for plan ${planId}`);
     
@@ -299,6 +321,10 @@ app.post('/api/subscribe', verifyAuth, async (req, res) => {
 
 // Rota Admin: Listar todas as imagens (Service Role required)
 app.get('/api/admin/images', verifyAuth, authorizeAdmin, async (req, res) => {
+    if (!SUPABASE_SERVICE_KEY) {
+        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    }
+    
     console.log(`Admin ${req.user.id} fetching all images.`);
     
     try {
@@ -319,6 +345,10 @@ app.get('/api/admin/images', verifyAuth, authorizeAdmin, async (req, res) => {
 
 // Rota Admin: Deletar imagem (Service Role required)
 app.delete('/api/admin/images/:imageId', verifyAuth, authorizeAdmin, async (req, res) => {
+    if (!SUPABASE_SERVICE_KEY) {
+        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    }
+    
     const { imageId } = req.params;
     const { imageUrl } = req.body; // imageUrl is the storage path (e.g., images/user_id/file.png)
     
@@ -352,6 +382,10 @@ app.delete('/api/admin/images/:imageId', verifyAuth, authorizeAdmin, async (req,
 
 // Rota Admin: Upload de imagem da Landing Page (Service Role required)
 app.post('/api/admin/landing-images/upload', verifyAuth, authorizeAdmin, async (req, res) => {
+    if (!SUPABASE_SERVICE_KEY) {
+        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    }
+    
     const { fileBase64, fileName, userId } = req.body;
     
     if (!fileBase64 || !fileName) {
@@ -409,6 +443,10 @@ app.post('/api/admin/landing-images/upload', verifyAuth, authorizeAdmin, async (
 
 // Rota Admin: Deletar imagem da Landing Page (Service Role required)
 app.delete('/api/admin/landing-images/:id', verifyAuth, authorizeAdmin, async (req, res) => {
+    if (!SUPABASE_SERVICE_KEY) {
+        return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
+    }
+    
     const { id } = req.params;
     const { imagePath } = req.body; // imagePath is the storage path (e.g., landing-carousel/file.png)
     
