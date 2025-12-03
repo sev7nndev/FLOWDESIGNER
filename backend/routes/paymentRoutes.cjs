@@ -11,25 +11,40 @@ router.post('/create-preference', async (req, res) => {
   }
 
   try {
-    // 1. Buscar o plano pelo nome
+    console.log('🔍 Creating payment preference for plan:', planId);
+    
+    // 1. Buscar o plano pelo NOME (não pelo ID)
     const { data: plan, error: planError } = await supabaseService
       .from('plans')
       .select('*')
-      .ilike('name', planId)
+      .ilike('name', planId) // Busca pelo nome (Free, Starter, Pro)
+      .eq('is_active', true)
       .single();
 
     if (planError || !plan) {
-      return res.status(404).json({ error: 'Plano não encontrado.' });
+      console.error('❌ Plan not found:', planError);
+      return res.status(404).json({ 
+        error: `Plano "${planId}" não encontrado.`,
+        details: planError?.message 
+      });
     }
     
+    console.log('✅ Plan found:', plan.name, 'Price:', plan.price);
+    
     if (plan.price <= 0) {
-        return res.status(400).json({ error: 'Não é possível criar preferência de pagamento para planos gratuitos.' });
+        console.log('ℹ️  Free plan selected, no payment needed');
+        return res.status(400).json({ 
+            error: 'Não é possível criar preferência de pagamento para planos gratuitos.' 
+        });
     }
     
     // 2. Verificar se o Mercado Pago está configurado
     if (!mercadopago.configurations.access_token || mercadopago.configurations.access_token === 'test_access_token') {
+        console.error('❌ Mercado Pago not configured');
         throw new Error("MP_ACCESS_TOKEN não configurado. Verifique o .env.local.");
     }
+
+    console.log('✅ Mercado Pago configured');
 
     // 3. Criar a preferência de pagamento
     const preference = {
@@ -54,14 +69,17 @@ router.post('/create-preference', async (req, res) => {
       }
     };
 
+    console.log('🔗 Creating Mercado Pago preference...');
     const response = await mercadopago.preferences.create(preference);
+    
+    console.log('✅ Preference created successfully');
     
     res.status(200).json({
       preferenceId: response.body.id,
       initPoint: response.body.init_point
     });
   } catch (error) {
-    console.error('Payment preference error:', error);
+    console.error('❌ Payment preference error:', error);
     
     let errorMessage = 'Erro ao criar preferência de pagamento.';
     
@@ -81,23 +99,29 @@ router.post('/create-preference', async (req, res) => {
 router.post('/webhook', async (req, res) => {
   try {
     const paymentData = req.body;
+    console.log('🔔 Payment webhook received:', paymentData.type);
     
     if (paymentData.type === 'payment') {
       const paymentId = paymentData.data.id;
+      
+      console.log('💳 Processing payment:', paymentId);
       
       const payment = await mercadopago.payment.findById(paymentId);
       
       if (payment.body.status === 'approved') {
         const { metadata } = payment.body;
-        console.log(`Pagamento ${paymentId} aprovado para o plano ${metadata.plan_name}.`);
+        console.log(`✅ Pagamento ${paymentId} aprovado para o plano ${metadata.plan_name}`);
+        
+        // Aqui você pode implementar a lógica para ativar a assinatura do usuário
+        // Por enquanto, apenas logamos o sucesso
       }
     }
     
     res.status(200).send('OK');
   } catch (error) {
-    console.error('Payment webhook error:', error);
+    console.error('❌ Payment webhook error:', error);
     res.status(500).send('ERROR');
   }
-});
+};
 
 module.exports = router;

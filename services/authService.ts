@@ -159,10 +159,11 @@ export const authService = {
       // Se for um plano pago, criar assinatura
       if (planId && planId !== 'free') {
         try {
+          console.log('💳 Creating subscription for plan:', planId);
           const { data: planData, error: planError } = await supabase
             .from('plans')
             .select('id')
-            .eq('name', planId)
+            .ilike('name', planId)
             .single();
 
           if (!planError && planData) {
@@ -300,7 +301,7 @@ export const authService = {
     }
   },
 
-  onAuthStateChange(callback: (user: User | null) => void) {
+  onAuthStateChange(callback: (user: User | null) => void) => {
     console.log('👂 Setting up auth state listener');
     
     return supabase.auth.onAuthStateChange(async (event, session) => {

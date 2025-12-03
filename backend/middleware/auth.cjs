@@ -12,7 +12,7 @@ const authenticateToken = async (req, res, next) => {
   try {
     console.log('🔐 Verifying token...');
     
-    // Use supabaseAnon to verify the JWT token (standard practice)
+    // Use supabaseAnon to verify JWT token (standard practice)
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
 
     if (error) {

@@ -13,10 +13,12 @@ router.post('/generate', authenticateToken, async (req, res) => {
   }
 
   try {
+    console.log('🎨 Starting image generation for user:', userId);
     const generatedImage = await generateImageWithQuotaCheck(userId, promptInfo);
+    console.log('✅ Image generated successfully');
     res.status(201).json(generatedImage);
   } catch (error) {
-    console.error("Image generation error:", error);
+    console.error("❌ Image generation error:", error);
     
     if (error.code === 'QUOTA_EXCEEDED') {
       return res.status(403).json({ error: error.message });
@@ -32,8 +34,10 @@ router.post('/generate', authenticateToken, async (req, res) => {
 // Get support recipient endpoint
 router.get('/support-recipient', authenticateToken, async (req, res) => {
   try {
+    console.log('🔍 Fetching support recipient...');
     const { supabaseService } = require('../config');
     
+    // Try to find admin or dev first
     const { data: supportUser, error } = await supabaseService
       .from('profiles')
       .select('id')
@@ -42,6 +46,8 @@ router.get('/support-recipient', authenticateToken, async (req, res) => {
       .single();
 
     if (error || !supportUser) {
+      // If no admin/dev, try to find owner
+      console.log('ℹ️  No admin/dev found, looking for owner...');
       const { data: ownerUser, error: ownerError } = await supabaseService
         .from('profiles')
         .select('id')
@@ -50,13 +56,17 @@ router.get('/support-recipient', authenticateToken, async (req, res) => {
         .single();
 
       if (ownerError || !ownerUser) {
+        console.error('❌ No support recipient found');
         return res.status(404).json({ error: 'Nenhum destinatário de suporte encontrado.' });
       }
+      console.log('✅ Owner found as support recipient');
       return res.status(200).json({ recipientId: ownerUser.id });
     }
+    
+    console.log('✅ Admin/Dev found as support recipient');
     return res.status(200).json({ recipientId: supportUser.id });
   } catch (error) {
-    console.error("Error fetching support recipient:", error);
+    console.error("❌ Error fetching support recipient:", error);
     res.status(500).json({ error: 'Erro ao buscar destinatário de suporte.' });
   }
 });

@@ -155,7 +155,7 @@ O flyer deve ser visualmente impactante e profissional, adequado para marketing 
 
         if (usageError) {
           console.error('⚠️ Usage update error:', usageError);
-          // Don't fail the whole process if usage update fails
+          // Don't fail whole process if usage update fails
           console.log('⚠️ Continuing without usage update...');
         } else {
           console.log('✅ Usage updated successfully');
