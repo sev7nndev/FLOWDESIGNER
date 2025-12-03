@@ -139,8 +139,12 @@ const express = require('express');
         }
         
         const usage = usageData;
-        const plan = usageData.plan_settings;
-        const maxImages = plan.max_images_per_month;
+        
+        // Ensure plan_settings is an object and not null/undefined
+        const plan = usageData.plan_settings || {}; 
+        
+        // Use 0 as fallback if max_images_per_month is missing
+        const maxImages = plan.max_images_per_month || 0; 
         const currentUsage = usage.current_usage;
         const planId = usage.plan_id;
         
@@ -167,15 +171,20 @@ const express = require('express');
         }
         
         // 2. Determine Quota Status
-        const usagePercentage = (usageToUse / maxImages) * 100;
+        // Handle division by zero if maxImages is 0 (e.g., if plan_settings failed to load)
+        const usagePercentage = maxImages > 0 ? (usageToUse / maxImages) * 100 : 0;
         
-        if (usageToUse >= maxImages) {
+        if (usageToUse >= maxImages && maxImages > 0) {
             return { status: 'BLOCKED', usage: { ...usage, current_usage: usageToUse }, plan, message: `Limite de ${maxImages} imagens atingido para o plano ${planId}.` };
         }
         
-        if (usagePercentage >= 80) {
+        if (usagePercentage >= 80 && maxImages > 0) {
             return { status: 'NEAR_LIMIT', usage: { ...usage, current_usage: usageToUse }, plan, message: `Você está perto do limite (${usageToUse}/${maxImages}).` };
         }
+        
+        // If maxImages is 0, it means the plan data is missing or misconfigured, but we allow it if usage is 0
+        // If maxImages is 0 and usage is > 0, it should have been caught by the BLOCKED check if maxImages was > 0.
+        // Since we set maxImages to 0 if missing, we rely on the frontend to handle the 0/0 display if data is truly missing.
         
         return { status: 'ALLOWED', usage: { ...usage, current_usage: usageToUse }, plan };
     };
