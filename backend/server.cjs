@@ -234,7 +234,7 @@ Diretrizes de design:
   return response.text();
 }
 
-// Geração de imagem com Google AI Studio (Imagen) - USANDO O SDK CORRETAMENTE
+// Geração de imagem com Google AI Studio (Imagen) - TENTANDO CAMPO ALTERNATIVO
 async function generateImage(detailedPrompt) {
   if (!GEMINI_API_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
@@ -246,12 +246,13 @@ async function generateImage(detailedPrompt) {
     // CORREÇÃO: Obter o modelo de imagem diretamente do SDK
     const imageModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
     
+    // TENTATIVA: Usar 'imageAspectRatio' em vez de 'aspectRatio'
     const result = await imageModel.generateContent({
       contents: [{ parts: [{ text: detailedPrompt }] }],
       generationConfig: {
         responseMimeType: "image/png",
         responseModalities: ["Image"],
-        aspectRatio: "3:4"
+        imageAspectRatio: "3:4" // CAMPO ALTERNATIVO
       }
     });
 
@@ -410,4 +411,8 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`[SERVIDOR] Backend rodando em http://localhost:${PORT}`);
   console.log('[SERVIDOR] Variáveis de ambiente configuradas:', requiredEnvVars.map(v => `${v}: ${process.env[v] ? 'OK' : 'MISSING'}`).join(', '));
+  
+  // NOVO: Log da versão do SDK para diagnóstico
+  const sdkVersion = require('@google/generative-ai/package.json').version;
+  console.log(`[DIAGNÓSTICO] Versão do SDK @google/generative-ai: ${sdkVersion}`);
 });
