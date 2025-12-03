@@ -3,6 +3,9 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
 const { v4: uuidv4 } = require('uuid');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const rateLimit = require('express-rate-limit');
+const sanitizeHtml = require('sanitize-html');
 
 // Tenta carregar o Mercado Pago. Se falhar, o erro será capturado aqui.
 let mercadopago;
@@ -12,7 +15,8 @@ try {
     console.error("FATAL ERROR: Failed to load 'mercadopago'. Please run 'npm install'.", e);
 }
 
-dotenv.config();
+// --- GARANTINDO O CARREGAMENTO DO .env.local ---
+dotenv.config({ path: '.env.local' });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -35,8 +39,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Reduzindo o limite de 50mb para 1mb, já que o logo é pequeno e o resto é texto.
-app.use(express.json({ limit: '1mb' })); 
+// Aumentando o limite para 50mb para acomodar o logo em base64, se necessário.
+app.use(express.json({ limit: '50mb' })); 
 app.set('trust proxy', 1);
 
 // --- Supabase Clients ---
@@ -66,7 +70,6 @@ if (!isSupabaseConfigured) {
         console.log("Supabase clients initialized.");
     } catch (e) {
         console.error("FATAL ERROR: Failed to initialize Supabase clients:", e);
-        // Se a inicialização falhar aqui, o servidor deve parar.
         process.exit(1);
     }
 }
@@ -82,12 +85,32 @@ if (MP_ACCESS_TOKEN && mercadopago) {
     console.warn("WARNING: MERCADO_PAGO_ACCESS_TOKEN not found or mercadopago module failed to load. Payment routes will be mocked or fail.");
 }
 
+// --- Gemini AI Client ---
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+let genAI = null;
+if (GEMINI_API_KEY) {
+    genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    console.log("Gemini AI client initialized.");
+} else {
+    console.warn("WARNING: GEMINI_API_KEY not found. AI generation routes will fail.");
+}
+
+// --- Rate Limiting ---
+const generationLimiter = rateLimit({ 
+    windowMs: 60 * 1000, 
+    max: 5, 
+    message: { error: "Muitas requisições. Tente novamente em um minuto." }, 
+    standardHeaders: true, 
+    legacyHeaders: false 
+});
+
+
 // --- Middleware de Autenticação e Autorização ---
 
 // 1. Verifica o JWT e anexa o UID do usuário à requisição
 const verifyAuth = async (req, res, next) => {
+    // FIX: Check if supabaseAnon was successfully initialized
     if (!supabaseAnon) {
-        // Se o cliente anon não foi inicializado (chaves ausentes), o backend não pode verificar o token.
         return res.status(401).json({ error: 'Unauthorized: Supabase configuration missing on backend.' });
     }
     
@@ -99,7 +122,6 @@ const verifyAuth = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     
     try {
-        // Use o cliente anon para verificar o token
         const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
         
         if (error || !user) {
@@ -107,6 +129,7 @@ const verifyAuth = async (req, res, next) => {
         }
         
         req.user = user;
+        req.user.token = token; // Store token for internal API calls if needed
         next();
     } catch (e) {
         console.error("JWT Verification Error:", e);
@@ -121,7 +144,6 @@ const authorizeAdmin = async (req, res, next) => {
     }
     
     if (!supabaseServiceRole) {
-        // Se o cliente Service Role não foi inicializado (chaves ausentes), o backend não pode acessar o DB.
         return res.status(403).json({ error: 'Forbidden: Supabase Service Role configuration missing on backend.' });
     }
     
@@ -149,34 +171,181 @@ const authorizeAdmin = async (req, res, next) => {
     }
 };
 
+// --- Helper Functions ---
+
+// Geração de prompt detalhado
+const generateDetailedPrompt = (promptInfo) => {
+    const { companyName, phone, addressStreet, addressNumber, addressNeighborhood, addressCity, details } = promptInfo;
+    const address = [addressStreet, addressNumber, addressNeighborhood, addressCity].filter(Boolean).join(', ');
+    const servicesList = details.split('.').map(s => s.trim()).filter(s => s.length > 5).join('; ');
+
+    return `Você é um designer profissional de social media. Gere uma arte de FLYER VERTICAL em alta qualidade.  
+Nicho: ${details}.  
+Dados que devem aparecer:  
+- Nome: ${companyName}  
+- Serviços: ${servicesList}  
+- Telefone/WhatsApp: ${phone}  
+- Endereço: ${address}`;
+};
+
+// Geração de imagem (Imagen 3)
+async function generateImage(detailedPrompt) {
+    if (!genAI) throw new Error('Gemini AI client not initialized.');
+
+    console.log(`[GENERATE] Iniciando geração de imagem com prompt: ${detailedPrompt.substring(0, 120)}...`);
+
+    try {
+        const imageModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
+
+        const result = await imageModel.generateContent({
+            model: "imagen-3.0-generate-001",
+            contents: detailedPrompt,
+            config: {
+                numberOfImages: 1,
+                outputMimeType: "image/png",
+                aspectRatio: "3:4" // Vertical flyer aspect ratio
+            }
+        });
+
+        // The image data is returned as imageBytes (Base64 string)
+        const imageBase64 = result.response?.candidates?.[0]?.image?.imageBytes;
+
+        if (!imageBase64) {
+            console.error("API Response:", JSON.stringify(result.response, null, 2));
+            throw new Error("A API não retornou a imagem corretamente.");
+        }
+
+        return `data:image/png;base64,${imageBase64}`;
+
+    } catch (error) {
+        console.error("[GENERATE] ERRO DURANTE A GERAÇÃO DE IMAGEM:", error);
+        throw new Error(`Erro da API de Imagem: ${error.message || 'Erro desconhecido.'}`);
+    }
+}
+
+// Upload Supabase
+async function uploadImageToSupabase(imageDataUrl, userId) {
+    if (!supabaseServiceRole) throw new Error('Supabase Service Role Client ausente.');
+    
+    try {
+        const matches = imageDataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) throw new Error('Formato de base64 inválido.');
+        
+        const contentType = matches[1];
+        const imageBuffer = Buffer.from(matches[2], 'base64');
+        const filePath = `images/${userId}/${uuidv4()}.png`; // Use 'images' bucket
+        
+        const { data, error } = await supabaseServiceRole.storage
+            .from('images')
+            .upload(filePath, imageBuffer, { 
+                contentType, 
+                upsert: false 
+            });
+            
+        if (error) throw new Error(`Erro no upload: ${error.message}`);
+        
+        return data.path; 
+    } catch (e) { 
+        console.error('Erro upload:', e); 
+        throw e; 
+    }
+}
+
+// Quota Increment
+async function incrementUserUsage(userId) {
+    if (!supabaseServiceRole) throw new Error('Supabase Service Role Client ausente.');
+    
+    // Calls the PostgreSQL function 'increment_user_usage'
+    const { error } = await supabaseServiceRole.rpc('increment_user_usage', { user_id_input: userId });
+    
+    if (error) {
+        console.error("Failed to increment usage:", error);
+        throw new Error("Falha ao registrar uso.");
+    }
+}
+
 
 // --- ROTAS DE GERAÇÃO E QUOTA (Requerem apenas verifyAuth) ---
 
-// Rota de Geração de Imagem
-app.post('/api/generate', verifyAuth, async (req, res) => {
+// Rota de Geração de Imagem (REAL IMPLEMENTATION)
+app.post('/api/generate', verifyAuth, generationLimiter, async (req, res) => {
     if (!supabaseServiceRole) {
         return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
     }
     
-    console.log(`User ${req.user.id} requested image generation.`);
+    const { promptInfo } = req.body;
+    const user = req.user;
     
-    // Simulação de sucesso (retorna um objeto de imagem válido)
-    const mockImage = {
-        id: uuidv4(),
-        user_id: req.user.id,
-        prompt: "Placeholder prompt",
-        image_url: `images/${req.user.id}/mock_image_${Date.now()}.png`,
-        business_info: req.body.promptInfo,
-        created_at: new Date().toISOString()
+    if (!promptInfo || !promptInfo.companyName || !promptInfo.details) {
+        return res.status(400).json({ error: "Nome da empresa e detalhes são obrigatórios." });
+    }
+    
+    const sanitizedPromptInfo = {
+        companyName: sanitizeHtml(promptInfo.companyName || ''),
+        phone: sanitizeHtml(promptInfo.phone || ''),
+        addressStreet: sanitizeHtml(promptInfo.addressStreet || ''),
+        addressNumber: sanitizeHtml(promptInfo.addressNumber || ''),
+        addressNeighborhood: sanitizeHtml(promptInfo.addressNeighborhood || ''),
+        addressCity: sanitizeHtml(promptInfo.addressCity || ''),
+        details: sanitizeHtml(promptInfo.details || ''),
+        logo: promptInfo.logo // Logo is base64, keep it as is
     };
     
-    res.json({ 
-        message: "Generation successful (mocked)",
-        image: mockImage
-    });
+    try {
+        // 1. Quota Check (Calling the internal check-quota endpoint for consistency)
+        const checkQuotaRes = await fetch(`http://localhost:${PORT}/api/check-quota`, {
+            headers: { 'Authorization': `Bearer ${user.token}` }
+        });
+        
+        const quotaResponse = await checkQuotaRes.json();
+        
+        if (quotaResponse.status === 'BLOCKED') {
+            return res.status(403).json({ 
+                error: quotaResponse.message || 'Limite de geração atingido.',
+                quotaStatus: 'BLOCKED',
+                usage: quotaResponse.usage,
+                plan: quotaResponse.plan
+            });
+        }
+        
+        // 2. Generate Detailed Prompt
+        const detailedPrompt = generateDetailedPrompt(sanitizedPromptInfo);
+        
+        // 3. Generate Image
+        const generatedImageDataUrl = await generateImage(detailedPrompt);
+        
+        // 4. Upload Image to Storage
+        const imagePath = await uploadImageToSupabase(generatedImageDataUrl, user.id);
+        
+        // 5. Save metadata to 'images' table
+        const { data: imageMetadata, error: dbError } = await supabaseServiceRole
+            .from('images')
+            .insert({
+                user_id: user.id,
+                prompt: detailedPrompt,
+                image_url: imagePath,
+                business_info: sanitizedPromptInfo,
+            })
+            .select('*')
+            .single();
+            
+        if (dbError) throw dbError;
+        
+        // 6. Increment Quota
+        await incrementUserUsage(user.id);
+        
+        res.json({ 
+            message: 'Arte gerada com sucesso!',
+            image: imageMetadata
+        });
+        
+    } catch (error) {
+        console.error("Generation failed:", error);
+        res.status(500).json({ error: error.message || 'Erro interno ao gerar arte.' });
+    }
 });
 
-// Rota de Verificação de Quota
+// Rota de Verificação de Quota (ROBUST IMPLEMENTATION)
 app.get('/api/check-quota', verifyAuth, async (req, res) => {
     if (!supabaseServiceRole) {
         return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
@@ -185,53 +354,30 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
     console.log(`User ${req.user.id} checked quota.`);
     
     try {
-        const { data: usageData, error: usageError } = await supabaseServiceRole
+        // 1. Fetch Usage Data
+        let { data: usageData, error: usageError } = await supabaseServiceRole
             .from('user_usage')
             .select('user_id, plan_id, current_usage, cycle_start_date')
             .eq('user_id', req.user.id)
             .single();
             
-        if (usageError || !usageData) {
-            const defaultUsage = { user_id: req.user.id, plan_id: 'free', current_usage: 0, cycle_start_date: new Date().toISOString() };
-            const { data: planSettings, error: planError } = await supabaseServiceRole
-                .from('plan_settings')
-                .select('id, max_images_per_month, price')
-                .eq('id', 'free')
-                .single();
-                
-            if (planError || !planSettings) throw new Error("Plan settings not found.");
-            
-            const { data: allPlans, error: allPlansError } = await supabaseServiceRole
-                .from('plan_details')
-                .select('*, plan_settings(price, max_images_per_month)');
-                
-            if (allPlansError) throw new Error("Failed to fetch all plans.");
-            
-            const plans = allPlans.map(p => ({
-                id: p.id,
-                display_name: p.display_name,
-                description: p.description,
-                features: p.features,
-                price: p.plan_settings.price,
-                max_images_per_month: p.plan_settings.max_images_per_month
-            }));
-            
-            return res.json({
-                status: 'ALLOWED',
-                usage: defaultUsage,
-                plan: planSettings,
-                plans: plans,
-                message: "Quota check successful (default free plan)."
-            });
+        if (usageError && usageError.code !== 'PGRST116') { 
+            throw new Error("Falha ao buscar uso do usuário.");
         }
         
+        // If no usage data, create default 'free' usage record (fallback)
+        if (!usageData) {
+            usageData = { user_id: req.user.id, plan_id: 'free', current_usage: 0, cycle_start_date: new Date().toISOString() };
+        }
+        
+        // 2. Fetch Plan Settings (Limits)
         const { data: planSettings, error: planError } = await supabaseServiceRole
             .from('plan_settings')
             .select('id, max_images_per_month, price')
             .eq('id', usageData.plan_id)
             .single();
             
-        if (planError || !planSettings) throw new Error("Plan settings not found.");
+        if (planError || !planSettings) throw new Error(`Plan settings not found for plan ID: ${usageData.plan_id}`);
         
         const maxImages = planSettings.max_images_per_month;
         let status = 'ALLOWED';
@@ -240,25 +386,26 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
         if (usageData.current_usage >= maxImages) {
             status = 'BLOCKED';
             message = "Limite de geração atingido.";
-        } else if (usageData.current_usage / maxImages > 0.8) {
+        } else if (maxImages > 0 && usageData.current_usage / maxImages > 0.8) {
             status = 'NEAR_LIMIT';
             message = "Você está perto do limite de gerações.";
         }
         
-        const { data: allPlans, error: allPlansError } = await supabaseServiceRole
+        // 3. Fetch All Plans (Details + Settings)
+        const { data: allPlansData, error: allPlansError } = await supabaseServiceRole
             .from('plan_details')
             .select('*, plan_settings(price, max_images_per_month)');
             
-        if (allPlansError) throw new Error("Failed to fetch all plans.");
+        if (allPlansError) throw new Error("Failed to fetch all plans details.");
         
-        const plans = allPlans.map(p => ({
-                id: p.id,
-                display_name: p.display_name,
-                description: p.description,
-                features: p.features,
-                price: p.plan_settings.price,
-                max_images_per_month: p.plan_settings.max_images_per_month
-            }));
+        const plans = allPlansData.map(p => ({
+            id: p.id,
+            display_name: p.display_name,
+            description: p.description,
+            features: p.features,
+            price: p.plan_settings.price,
+            max_images_per_month: p.plan_settings.max_images_per_month
+        }));
 
         res.json({
             status: status,
@@ -282,6 +429,7 @@ app.post('/api/subscribe', verifyAuth, async (req, res) => {
         return res.status(500).json({ error: "Erro de configuração: Módulo Mercado Pago não carregado." });
     }
     
+    const MP_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN;
     if (!MP_ACCESS_TOKEN) {
         return res.status(500).json({ error: "Erro de configuração: Token do Mercado Pago não está definido no servidor." });
     }
@@ -504,7 +652,13 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', service: 'Flow Designer Backend' });
 });
 
-// --- Inicia o Servidor ---
+// --- Error handler ---
+app.use((err, req, res, next) => {
+    console.error("[ERRO GLOBAL]", err);
+    res.status(500).json({ error: err.message || 'Erro interno.' });
+});
+
+// --- Start server ---
 app.listen(PORT, () => {
     console.log(`Flow Designer Backend running on port ${PORT}`);
 });
