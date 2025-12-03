@@ -37,10 +37,34 @@ const seedData = async () => {
       },
       {
         id: '00000000-0000-0000-0000-000000000003',
+        email: 'dev@flowdesigner.com',
+        first_name: 'Dev',
+        last_name: 'User',
+        role: 'dev',
+        status: 'on'
+      },
+      {
+        id: '00000000-0000-0000-0000-000000000004',
         email: 'cliente@flowdesigner.com',
         first_name: 'Cliente',
         last_name: 'Teste',
         role: 'free',
+        status: 'on'
+      },
+      {
+        id: '00000000-0000-0000-0000-000000000005',
+        email: 'starter@flowdesigner.com',
+        first_name: 'Starter',
+        last_name: 'User',
+        role: 'starter',
+        status: 'on'
+      },
+      {
+        id: '00000000-0000-0000-0000-000000000006',
+        email: 'pro@flowdesigner.com',
+        first_name: 'Pro',
+        last_name: 'User',
+        role: 'pro',
         status: 'on'
       }
     ];
@@ -60,7 +84,8 @@ const seedData = async () => {
     // Create test plans if they don't exist
     const { data: existingPlans } = await supabase
       .from('plans')
-      .select('id, name');
+      .select('id, name')
+      .then(({ data }) => data || []);
 
     const planNames = existingPlans?.map(p => p.name) || [];
     
@@ -86,8 +111,8 @@ const seedData = async () => {
 
     // Create subscriptions for test users
     for (const user of testUsers) {
-      if (user.role !== 'admin' && user.role !== 'owner') {
-        const planName = user.role === 'free' ? 'Free' : user.role;
+      if (user.role !== 'admin' && user.role !== 'dev' && user.role !== 'owner') {
+        const planName = user.role === 'free' ? 'Free' : user.role === 'starter' ? 'Starter' : 'Pro';
         
         const { data: plan } = await supabase
           .from('plans')
@@ -113,12 +138,38 @@ const seedData = async () => {
       }
     }
 
+    // Create user_usage records
+    for (const user of testUsers) {
+      const { error } = await supabase
+        .from('user_usage')
+          .upsert({
+            user_id: user.id,
+            plan_id: user.role,
+            current_usage: 0
+          }, { onConflict: 'user_id' });
+
+      if (error) {
+        console.error(`❌ Erro ao criar usage para ${user.email}:`, error);
+      } else {
+        console.log(`✅ Usage criado para ${user.email}`);
+      }
+    }
+
     console.log('\n🎉 Dados de teste inseridos com sucesso!');
     console.log('\n🔑 Credenciais para teste:');
+    console.log('=====================================');
     console.log('Admin: admin@flowdesigner.com');
     console.log('Owner: owner@flowdesigner.com');
-    console.log('Cliente: cliente@flowdesigner.com');
-    console.log('Senha para todos: 123456 (configure no Supabase Auth)');
+    console.log('Dev: dev@flowdesigner.com');
+    console.log('Cliente Free: cliente@flowdesigner.com');
+    console.log('Cliente Starter: starter@flowdesigner.com');
+    console.log('Cliente Pro: pro@flowdesigner.com');
+    console.log('=====================================');
+    console.log('Senha para todos: 123456');
+    console.log('\n📋 Planos:');
+    console.log('- Free: 3 imagens/mês');
+    console.log('- Starter: 20 imagens/mês');
+    console.log('- Pro: 50 imagens/mês');
 
   } catch (error) {
     console.error('❌ Erro ao inserir dados:', error);

@@ -11,6 +11,7 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     console.log('🔐 Verifying token...');
+    
     // Use supabaseAnon to verify the JWT token (standard practice)
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
 
@@ -24,7 +25,7 @@ const authenticateToken = async (req, res, next) => {
       return res.status(403).json({ error: 'Usuário não encontrado.' });
     }
 
-    // Get user profile using the SERVICE ROLE client for reliable access
+    // Get user profile using SERVICE ROLE client for reliable access
     try {
       const { data: profile, error: profileError } = await supabaseService
         .from('profiles')
