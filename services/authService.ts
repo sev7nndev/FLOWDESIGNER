@@ -5,88 +5,105 @@ export const authService = {
   async login(email: string, password: string): Promise<User> {
     try {
       console.log('🔐 Attempting login for:', email);
+      console.log('🔍 Checking if user exists in profiles table...');
       
+      // Primeiro, verificar se o usuário existe na tabela profiles
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (profileError) {
+        console.log('📝 Profile not found, will create after login');
+      } else {
+        console.log('✅ Profile found:', profile.email, 'Role:', profile.role);
+      }
+      
+      console.log('🔑 Attempting Supabase auth...');
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        console.error('Login error details:', {
+        console.error('❌ Supabase auth error:', {
           message: error.message,
           status: error.status,
-          code: error.status
+          code: error.code
         });
         
         // Tratamento específico de erros comuns
         if (error.message?.includes('Invalid login credentials')) {
-          throw new Error('Email ou senha inválidos.');
+          throw new Error('Email ou senha inválidos. Verifique suas credenciais e tente novamente.');
         } else if (error.message?.includes('Email not confirmed')) {
           throw new Error('Por favor, confirme seu email antes de fazer login.');
         } else if (error.message?.includes('Too many requests')) {
           throw new Error('Muitas tentativas. Aguarde um minuto e tente novamente.');
+        } else if (error.message?.includes('User not found')) {
+          throw new Error('Usuário não encontrado. Verifique o email ou cadastre-se.');
         } else {
-          throw new Error(error.message || 'Falha no login. Verifique suas credenciais.');
+          throw new Error(`Erro no login: ${error.message}`);
         }
       }
 
       if (!data.user) {
-        throw new Error('Login falhou. Usuário não encontrado.');
+        console.error('❌ No user data returned from auth');
+        throw new Error('Login falhou. Nenhum usuário retornado.');
       }
 
-      // Buscar o perfil completo após login bem-sucedido
+      console.log('✅ Supabase auth successful for user:', data.user.id);
+
+      // Buscar ou criar o perfil completo após login bem-sucedido
       try {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
+        let userProfile = profile;
+        
+        if (!userProfile) {
+          console.log('📝 Creating profile for authenticated user...');
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email || email,
+              role: 'free',
+              status: 'on',
+              first_name: '',
+              last_name: ''
+            })
+            .select()
+            .single();
 
-        if (profileError) {
-          console.error('Profile fetch error after login:', profileError);
-          
-          // Se perfil não existe, criar um perfil padrão
-          if (profileError.code === 'PGRST116') {
-            console.log('📝 Creating default profile after login');
-            const { error: createError } = await supabase
-              .from('profiles')
-              .insert({
-                id: data.user.id,
-                email: data.user.email,
-                role: 'free',
-                status: 'on',
-                first_name: '',
-                last_name: ''
-              })
-              .single();
-
-            if (createError) {
-              console.error('Error creating default profile:', createError);
-            } else {
-              console.log('✅ Default profile created');
-            }
+          if (createError) {
+            console.error('❌ Error creating profile:', createError);
+            throw new Error('Erro ao criar perfil de usuário.');
           }
+          
+          userProfile = newProfile;
+          console.log('✅ Profile created successfully');
         } else {
-          console.log('✅ Profile loaded:', profile);
+          console.log('✅ Using existing profile');
         }
+
+        // Retorna o usuário completo com perfil
+        const userWithProfile: User = {
+          id: data.user.id,
+          email: data.user.email || email,
+          firstName: userProfile.first_name || '',
+          lastName: userProfile.last_name || '',
+          createdAt: data.user.created_at ? new Date(data.user.created_at).getTime() : Date.now(),
+          role: userProfile.role || 'free',
+        };
+
+        console.log('✅ Login successful:', userWithProfile.email, 'Role:', userWithProfile.role);
+        return userWithProfile;
+        
       } catch (profileErr) {
-        console.error('Error fetching profile after login:', profileErr);
+        console.error('❌ Error handling profile:', profileErr);
+        throw new Error('Erro ao processar perfil do usuário.');
       }
-
-      // Retorna o usuário completo com perfil (ou perfil padrão)
-      const userWithProfile: User = {
-        id: data.user.id,
-        email: data.user.email || '',
-        firstName: '',
-        lastName: '',
-        createdAt: data.user.created_at ? new Date(data.user.created_at).getTime() : Date.now(),
-        role: 'free', // Role padrão
-      };
-
-      console.log('✅ Login successful:', userWithProfile.id);
-      return userWithProfile;
+      
     } catch (error: any) {
-      console.error('AuthService login error:', error);
+      console.error('❌ AuthService login error:', error);
       throw new Error(error.message || 'Falha no login. Tente novamente.');
     }
   },
@@ -107,11 +124,7 @@ export const authService = {
       });
 
       if (error) {
-        console.error('Registration error details:', {
-          message: error.message,
-          status: error.status,
-          code: error.status
-        });
+        console.error('❌ Registration error:', error);
         
         if (error.message?.includes('User already registered')) {
           throw new Error('Este e-mail já está cadastrado. Tente fazer login.');
@@ -148,12 +161,12 @@ export const authService = {
           .single();
 
         if (profileError) {
-          console.error('Profile creation error:', profileError);
+          console.error('❌ Profile creation error:', profileError);
         } else {
           console.log('✅ Profile created for user:', newUserId);
         }
       } catch (profileErr) {
-        console.error('Error creating profile:', profileErr);
+        console.error('❌ Error creating profile:', profileErr);
       }
 
       // Se for um plano pago, criar assinatura
@@ -179,18 +192,18 @@ export const authService = {
               .single();
 
             if (subscriptionError) {
-              console.error('Subscription creation error:', subscriptionError);
+              console.error('❌ Subscription creation error:', subscriptionError);
             } else {
               console.log('✅ Subscription created for plan:', planId);
             }
           }
         } catch (subErr) {
-          console.error('Error handling subscription:', subErr);
+          console.error('❌ Error handling subscription:', subErr);
         }
       }
 
     } catch (error: any) {
-      console.error('AuthService registration error:', error);
+      console.error('❌ AuthService registration error:', error);
       throw new Error(error.message || 'Falha no registro. Tente novamente.');
     }
   },
@@ -211,13 +224,13 @@ export const authService = {
       });
 
       if (error) {
-        console.error('Google login error:', error);
+        console.error('❌ Google login error:', error);
         throw new Error('Falha no login com Google. Tente novamente.');
       }
 
       console.log('✅ Google login initiated');
     } catch (error: any) {
-      console.error('AuthService Google login error:', error);
+      console.error('❌ AuthService Google login error:', error);
       throw new Error(error.message || 'Falha no login com Google.');
     }
   },
@@ -229,13 +242,13 @@ export const authService = {
       const { error } = await supabase.auth.signOut();
       
       if (error) {
-        console.error('Logout error:', error);
+        console.error('❌ Logout error:', error);
         throw new Error('Falha ao sair.');
       }
 
       console.log('✅ Logout successful');
     } catch (error: any) {
-      console.error('AuthService logout error:', error);
+      console.error('❌ AuthService logout error:', error);
       throw new Error(error.message || 'Falha ao sair.');
     }
   },
@@ -247,7 +260,7 @@ export const authService = {
       const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error) {
-        console.error('Get current user error:', error);
+        console.error('❌ Get current user error:', error);
         return null;
       }
 
@@ -265,7 +278,7 @@ export const authService = {
           .single();
 
         if (profileError) {
-          console.error('Profile fetch error:', profileError);
+          console.error('❌ Profile fetch error:', profileError);
           if (profileError.code === 'PGRST116') {
             // Perfil não encontrado, retorna usuário com role padrão
             return {
@@ -292,11 +305,11 @@ export const authService = {
         console.log('✅ User with profile loaded:', userWithProfile.email, 'role:', userWithProfile.role);
         return userWithProfile;
       } catch (profileErr) {
-        console.error('Error fetching profile:', profileErr);
+        console.error('❌ Error fetching profile:', profileErr);
         return null;
       }
     } catch (error) {
-      console.error('Get current user error:', error);
+      console.error('❌ Get current user error:', error);
       return null;
     }
   },
@@ -317,7 +330,7 @@ export const authService = {
             .single();
 
           if (profileError) {
-            console.error('Profile fetch error in auth state change:', profileError);
+            console.error('❌ Profile fetch error in auth state change:', profileError);
             if (profileError.code === 'PGRST116') {
               // Perfil não encontrado, retorna usuário com role padrão
               callback({
@@ -346,7 +359,7 @@ export const authService = {
           console.log('✅ Auth state changed - user authenticated:', userWithProfile.email, 'role:', userWithProfile.role);
           callback(userWithProfile);
         } catch (profileErr) {
-          console.error('Error in auth state change profile fetch:', profileErr);
+          console.error('❌ Error in auth state change profile fetch:', profileErr);
           callback(null);
         }
       } else {
