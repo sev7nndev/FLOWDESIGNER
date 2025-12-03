@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star, LogOut, ShieldOff, CreditCard, Link2, Link2Off } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, CheckCircle, PauseCircle, Loader2, MessageSquare, User as UserIcon, Zap, Shield, Star, LogOut, ShieldOff } from 'lucide-react';
 import { Button } from '../components/Button';
 import { useOwnerMetrics } from '../hooks/useOwnerMetrics';
 import { MetricCard } from '../components/MetricCard';
@@ -24,8 +24,7 @@ const ClientTable: React.FC<ClientTableProps> = ({ clients, isLoading }) => {
   if (isLoading) {
     return (
       <div className="text-center py-10 text-gray-500 flex items-center justify-center gap-2">
-        <Loader2 size={20} className="animate-spin mr-2" />
-        Carregando clientes...
+        <Loader2 size={20} className="animate-spin mr-2" /> Carregando clientes...
       </div>
     );
   }
@@ -154,7 +153,7 @@ const PaymentsPanel: React.FC<{ user: User, status: string, onRefresh: () => voi
   return (
     <div className="max-w-2xl mx-auto bg-zinc-900/50 p-8 rounded-2xl border border-white/10 shadow-xl">
       <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
-        <CreditCard size={24} className="text-primary" />
+        <DollarSign size={24} className="text-primary" />
         Conexão com Mercado Pago
       </h2>
       <p className="text-gray-400 text-sm mb-8">
@@ -170,7 +169,7 @@ const PaymentsPanel: React.FC<{ user: User, status: string, onRefresh: () => voi
               <p className="text-xs text-gray-400">Você está pronto para receber pagamentos.</p>
             </div>
           </div>
-          <Button variant="danger" onClick={handleDisconnect} isLoading={isLoading} icon={<Link2Off size={16} />}>
+          <Button variant="danger" onClick={handleDisconnect} isLoading={isLoading} icon={<span>🔌</span>}>
             Desconectar
           </Button>
         </div>
@@ -180,7 +179,7 @@ const PaymentsPanel: React.FC<{ user: User, status: string, onRefresh: () => voi
             <p className="font-semibold text-white">Nenhuma conta conectada</p>
             <p className="text-xs text-gray-400">Conecte-se para começar a vender.</p>
           </div>
-          <Button onClick={handleConnect} isLoading={isLoading} icon={<Link2 size={16} />}>
+          <Button onClick={handleConnect} isLoading={isLoading} icon={<span>🔗</span>}>
             Conectar Mercado Pago
           </Button>
         </div>
@@ -194,8 +193,25 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
   const { metrics, isLoadingMetrics, errorMetrics, refreshMetrics } = useOwnerMetrics(user);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'clients' | 'chat' | 'payments'>('dashboard');
 
-  // Conditional rendering for access control
-  if (!user || user.role !== 'owner') {
+  // Enhanced access control with detailed logging
+  if (!user) {
+    console.log('❌ OwnerPanel: No user provided');
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-gray-100 p-4 text-center">
+        <ShieldOff size={64} className="text-red-500 mb-6 opacity-50" />
+        <h1 className="text-3xl font-bold text-white mb-3">Acesso Negado</h1>
+        <p className="text-gray-400 mb-8">Você não está autenticado.</p>
+        <Button onClick={onBackToApp} icon={<ArrowLeft size={16} />}>
+          Voltar para o Aplicativo
+        </Button>
+      </div>
+    );
+  }
+
+  console.log('🔍 OwnerPanel: Checking access for user:', user.email, 'Role:', user.role);
+  
+  if (user.role !== 'owner') {
+    console.log('❌ OwnerPanel: Access denied for role:', user.role);
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-gray-100 p-4 text-center">
         <ShieldOff size={64} className="text-red-500 mb-6 opacity-50" />
@@ -208,6 +224,8 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
     );
   }
 
+  console.log('✅ OwnerPanel: Access granted for owner:', user.email);
+
   const totalClients = metrics.clients.length;
   const totalActive = metrics.statusCounts.on;
   const totalInactive = metrics.statusCounts.paused + metrics.statusCounts.cancelled;
@@ -216,6 +234,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
     <div className="min-h-screen bg-zinc-950 text-gray-100 pt-20 pb-16 relative">
       <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
       <div className="max-w-7xl mx-auto px-4 md:px-6 relative z-10">
+        
         {/* Header da Página */}
         <div className="flex items-center justify-between border-b border-primary/50 pb-4 mb-8">
           <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
@@ -360,7 +379,10 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ user, onBackToAp
         )}
 
         {!isLoadingMetrics && activeTab === 'payments' && (
-          <PaymentsPanel user={user} status={metrics.mpConnectionStatus} onRefresh={refreshMetrics} />
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white">Pagamentos</h2>
+            <PaymentsPanel user={user} status={metrics.mpConnectionStatus} onRefresh={refreshMetrics} />
+          </div>
         )}
       </div>
     </div>

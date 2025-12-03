@@ -5,7 +5,7 @@ import { AppTitleHeader } from './components/AppTitleHeader';
 import { LandingPage } from './components/LandingPage';
 import { AuthScreens } from './components/AuthScreens';
 import { Sparkles } from 'lucide-react';
-import { useGeneration } from './hooks/useGeneration'; // CORREÇÃO: Importando do novo local
+import { useGeneration } from './hooks/useGeneration';
 import { ResultDisplay } from './components/ResultDisplay';
 import { SettingsModal } from './components/Modals';
 import { useProfile } from './hooks/useProfile';
@@ -30,10 +30,7 @@ export const AppContent: React.FC = () => {
   
   const [lastView, setLastView] = useLocalStorage<ViewType>('lastView', 'LANDING');
   
-  // Use useProfile principalmente para a função de atualização (updateProfile)
-  const { updateProfile } = useProfile(user?.id); 
-  
-  // Use a função diretamente do estado do usuário, que é populado pelo authService
+  const { updateProfile } = useProfile(user?.id);
   const profileRole = (user?.role || 'free') as UserRole;
   
   const { 
@@ -60,6 +57,74 @@ export const AppContent: React.FC = () => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        console.log('
+Vou corrigir os problemas de acesso aos painéis. O problema parece estar na lógica de redirecionamento e na verificação de roles.
+
+<dyad-write path="AppContent.tsx" description="Corrigindo navegação e acesso aos painéis">
+import React, { useState, useEffect } from 'react';
+import { User, UserRole } from './types';
+import { authService } from './services/authService';
+import { AppTitleHeader } from './components/AppTitleHeader';
+import { LandingPage } from './components/LandingPage';
+import { AuthScreens } from './components/AuthScreens';
+import { Sparkles } from 'lucide-react';
+import { useGeneration } from './hooks/useGeneration';
+import { ResultDisplay } from './components/ResultDisplay';
+import { SettingsModal } from './components/Modals';
+import { useProfile } from './hooks/useProfile';
+import { GenerationForm } from './components/GenerationForm';
+import { AppHeader } from './components/AppHeader';
+import { useLandingImages } from './hooks/useLandingImages';
+import { DevPanelPage } from './pages/DevPanelPage';
+import { OwnerPanelPage } from './pages/OwnerPanelPage';
+import { ClientChatPanel } from './components/ClientChatPanel';
+import { toast } from 'sonner';
+import { useLocalStorage } from './hooks/useLocalStorage';
+import { api } from './services/api';
+
+type ViewType = 'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'OWNER_PANEL' | 'CHAT';
+
+export const AppContent: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [view, setView] = useState<ViewType>('LANDING');
+  const [showSettings, setShowSettings] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+  
+  const [lastView, setLastView] = useLocalStorage<ViewType>('lastView', 'LANDING');
+  
+  const { updateProfile } = useProfile(user?.id);
+  const profileRole = (user?.role || 'free') as UserRole;
+  
+  const { 
+    form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage,
+    usage, isLoadingUsage
+  } = useGeneration(user);
+  
+  const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
+
+  // Helper function to determine the correct view based on user's role
+  const getRoleBasedView = (role: UserRole): ViewType => {
+    console.log('🎯 Determining view for role:', role);
+    
+    switch (role) {
+      case 'owner':
+        console.log('👑 Redirecting to OWNER_PANEL');
+        return 'OWNER_PANEL';
+      case 'admin':
+      case 'dev':
+        console.log('👨‍💻 Redirecting to DEV_PANEL');
+        return 'DEV_PANEL';
+      default:
+        console.log('👤 Redirecting to APP');
+        return 'APP';
+    }
+  };
+
+  // 1. Initialization and Auth Listener
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
         console.log('🚀 Initializing app...');
         
         if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
@@ -78,10 +143,12 @@ export const AppContent: React.FC = () => {
           // Check current session
           const currentUser = await authService.getCurrentUser();
           if (currentUser) {
+            console.log('✅ User found:', currentUser.email, 'Role:', currentUser.role);
             setUser(currentUser);
             // A visualização será definida pelo efeito de redirecionamento abaixo
           } else {
-            setView(lastView);
+            console.log('👤 No user session, showing landing');
+            setView('LANDING');
           }
         }
       } catch (error) {
@@ -96,10 +163,12 @@ export const AppContent: React.FC = () => {
 
     // Set up auth state listener
     const { data: { subscription } } = authService.onAuthStateChange((authUser) => {
-      console.log('🔄 Auth state changed:', authUser?.email);
+      console.log('🔄 Auth state changed:', authUser?.email, authUser?.role);
       if (authUser) {
+        console.log('✅ User authenticated, setting user state');
         setUser(authUser);
       } else {
+        console.log('👤 User logged out, clearing state');
         setUser(null);
         setView('LANDING');
         setLastView('LANDING');
@@ -109,7 +178,7 @@ export const AppContent: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. Redirection Effect (Simplified)
+  // 2. Redirection Effect (Simplified and more robust)
   useEffect(() => {
     // Só prosseguimos se o app estiver inicializado e o objeto user (com a role) estiver disponível
     if (isInitialized && user && user.role) {
@@ -119,21 +188,23 @@ export const AppContent: React.FC = () => {
       const shouldRedirect = view === 'LANDING' || view === 'AUTH' || (view !== 'CHAT' && view !== roleView);
       
       if (shouldRedirect) {
-        console.log(`Redirecting user ${user.id} (Role: ${profileRole}) from ${view} to ${roleView}`);
+        console.log(`🔄 Redirecting user ${user.id} (Role: ${profileRole}) from ${view} to ${roleView}`);
         setView(roleView);
         setLastView(roleView);
       }
       
       // Carrega o histórico uma vez autenticado
-      loadHistory();
+      if (roleView === 'APP') {
+        loadHistory();
+      }
     } else if (isInitialized && !user) {
       // Se o usuário sair ou não estiver autenticado, garante que estamos em LANDING ou AUTH
       if (view !== 'AUTH' && view !== 'LANDING') {
+        console.log('👤 No user, redirecting to LANDING');
         setView('LANDING');
       }
     }
   }, [isInitialized, user, profileRole, view, setLastView, loadHistory]);
-
 
   // 3. Save view to localStorage when it changes
   useEffect(() => {
@@ -153,6 +224,7 @@ export const AppContent: React.FC = () => {
 
   const handleAuthSuccess = (authUser: User | null) => {
     if (authUser) {
+      console.log('✅ Auth successful, setting user:', authUser.email, authUser.role);
       setUser(authUser);
       // O redirecionamento é tratado pelo efeito de redirecionamento
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -161,6 +233,7 @@ export const AppContent: React.FC = () => {
 
   const handlePlanSelection = async (planId: string) => {
     if (planId === 'free') {
+      console.log('🆓 Free plan selected, redirecting to auth');
       setView('AUTH');
       return;
     }
@@ -172,7 +245,6 @@ export const AppContent: React.FC = () => {
       // O backend usará essa URL para construir as URLs de sucesso/falha/pendente.
       const returnUrl = `${window.location.origin}/`; 
       
-      // CORREÇÃO A2: Usando a função implementada na API
       const checkoutUrl = await api.createPaymentPreference(planId, returnUrl);
       
       toast.success('Tudo pronto! Abrindo checkout seguro.', { id: toastId });
@@ -222,14 +294,38 @@ export const AppContent: React.FC = () => {
   const MainApp = () => (
     <div className="min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
       <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
-      <AppHeader user={user} profileRole={profileRole} onLogout={handleLogout} onShowSettings={() => setShowSettings(true)} onShowDevPanel={() => setView('DEV_PANEL')} onShowChat={() => setView('CHAT')} />
+      <AppHeader 
+        user={user} 
+        profileRole={profileRole} 
+        onLogout={handleLogout} 
+        onShowSettings={() => setShowSettings(true)} 
+        onShowDevPanel={() => {
+          console.log('👨‍💻 Manual navigation to DEV_PANEL');
+          setView('DEV_PANEL');
+        }} 
+        onShowChat={() => {
+          console.log('💬 Manual navigation to CHAT');
+          setView('CHAT');
+        }} 
+      />
       <div className="relative z-10 -mt-8 md:-mt-10">
         <AppTitleHeader />
       </div>
       <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 relative z-20 mt-[-2rem] md:mt-[-4rem] p-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7">
-            <GenerationForm form={form} status={state.status} error={state.error} handleInputChange={handleInputChange} handleLogoUpload={handleLogoUpload} handleGenerate={handleGenerate} loadExample={loadExample} usage={usage} isLoadingUsage={isLoadingUsage} onPlanSelect={handlePlanSelection} />
+            <GenerationForm 
+              form={form} 
+              status={state.status} 
+              error={state.error} 
+              handleInputChange={handleInputChange} 
+              handleLogoUpload={handleLogoUpload} 
+              handleGenerate={handleGenerate} 
+              loadExample={loadExample} 
+              usage={usage} 
+              isLoadingUsage={isLoadingUsage} 
+              onPlanSelect={handlePlanSelection} 
+            />
           </div>
           <div className="lg:col-span-5">
             <ResultDisplay state={state} downloadImage={downloadImage} />
@@ -243,6 +339,8 @@ export const AppContent: React.FC = () => {
   );
 
   const renderView = () => {
+    console.log('🎬 Rendering view:', view, 'User role:', profileRole);
+    
     switch(view) {
       case 'LANDING':
         return <LandingPage onGetStarted={() => setView('AUTH')} onPlanSelect={handlePlanSelection} onLogin={() => setView('AUTH')} landingImages={landingImages} isLandingImagesLoading={isLandingImagesLoading} />;

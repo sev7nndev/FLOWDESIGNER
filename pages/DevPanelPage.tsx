@@ -259,8 +259,27 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
 
 // --- Main Dev Panel Page ---
 export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, onLogout }) => {
-    // Conditional rendering for access control
-    if (!user || (user.role !== 'admin' && user.role !== 'dev')) {
+    // Enhanced access control with detailed logging
+    if (!user) {
+        console.log('❌ DevPanel: No user provided');
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-gray-100 p-4 text-center">
+                <ShieldOff size={64} className="text-red-500 mb-6 opacity-50" />
+                <h1 className="text-3xl font-bold text-white mb-3">Acesso Negado</h1>
+                <p className="text-gray-400 mb-8">Você não está autenticado.</p>
+                <Button onClick={onBackToApp} icon={<ArrowLeft size={16} />}>
+                    Voltar para o Aplicativo
+                </Button>
+            </div>
+        );
+    }
+
+    console.log('🔍 DevPanel: Checking access for user:', user.email, 'Role:', user.role);
+    
+    const hasAccess = user.role === 'admin' || user.role === 'dev';
+    
+    if (!hasAccess) {
+        console.log('❌ DevPanel: Access denied for role:', user.role);
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-gray-100 p-4 text-center">
                 <ShieldOff size={64} className="text-red-500 mb-6 opacity-50" />
@@ -272,6 +291,8 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
             </div>
         );
     }
+
+    console.log('✅ DevPanel: Access granted for role:', user.role);
 
     return (
         <div className="min-h-screen bg-zinc-950 text-gray-100 pt-20 pb-16 relative">
