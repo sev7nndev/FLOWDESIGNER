@@ -391,14 +391,22 @@ const PlanSettingsManager: React.FC = () => {
     );
 };
 
-// --- Componente de Conexão Mercado Pago (Apenas Dev) ---
-const MercadoPagoManager: React.FC = () => {
+// --- Componente de Conexão Mercado Pago (Apenas Dono do SaaS) ---
+const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
     const [isConnected, setIsConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-
+    
+    // Restrição de acesso: Apenas 'owner' pode ver e interagir com esta seção.
+    const isOwner = user.role === 'owner';
+    
     // Check connection status (simplified: just check if tokens exist)
     const checkConnectionStatus = useCallback(async () => {
+        if (!isOwner) {
+            setIsLoading(false);
+            return;
+        }
+        
         setIsLoading(true);
         try {
             // This endpoint is only accessible by admin/dev via service key in the backend
@@ -415,7 +423,7 @@ const MercadoPagoManager: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [isOwner]);
     
     useEffect(() => {
         checkConnectionStatus();
@@ -434,6 +442,10 @@ const MercadoPagoManager: React.FC = () => {
             window.history.replaceState({}, document.title, window.location.pathname);
         }
     }, [checkConnectionStatus]);
+    
+    if (!isOwner) {
+        return null; // Não renderiza nada se não for o owner
+    }
     
     const handleConnect = () => {
         window.location.href = api.getMercadoPagoConnectUrl();
@@ -486,7 +498,7 @@ const MercadoPagoManager: React.FC = () => {
 // --- Main Dev Panel Page ---
 export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, onLogout }) => {
     // Conditional rendering for access control
-    if (!user || (user.role !== 'admin' && user.role !== 'dev')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'dev' && user.role !== 'owner')) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-gray-100 p-4 text-center">
                 <ShieldOff size={64} className="text-red-500 mb-6 opacity-50" />
@@ -521,8 +533,8 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
                 </div>
 
                 <div className="space-y-12">
-                    {/* Seção 0: Gerenciamento de Pagamentos */}
-                    <MercadoPagoManager />
+                    {/* Seção 0: Gerenciamento de Pagamentos (Apenas Owner) */}
+                    {user && <MercadoPagoManager user={user} />}
                     
                     {/* Seção 1: Gerenciamento de Planos */}
                     <PlanSettingsManager />
