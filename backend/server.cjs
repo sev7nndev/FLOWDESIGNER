@@ -7,7 +7,8 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const sanitizeHtml = require('sanitize-html');
 const { v4: uuidv4 } = require('uuid');
-// Removido o require('dotenv').config() para confiar nas variáveis injetadas pelo ambiente Dyad/Vite.
+// Reintroduzindo dotenv para garantir que as variáveis sejam carregadas no ambiente Node.js
+require('dotenv').config({ path: '.env.local' }); 
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -24,7 +25,7 @@ const missingEnvVars = requiredEnvVars.filter(v => !process.env[v]);
 
 if (missingEnvVars.length > 0) {
   console.error(`[ERRO CRÍTICO] Variáveis de ambiente secretas ausentes: ${missingEnvVars.join(', ')}`);
-  console.error('O backend não pode iniciar sem estas chaves. Por favor, configure o arquivo .env.local ou o ambiente Dyad.');
+  console.error('O backend não pode iniciar sem estas chaves. Por favor, configure o arquivo .env.local.');
   // Se as chaves críticas estiverem faltando, o servidor deve falhar ou usar valores dummy para iniciar, mas com aviso.
 }
 
@@ -40,6 +41,7 @@ const {
 const dummyUrl = 'http://dummy.url';
 const dummyKey = 'dummy_key';
 
+// Agora, SUPABASE_URL deve ser carregado corretamente.
 const supabaseService = createClient(SUPABASE_URL || dummyUrl, SUPABASE_SERVICE_KEY || dummyKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
@@ -79,12 +81,15 @@ const authenticateToken = async (req, res, next) => {
     // Usando supabaseAnon para verificar o token do usuário
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
     if (error || !user) {
+      // Se houver erro de autenticação, retorna 403
       return res.status(403).json({ error: 'Token inválido ou expirado.' });
     }
     req.user = { id: user.id, email: user.email, token }; 
     next();
   } catch (e) {
-    return res.status(500).json({ error: 'Erro ao autenticar token.' });
+    // Se houver erro de rede (como o ENOTFOUND), retorna 500
+    console.error("Erro durante a autenticação do token:", e);
+    return res.status(500).json({ error: 'Erro interno ao verificar autenticação.' });
   }
 };
 
