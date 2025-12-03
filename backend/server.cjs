@@ -234,42 +234,32 @@ Diretrizes de design:
   return response.text();
 }
 
-// Geração de imagem com Google AI Studio (Gemini 2.5 Flash)
+// Geração de imagem usando Imagen 3 (SDK correto)
 async function generateImage(detailedPrompt) {
   if (!GEMINI_API_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
   }
-  
-  console.log(`[GENERATE] Iniciando geração de imagem com o prompt: ${detailedPrompt.substring(0, 100)}...`);
-  
+
+  console.log(`[GENERATE] Iniciando geração de imagem com o prompt: ${detailedPrompt.substring(0, 120)}...`);
+
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-    });
-
-    // Usando 'prompt' e 'generationConfig' conforme o formato fornecido pelo usuário
-    const result = await model.generateContent({
+    const result = await genAI.images.generate({
+      model: "imagen-3.0",
       prompt: detailedPrompt,
-      generationConfig: {
-        responseMimeType: "image/png"
-      }
+      size: "1024x1365" // 3:4 (vertical)
     });
 
-    // Extração do base64 conforme o formato fornecido pelo usuário
-    const base64Image = result.response.candidates[0].content[0].asset.data;
-    const mimeType = "image/png"; 
-
-    // Retorna no formato Data URL (Base64)
-    return `data:${mimeType};base64,${base64Image}`;
-
-  } catch (error) {
-    console.error(`[GENERATE] ERRO DURANTE A GERAÇÃO DE IMAGEM:`, error);
-    
-    if (error.message) {
-        throw new Error(`Erro da API de Imagem: ${error.message}`);
+    if (!result?.data?.[0]?.b64_json) {
+      throw new Error("A API não retornou a imagem corretamente.");
     }
+
+    const base64Image = result.data[0].b64_json;
+
+    return `data:image/png;base64,${base64Image}`;
     
-    throw new Error('Falha ao gerar imagem. Verifique os logs do servidor para mais detalhes.');
+  } catch (error) {
+    console.error("[GENERATE] ERRO DURANTE A GERAÇÃO DE IMAGEM:", error);
+    throw new Error(`Erro da API de Imagem: ${error?.message || "Falha desconhecida"}`);
   }
 }
 
