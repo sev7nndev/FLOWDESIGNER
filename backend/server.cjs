@@ -240,28 +240,35 @@ async function generateDetailedPrompt(promptInfo) {
     .filter(Boolean)
     .join(', ');
     
-  // 4. Reforçar a Sanitização do Prompt: Usar replace para remover quebras de linha e aspas duplas que podem quebrar o contexto da IA.
+  // 1. Sanitização e preparação da entrada do usuário
   const cleanDetails = details.replace(/[\r\n]+/g, ' ').replace(/"/g, '');
   const servicesList = cleanDetails.split('.').map(s => s.trim()).filter(s => s.length > 5).join('; ');
   
-  const prompt = `Você é um designer profissional de social media. Gere uma arte de FLYER VERTICAL em alta qualidade, com aparência profissional.  
-Use como referência o nível de qualidade de flyers modernos de pet shop, oficina mecânica, barbearia, lanchonete, salão de beleza, imobiliária e clínica, com:  
-- composição bem organizada;  
-- tipografia clara e hierarquia entre título, subtítulo e lista de serviços;  
-- ilustrações ou imagens relacionadas ao nicho;  
-- fundo bem trabalhado, mas sem poluir o texto.  
-Nicho do cliente: ${cleanDetails}.  
-Dados que DEVEM aparecer no flyer:  
-- Nome da empresa: ${companyName}  
-- Serviços principais: ${servicesList}  
-- Benefícios / diferenciais: ${servicesList}  
-- Telefone/WhatsApp: ${phone}  
-- Endereço (se houver): ${address}  
-Diretrizes de design:  
-- Usar cores coerentes com o nicho (ex.: suaves para pet shop/saúde; escuras e fortes para mecânica/barbearia; quentes para lanchonete etc.).  
-- Reservar espaço para o logotipo.  
-- Não inventar textos aleatórios; use somente os dados fornecidos.`;
+  // 2. Estrutura de Prompt com Delimitadores Fortes (Prevenção de Injeção)
+  const systemInstructions = `Você é um designer profissional de social media. Sua tarefa é gerar uma arte de FLYER VERTICAL em alta qualidade, com aparência profissional. 
+Use como referência o nível de qualidade de flyers modernos de pet shop, oficina mecânica, barbearia, lanchonete, salão de beleza, imobiliária e clínica.
+O prompt final deve ser focado em: composição bem organizada, tipografia clara e hierarquia entre título, subtítulo e lista de serviços, ilustrações ou imagens relacionadas ao nicho, e fundo bem trabalhado, mas sem poluir o texto.
+Diretrizes de design:
+- Usar cores coerentes com o nicho (ex.: suaves para pet shop/saúde; escuras e fortes para mecânica/barbearia; quentes para lanchonete etc.).
+- Reservar espaço para o logotipo.
+- Não inventar textos aleatórios; use somente os dados fornecidos.
+- O resultado deve ser APENAS o prompt de imagem final, sem introduções ou explicações.`;
 
+  const userInputBlock = `
+### DADOS DO CLIENTE ###
+- Nome da empresa: ${companyName}
+- Serviços principais: ${servicesList}
+- Benefícios / diferenciais: ${servicesList}
+- Telefone/WhatsApp: ${phone}
+- Endereço (se houver): ${address}
+- Nicho/Descrição do Cliente: ${cleanDetails}
+### FIM DOS DADOS DO CLIENTE ###
+
+Gere o prompt de imagem final baseado nas instruções acima e nos dados do cliente.
+`;
+
+  const prompt = systemInstructions + userInputBlock;
+  
   // Usando o modelo diretamente na chamada
   const result = await genAI.getGenerativeModel({ model: "gemini-2.5-flash" }).generateContent(prompt);
   const response = await result.response;
@@ -575,6 +582,11 @@ app.post('/api/subscribe', authenticateToken, async (req, res, next) => {
 });
 
 app.get('/api/admin/mp-connect', authenticateToken, authorizeAdminOrDev, async (req, res, next) => {
+    // CRITICAL FIX 1: Ensure only 'owner' can access payment account details
+    if (req.user.role !== 'owner') {
+        return res.status(403).json({ error: 'Acesso negado: Apenas o Owner pode gerenciar a conexão MP.' });
+    }
+    
     // Placeholder for MP OAuth Connect URL
     res.status(501).json({ error: "Endpoint de conexão MP não implementado." });
 });
