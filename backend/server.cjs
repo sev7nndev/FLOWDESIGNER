@@ -47,11 +47,13 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 let supabaseAnon = null;
 let supabaseServiceRole = null;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_KEY) {
+const isSupabaseConfigured = SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_SERVICE_KEY;
+
+if (!isSupabaseConfigured) {
     console.warn("WARNING: Supabase environment variables (URL, ANON_KEY, SERVICE_KEY) are missing. Backend routes requiring Supabase will fail.");
 } else {
     try {
-        // Cria clientes Supabase
+        // Cria clientes Supabase APENAS se as chaves existirem
         supabaseAnon = createClient(
             SUPABASE_URL,
             SUPABASE_ANON_KEY
