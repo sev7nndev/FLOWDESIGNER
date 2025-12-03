@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User } from '../types';
-import { api } from '../services/api';
-import { PLACEHOLDER_EXAMPLES } from '../constants';
+import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User } from '@/types';
+import { api } from '@/services/api';
+import { PLACEHOLDER_EXAMPLES } from '@/constants';
 import { useUsage } from './useUsage'; 
 import { toast } from 'sonner';
 // import { getSupabase } from '../services/supabaseClient'; // Importando getSupabase

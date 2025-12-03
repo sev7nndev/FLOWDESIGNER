@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSupabase } from '../services/supabaseClient';
+import { getSupabase } from '@/services/supabaseClient';
 import { toast } from 'sonner';
-import { ChatMessage } from '../types'; // Importando ChatMessage
+import { ChatMessage } from '@/types'; // Importando ChatMessage
 
 // Tipagem para uma única mensagem
 interface Message {
