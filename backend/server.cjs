@@ -194,7 +194,7 @@ async function generateImage(detailedPrompt) {
   }
 
   try {
-    // Endpoint atualizado do Imagen 3
+    // Endpoint CORRETO do Imagen 3
     const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0:generateImage?key=${process.env.GEMINI_API_KEY}`;
     
     // Payload compatível com a API atual
