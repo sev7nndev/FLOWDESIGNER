@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GeneratedImage, User, UserRole, PlanSetting, QuotaCheckResponse, QuotaStatus } from '../types';
+import { GeneratedImage, User, UserRole, QuotaCheckResponse, QuotaStatus, EditablePlan } from '../types';
 import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download, Zap, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from './Button';
 import { api } from '../services/api';
@@ -115,9 +115,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Administrador', color: 'bg-red-600' },
     dev: { name: 'Desenvolvedor', color: 'bg-cyan-600' },
+    owner: { name: 'Dono', color: 'bg-purple-800' }, // ADDED owner
     client: { name: 'Cliente', color: 'bg-blue-600' },
     free: { name: 'Grátis', color: 'bg-gray-500' },
-    starter: { name: 'Starter', color: 'bg-yellow-600' }, // Added Starter
+    starter: { name: 'Starter', color: 'bg-yellow-600' }, 
     pro: { name: 'Pro', color: 'bg-primary' },
   };
 
@@ -203,13 +204,18 @@ interface UpgradeModalProps {
 }
 
 export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaResponse, refreshUsage }) => {
-    const { usage, plan, plans } = quotaResponse;
+    // quotaResponse now includes 'plans' array
+    const { usage, plan, plans } = quotaResponse; 
     const [isSubscribing, setIsSubscribing] = useState(false);
     
-    const currentPlan = plans.find(p => p.id === usage.plan_id);
-    const upgradePlans = plans.filter(p => p.id !== 'free' && p.id !== usage.plan_id);
+    // Find the current plan details from the full list
+    const currentPlan = plans.find((p: EditablePlan) => p.id === usage.plan_id);
+    // Filter plans for upgrade options (excluding free and current plan)
+    const upgradePlans = plans.filter((p: EditablePlan) => p.id !== 'free' && p.id !== usage.plan_id);
     
-    const usagePercentage = (usage.current_usage / plan.max_images_per_month) * 100;
+    // Ensure plan.max_images_per_month is treated as a number
+    const maxImages = plan.max_images_per_month || 0;
+    const usagePercentage = maxImages > 0 ? (usage.current_usage / maxImages) * 100 : 0;
     const isBlocked = quotaResponse.status === QuotaStatus.BLOCKED;
     
     const handleSubscribe = async (planId: string) => {
@@ -219,9 +225,6 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaRespon
             
             // Redirect user to Mercado Pago
             window.location.href = paymentUrl;
-            
-            // Note: The actual plan update (user_usage table) happens via Mercado Pago Webhook 
-            // or a success redirect handler, which is outside the scope of this component.
             
         } catch (e: any) {
             toast.error(e.message || "Falha ao iniciar pagamento. Verifique a conexão do Mercado Pago no Painel Dev.");
@@ -239,7 +242,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaRespon
                         <Zap size={20} className="text-red-400 flex-shrink-0 mt-0.5" />
                         <div>
                             <h4 className="text-lg font-bold text-white">Geração Bloqueada</h4>
-                            <p className="text-sm text-red-300 mt-1">Você atingiu o limite de {plan.max_images_per_month} imagens do seu plano {currentPlan?.id.toUpperCase()}. Faça upgrade para continuar criando.</p>
+                            <p className="text-sm text-red-300 mt-1">Você atingiu o limite de {maxImages} imagens do seu plano {currentPlan?.display_name || usage.plan_id.toUpperCase()}. Faça upgrade para continuar criando.</p>
                         </div>
                     </div>
                 )}
@@ -251,13 +254,13 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaRespon
                     <div className="flex justify-between items-center text-sm text-gray-400">
                         <span>Plano Atual:</span>
                         <span className={`text-white font-bold uppercase px-2 py-0.5 rounded-full ${currentPlan?.id === 'free' ? 'bg-gray-500' : 'bg-primary'}`}>
-                            {currentPlan?.id}
+                            {currentPlan?.display_name || usage.plan_id}
                         </span>
                     </div>
                     
                     <div className="flex justify-between items-center text-sm text-gray-400">
                         <span>Imagens Usadas:</span>
-                        <span className="text-white font-bold">{usage.current_usage} / {plan.max_images_per_month}</span>
+                        <span className="text-white font-bold">{usage.current_usage} / {maxImages}</span>
                     </div>
                     
                     {/* Progress Bar */}
@@ -276,9 +279,9 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaRespon
                     <h4 className="text-lg font-semibold text-white border-b border-white/10 pb-2">Opções de Upgrade</h4>
                     
                     <div className="grid grid-cols-2 gap-4">
-                        {upgradePlans.map((p: PlanSetting) => (
+                        {upgradePlans.map((p: EditablePlan) => (
                             <div key={p.id} className={`p-5 rounded-xl border transition-all ${p.id === 'pro' ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20' : 'border-white/10 bg-zinc-900/50'}`}>
-                                <h5 className="text-xl font-bold text-white uppercase">{p.id}</h5>
+                                <h5 className="text-xl font-bold text-white uppercase">{p.display_name}</h5>
                                 <p className="text-3xl font-extrabold text-white mt-1 mb-2">R$ {p.price.toFixed(2)} <span className="text-sm text-gray-500 font-normal">/mês</span></p>
                                 <p className="text-sm text-gray-400 mb-4">{p.max_images_per_month} imagens por mês.</p>
                                 
@@ -288,7 +291,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaRespon
                                     className="w-full h-10 text-sm"
                                     variant={p.id === 'pro' ? 'primary' : 'secondary'}
                                 >
-                                    {isSubscribing ? 'Redirecionando...' : `Assinar ${p.id.toUpperCase()}`}
+                                    {isSubscribing ? 'Redirecionando...' : `Assinar ${p.display_name}`}
                                 </Button>
                             </div>
                         ))}

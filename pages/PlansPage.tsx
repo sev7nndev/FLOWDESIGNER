@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, UserRole, PlanSetting, EditablePlan } from '../types';
+import { User, EditablePlan } from '../types';
 import { useUsage } from '../hooks/useUsage';
 import { Button } from '../components/Button';
 import { Zap, Loader2, CheckCircle2, ArrowLeft, Info } from 'lucide-react';
@@ -23,8 +23,8 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, onBackToApp }) => {
         currentUsage, 
         maxImages,
         refreshUsage
-    } = useUsage(user.id);
-    
+    } = useUsage(user.id, user.role); // PASSING user.role
+
     const [isSubscribing, setIsSubscribing] = React.useState(false);
 
     const handleSubscribe = async (planId: string) => {
@@ -42,7 +42,7 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, onBackToApp }) => {
         }
     };
     
-    // Removed hardcoded getPlanFeatures, now using plan.features directly
+    const sortedPlans = plans.sort((a, b) => a.price - b.price);
 
     if (isLoading) {
         return (
@@ -52,15 +52,8 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, onBackToApp }) => {
         );
     }
     
-    if (error) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-red-400">
-                <p>Erro ao carregar planos: {error}</p>
-            </div>
-        );
-    }
-    
-    const sortedPlans = plans.sort((a, b) => a.price - b.price);
+    // If there is a critical error fetching quota, display the error but still show plans if available
+    const showQuotaError = error && !quota;
 
     return (
         <div className="min-h-screen bg-zinc-950 text-gray-100 pt-20 pb-16 relative">
@@ -78,8 +71,19 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, onBackToApp }) => {
                     </Button>
                 </div>
 
-                {/* Seção de Uso Atual */}
-                {currentPlan && quota && (
+                {showQuotaError && (
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl mb-8 max-w-4xl mx-auto flex items-start gap-3">
+                        <Info size={20} className="flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h4 className="font-bold text-white">Erro ao Carregar Uso Atual</h4>
+                            <p className="text-sm mt-1">{error}</p>
+                            <button onClick={refreshUsage} className="text-xs mt-2 underline hover:text-red-300">Tentar Recarregar Uso</button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Seção de Uso Atual (Só mostra se o quota foi carregado com sucesso) */}
+                {currentPlan && quota && !showQuotaError && (
                     <div className="bg-zinc-900/50 p-8 rounded-2xl border border-white/10 shadow-xl mb-12 max-w-4xl mx-auto">
                         <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
                             <CheckCircle2 size={24} className="text-primary" /> Seu Plano Atual: <span className={`text-white text-lg font-bold uppercase px-3 py-1 rounded-full ${currentPlan.id === 'free' ? 'bg-gray-500' : currentPlan.id === 'starter' ? 'bg-yellow-600' : 'bg-primary'}`}>{currentPlan.display_name}</span>
@@ -126,7 +130,7 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, onBackToApp }) => {
 
                 {/* Seção de Upgrade */}
                 <div className="text-center mb-16">
-                    <span className="text-primary text-xs font-bold uppercase tracking-widest">Upgrade</span>
+                    <span className="text-primary text-xs font-bold uppercase tracking-widest">Investimento</span>
                     <h3 className="text-3xl md:text-4xl font-bold text-white mt-2">Mude para um Plano Ilimitado</h3>
                 </div>
 

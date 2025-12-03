@@ -18,6 +18,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Admin', color: 'bg-red-600' },
     dev: { name: 'Dev', color: 'bg-cyan-600' },
+    owner: { name: 'Owner', color: 'bg-purple-800' }, // ADDED owner
     client: { name: 'Client', color: 'bg-blue-600' },
     free: { name: 'Grátis', color: 'bg-gray-500' },
     starter: { name: 'Starter', color: 'bg-yellow-600' },
@@ -26,7 +27,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
 
   const currentRole = roleDisplay[profileRole] || roleDisplay.free;
   const displayName = user?.firstName || user?.email?.split('@')[0] || 'Usuário';
-  const isAdminOrDev = profileRole === 'admin' || profileRole === 'dev';
+  const isAdminOrDev = profileRole === 'admin' || profileRole === 'dev' || profileRole === 'owner';
   
   const isNearLimit = quotaStatus === QuotaStatus.NEAR_LIMIT;
   const isBlocked = quotaStatus === QuotaStatus.BLOCKED;
@@ -63,7 +64,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
             <span className="text-xs font-bold ml-1">{currentUsage}/{maxImages}</span>
           </button>
           
-          {/* Dev Panel Button (Visible only to Admin/Dev) */}
+          {/* Dev Panel Button (Visible only to Admin/Dev/Owner) */}
           {isAdminOrDev && (
             <button 
               onClick={onShowDevPanel} 

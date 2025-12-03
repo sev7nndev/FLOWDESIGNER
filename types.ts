@@ -104,5 +104,6 @@ export interface QuotaCheckResponse {
   status: QuotaStatus;
   usage: UserUsage;
   plan: PlanSetting;
+  plans: EditablePlan[]; // ADDED: Full list of plans for context in modals/pages
   message?: string;
 }

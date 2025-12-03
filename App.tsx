@@ -40,7 +40,7 @@ export const App: React.FC = () => {
   
   // Usage Hook
   const { 
-    plans, 
+    // plans, // Removed unused import
     quota, 
     isLoading: isUsageLoading, 
     refreshUsage, 

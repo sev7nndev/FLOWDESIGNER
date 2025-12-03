@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save } from 'lucide-react';
+import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info } from 'lucide-react';
 import { Button } from '../components/Button';
-import { LandingImage, User, GeneratedImage, PlanSetting, UserRole, EditablePlan } from '../types';
+import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '../types';
 import { useLandingImages } from '../hooks/useLandingImages';
 import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
 import { api } from '../services/api';
 import { toast } from 'sonner';
+import { getSupabase } from '../services/supabaseClient'; // Import getSupabase directly
 
 interface DevPanelPageProps {
   user: User | null; // User can be null if profile is still loading or not authenticated
@@ -447,10 +448,11 @@ const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
     
     // Restrição de acesso: Apenas 'owner' pode ver e interagir com esta seção.
     const isOwner = user.role === 'owner';
+    const supabase = getSupabase(); // Use imported getSupabase
     
     // Check connection status (simplified: just check if tokens exist)
     const checkConnectionStatus = useCallback(async () => {
-        if (!isOwner) {
+        if (!isOwner || !supabase) {
             setIsLoading(false);
             return;
         }
@@ -458,7 +460,7 @@ const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
         setIsLoading(true);
         try {
             // This endpoint is only accessible by admin/dev via service key in the backend
-            const { data, error } = await api.getSupabase()!
+            const { data } = await supabase
                 .from('owners_payment_accounts')
                 .select('owner_id')
                 .limit(1)
@@ -471,7 +473,7 @@ const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
         } finally {
             setIsLoading(false);
         }
-    }, [isOwner]);
+    }, [isOwner, supabase]);
     
     useEffect(() => {
         checkConnectionStatus();

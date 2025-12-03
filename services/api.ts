@@ -1,4 +1,4 @@
-import { GeneratedImage, BusinessInfo, LandingImage, PlanSetting, QuotaCheckResponse, PlanDetail, EditablePlan } from "../types";
+import { GeneratedImage, BusinessInfo, LandingImage, QuotaCheckResponse, EditablePlan } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // URL do seu Backend Node.js local (ou deployado)
@@ -161,12 +161,19 @@ export const api = {
         
         if (!response.ok) {
             let errorMessage = "Falha ao verificar quota.";
+            let errorBody: any = {};
             try {
-                const err = await response.json();
-                errorMessage = err.error || errorMessage;
+                errorBody = await response.json();
+                errorMessage = errorBody.error || errorMessage;
             } catch (e) {
                 // Ignore if response body is not JSON
             }
+            
+            // If the backend returns the full quota response structure even on error (e.g., BLOCKED)
+            if (errorBody.status) {
+                return errorBody as QuotaCheckResponse;
+            }
+            
             throw new Error(errorMessage);
         }
         
