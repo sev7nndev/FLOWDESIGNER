@@ -207,10 +207,6 @@ async function generateImage(detailedPrompt) {
       ],
       generationConfig: {
         responseMimeType: "image/png"
-      },
-      // Configuração de imagem separada, usando aspectRatio
-      imageConfig: {
-        aspectRatio: "3:4" // Usando 3:4 para flyers verticais
       }
     };
 
