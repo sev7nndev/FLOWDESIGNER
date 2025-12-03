@@ -217,7 +217,6 @@ export const App: React.FC = () => {
                   user={user}
                   planId={selectedPlanId} 
                   onBack={() => setView('PLANS')} 
-                  onSuccess={() => setView('APP')} 
                   plans={plans}
               />
           </div>
@@ -282,7 +281,7 @@ export const App: React.FC = () => {
       </main>
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profileRole} />}
-      {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(null)} quotaResponse={showUpgradeModal} refreshUsage={refreshUsage} />}
+      {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(null)} quotaResponse={showUpgradeModal} />}
     </div>
   );
 };

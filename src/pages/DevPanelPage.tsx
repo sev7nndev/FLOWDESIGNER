@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info } from 'lucide-react';
-import { Button } from '../components/Button';
-import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '../types';
-import { useLandingImages } from '../hooks/useLandingImages';
-import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
-import { api } from '../services/api';
+import { Button } from '../../components/Button';
+import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '../../types';
+import { useLandingImages } from '../../hooks/useLandingImages';
+import { useAdminGeneratedImages } from '../../hooks/useAdminGeneratedImages';
+import { api } from '../../services/api';
 import { toast } from 'sonner';
-import { getSupabase } from '../services/supabaseClient';
+import { getSupabase } from '../../services/supabaseClient';
 
 interface DevPanelPageProps {
   user: User | null;
@@ -307,7 +307,7 @@ const PlanSettingsManager: React.FC = () => {
         try {
             const fetchedPlans = await api.getPlanSettings();
             // Sort by price for consistent display
-            setPlans(fetchedPlans.sort((a, b) => a.price - b.price));
+            setPlans(fetchedPlans.sort((a: EditablePlan, b: EditablePlan) => a.price - b.price));
         } catch (e: any) {
             setError(e.message || "Falha ao carregar planos.");
             toast.error("Falha ao carregar planos.");
@@ -467,7 +467,7 @@ const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
                 .maybeSingle();
                 
             setIsConnected(!!data);
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to check MP connection status:", e);
             setIsConnected(false);
         } finally {

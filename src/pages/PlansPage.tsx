@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import { User, EditablePlan } from '@/types';
-import { Button } from '../components/Button';
+import { User, EditablePlan } from '../../types';
+import { Button } from '../../components/Button';
 import { ArrowLeft, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
-import { PricingCard } from '../components/PricingCard';
+import { PricingCard } from '../../components/PricingCard';
 
 interface PlansPageProps {
     user: User | null;
