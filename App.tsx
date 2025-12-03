@@ -75,11 +75,17 @@ export const App: React.FC = () => {
   // Landing Images Hook (Used by LandingPage and DevPanel)
   const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
 
-  // NEW: Handle plan selection from Landing Page
+  // NEW: Handle plan selection from Landing Page (Leads to AUTH screen)
   const handleSelectPlan = useCallback((planId: string) => {
       setSelectedPlanId(planId);
       setView('AUTH');
   }, []);
+  
+  // NEW: Handle generic start/show plans (Leads to PLANS screen, which is accessible even if logged out)
+  const handleShowPlans = useCallback(() => {
+      setView('PLANS');
+  }, []);
+
 
   const fetchAuthUser = (supabaseUser: any) => {
     const newAuthUser: AuthUser = {
@@ -148,9 +154,10 @@ export const App: React.FC = () => {
       <>
         <Toaster position="top-right" richColors />
         <LandingPage 
-          onGetStarted={() => handleSelectPlan('free')} // Default to free plan on generic start
+          onGetStarted={handleShowPlans} // CTA principal leva para a página de planos
           onLogin={() => setView('AUTH')} 
-          onSelectPlan={handleSelectPlan} // Pass new handler
+          onSelectPlan={handleSelectPlan} // Seleção de plano na seção de preços leva para AUTH
+          onShowPlans={handleShowPlans} // Botão Criar Conta na navbar leva para a página de planos
           landingImages={landingImages}
           isLandingImagesLoading={isLandingImagesLoading}
         />
@@ -181,7 +188,27 @@ export const App: React.FC = () => {
     );
   }
   
-  if (view === 'PLANS' && user) {
+  if (view === 'PLANS') {
+    // If user is logged in, show PlansPage. If not, show a simplified version or redirect to AUTH/LANDING.
+    // Since PlansPage requires a 'user' object, we must handle the unauthenticated case.
+    // For now, we redirect unauthenticated users back to the landing page, 
+    // but we will update PlansPage to handle unauthenticated view if needed later.
+    if (!user) {
+        // If unauthenticated, show a simplified view of plans and redirect to AUTH on selection
+        return (
+            <>
+                <Toaster position="top-right" richColors />
+                <PlansPage 
+                    user={null as any} // Pass null user to indicate unauthenticated state
+                    onBackToApp={() => setView('LANDING')} 
+                    onSelectPlan={handleSelectPlan} // Pass the handler to select a plan and go to AUTH
+                    plans={plans} // Pass plans data
+                    isLoadingPlans={isUsageLoading} // Use isUsageLoading as it fetches plans
+                />
+            </>
+        );
+    }
+    
     return (
       <>
         <Toaster position="top-right" richColors />
