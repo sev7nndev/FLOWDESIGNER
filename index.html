@@ -2,16 +2,20 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Flow Designer</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
       
-      /* Corrigindo o problema de overflow do iframe */
+      /* Reset completo para evitar overflow */
       html, body {
         width: 100%;
-        height: auto; /* Garante que o scroll funcione e não force 100vh */
-        overflow-x: hidden; /* Evita scroll horizontal desnecessário */
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        position: relative;
       }
       
       body {
@@ -19,8 +23,19 @@
         color: #fafafa;
         font-family: 'Inter', sans-serif;
         background-image: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15), transparent 40%);
+        min-height: 100vh;
       }
-      
+
+      /* Container principal */
+      #root {
+        width: 100%;
+        height: 100%;
+        min-height: 100vh;
+        overflow-x: hidden;
+        overflow-y: auto;
+        position: relative;
+      }
+
       /* Grid Background Effect */
       .bg-grid {
         background-size: 40px 40px;
@@ -55,6 +70,19 @@
       .no-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
+      }
+
+      /* Prevenir overflow em telas pequenas */
+      @media (max-width: 640px) {
+        html, body {
+          overflow-x: hidden;
+          width: 100vw;
+        }
+        
+        #root {
+          overflow-x: hidden;
+          width: 100vw;
+        }
       }
     </style>
   <script type="importmap">

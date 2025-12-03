@@ -166,7 +166,7 @@ export const App: React.FC = () => {
 
   if (view === 'LANDING') {
     return (
-      <>
+      <div className="app-container">
         <Toaster position="top-right" richColors />
         <LandingPage 
           onGetStarted={handleShowPlans} // CTA principal agora leva para a página de planos
@@ -176,13 +176,13 @@ export const App: React.FC = () => {
           landingImages={landingImages}
           isLandingImagesLoading={isLandingImagesLoading}
         />
-      </>
+      </div>
     );
   }
 
   if (view === 'AUTH') {
     return (
-      <>
+      <div className="app-container">
         <Toaster position="top-right" richColors />
         <AuthScreens 
             onSuccess={() => {}} 
@@ -190,13 +190,13 @@ export const App: React.FC = () => {
             selectedPlanId={selectedPlanId} // Pass selected plan
             plans={plans} // Pass plans for context
         />
-      </>
+      </div>
     );
   }
   
   if (view === 'PLANS') {
     return (
-      <>
+      <div className="app-container">
         <Toaster position="top-right" richColors />
         <PlansPage 
             user={user} 
@@ -205,7 +205,7 @@ export const App: React.FC = () => {
             plans={plans} 
             isLoadingPlans={isUsageLoading} 
         />
-      </>
+      </div>
     );
   }
   
@@ -216,7 +216,7 @@ export const App: React.FC = () => {
           return null;
       }
       return (
-          <>
+          <div className="app-container">
               <Toaster position="top-right" richColors />
               <CheckoutPage 
                   user={user}
@@ -225,18 +225,18 @@ export const App: React.FC = () => {
                   onSuccess={() => setView('APP')} 
                   plans={plans}
               />
-          </>
+          </div>
       );
   }
   
   // MAIN APP UI (Protected)
   if (!user) {
       // Should not happen if auth flow is correct, but handles fallback
-      return <div className="min-h-screen bg-zinc-950" />;
+      return <div className="app-container min-h-screen bg-zinc-950" />;
   }
   
   return (
-    <div className="min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
+    <div className="app-container min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
       <Toaster position="top-right" richColors />
       <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
       

@@ -3,12 +3,19 @@
 @tailwind utilities;
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-      
-/* Corrigindo o problema de overflow do iframe */
+
+/* Reset e Correções para Iframe */
+* {
+  box-sizing: border-box;
+}
+
 html, body {
   width: 100%;
-  height: auto; /* Garante que o scroll funcione e não force 100vh */
-  overflow-x: hidden; /* Evita scroll horizontal desnecessário */
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 body {
@@ -16,6 +23,14 @@ body {
   color: #fafafa;
   font-family: 'Inter', sans-serif;
   background-image: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15), transparent 40%);
+  min-height: 100vh;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Shadcn/ui CSS Variables (Mapped to existing theme) */
@@ -74,4 +89,24 @@ body {
 .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+}
+
+/* Correções específicas para o container principal */
+.app-container {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Para telas muito pequenas */
+@media (max-width: 640px) {
+  html, body {
+    overflow-x: hidden;
+  }
+  
+  .app-container {
+    overflow-x: hidden;
+  }
 }

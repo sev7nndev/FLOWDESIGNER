@@ -30,6 +30,17 @@ import path from 'path';
             alias: {
               '@': path.resolve(__dirname, '.'),
             }
+          },
+          // Otimizações para evitar overflow
+          build: {
+            rollupOptions: {
+              output: {
+                manualChunks: {
+                  vendor: ['react', 'react-dom'],
+                  ui: ['framer-motion', 'lucide-react'],
+                }
+              }
+            }
           }
         };
     });
