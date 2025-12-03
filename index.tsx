@@ -1,34 +1,26 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-
-console.log('index.tsx carregado');
+import './index.css';
 
 const rootElement = document.getElementById('root');
-console.log('Elemento root:', rootElement);
 
 if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
+  console.error("Fatal: O elemento root não foi encontrado.");
+} else {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <div style={{ 
+        color: 'white', 
+        fontSize: '24px', 
+        textAlign: 'center',
+        padding: '20px' 
+      }}>
+        <p>Teste de Renderização ✅</p>
+        <p style={{ fontSize: '16px', color: '#a1a1aa', marginTop: '1rem' }}>
+          Se você vê esta mensagem, o React está funcionando. O problema está no componente App.tsx.
+        </p>
+      </div>
+    </React.StrictMode>
+  );
 }
-
-const root = ReactDOM.createRoot(rootElement);
-console.log('Root criado');
-
-// Teste simples
-const Teste = () => {
-  console.log('Componente Teste renderizando');
-  return React.createElement('div', {
-    style: {
-      width: '100vw',
-      height: '100vh',
-      backgroundColor: '#09090b',
-      color: '#fff',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'Inter'
-    }
-  }, 'TESTE REACT');
-
-};
-
-root.render(React.createElement(Teste));
