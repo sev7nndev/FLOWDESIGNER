@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../components/Button';
 import { Sparkles, ArrowLeft, CheckCircle2, Zap, DollarSign } from 'lucide-react';
-import { authService } from '../services/authService';
+import { authService } from '@/services/authService';
 import { GoogleIcon } from './GoogleIcon';
 import { User, EditablePlan } from '@/types'; // Import User type and EditablePlan
 
