@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { User, EditablePlan } from '@/types';
 import { Button } from '../components/Button';
-import { ArrowLeft, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
 import { PricingCard } from '../components/PricingCard';
 
 interface PlansPageProps {
@@ -17,6 +17,14 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlan
     const freePlan = useMemo(() => plans.find(p => p.id === 'free'), [plans]);
     const starterPlan = useMemo(() => plans.find(p => p.id === 'starter'), [plans]);
     const proPlan = useMemo(() => plans.find(p => p.id === 'pro'), [plans]);
+
+    // Helper para formatar features, garantindo que o limite de imagens seja o primeiro item
+    const formatFeatures = (plan: EditablePlan) => {
+        const quotaFeature = `${plan.max_images_per_month} imagens por mês`;
+        // Filtra features para remover duplicatas de quota e adiciona a quota no início
+        const filteredFeatures = plan.features.filter(f => !f.toLowerCase().includes('imagens'));
+        return [quotaFeature, ...filteredFeatures];
+    };
 
     return (
         <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center pt-16 pb-10 px-4 relative">
@@ -44,6 +52,12 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlan
                         <Loader2 size={32} className="animate-spin text-primary" />
                         <p className="text-gray-400 mt-4">Carregando planos...</p>
                     </div>
+                ) : plans.length === 0 ? (
+                    <div className="text-center py-20 max-w-md mx-auto p-6 bg-red-500/10 border border-red-500/20 rounded-xl">
+                        <AlertTriangle size={32} className="text-red-400 mx-auto mb-4" />
+                        <p className="text-red-300 font-medium">Falha ao carregar os planos de preço.</p>
+                        <p className="text-red-400 text-sm mt-2">Verifique se o backend está rodando e se as tabelas `plan_settings` e `plan_details` no Supabase estão preenchidas corretamente.</p>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-end">
                         
@@ -54,7 +68,7 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlan
                                 period=""
                                 description={freePlan.description}
                                 buttonText={user?.role === 'free' ? 'Plano Atual' : 'Começar Grátis'}
-                                features={[`${freePlan.max_images_per_month} imagens por mês`, ...freePlan.features.filter(f => !f.toLowerCase().includes('imagens'))]}
+                                features={formatFeatures(freePlan)}
                                 onClick={() => onSelectPlan('free')} 
                                 disabled={user?.role === 'free'}
                             />
@@ -67,7 +81,7 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlan
                                 period="/mês"
                                 description={starterPlan.description}
                                 buttonText={user?.role === 'starter' ? 'Plano Atual' : 'Assinar Start'}
-                                features={starterPlan.features}
+                                features={formatFeatures(starterPlan)}
                                 highlight={false}
                                 onClick={() => onSelectPlan('starter')} 
                                 disabled={user?.role === 'starter'}
@@ -81,7 +95,7 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlan
                                 period="/mês"
                                 description={proPlan.description}
                                 buttonText={user?.role === 'pro' ? 'Plano Atual' : 'Assinar Pro'}
-                                features={proPlan.features}
+                                features={formatFeatures(proPlan)}
                                 highlight={true}
                                 badge="Melhor Custo-Benefício"
                                 onClick={() => onSelectPlan('pro')} 
