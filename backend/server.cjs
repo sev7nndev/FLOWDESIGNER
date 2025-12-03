@@ -3,7 +3,16 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
 const { v4: uuidv4 } = require('uuid');
-const mercadopago = require('mercadopago');
+
+// Tenta carregar o Mercado Pago. Se falhar, o erro será capturado aqui.
+let mercadopago;
+try {
+    mercadopago = require('mercadopago');
+} catch (e) {
+    console.error("FATAL ERROR: Failed to load 'mercadopago'. Please run 'npm install'.", e);
+    // Se o require falhar, o processo Node.js deve sair com erro 1, que é o que está acontecendo.
+    // Se o require for bem-sucedido, mas a configuração falhar, o erro será capturado abaixo.
+}
 
 dotenv.config();
 
@@ -55,12 +64,13 @@ const supabaseServiceRole = createClient(
 
 // --- Mercado Pago Configuration ---
 const MP_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-if (MP_ACCESS_TOKEN) {
+if (MP_ACCESS_TOKEN && mercadopago) {
     mercadopago.configure({
         access_token: MP_ACCESS_TOKEN,
     });
+    console.log("Mercado Pago configured successfully.");
 } else {
-    console.warn("WARNING: MERCADO_PAGO_ACCESS_TOKEN not found. Payment routes will be mocked or fail.");
+    console.warn("WARNING: MERCADO_PAGO_ACCESS_TOKEN not found or mercadopago module failed to load. Payment routes will be mocked or fail.");
 }
 
 // --- Middleware de Autenticação e Autorização ---
@@ -252,6 +262,10 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
 // Rota de Iniciação de Assinatura (Mercado Pago)
 app.post('/api/subscribe', verifyAuth, async (req, res) => {
     const { planId } = req.body;
+    
+    if (!mercadopago) {
+        return res.status(500).json({ error: "Erro de configuração: Módulo Mercado Pago não carregado." });
+    }
     
     if (!MP_ACCESS_TOKEN) {
         return res.status(500).json({ error: "Erro de configuração: Token do Mercado Pago não está definido no servidor." });
