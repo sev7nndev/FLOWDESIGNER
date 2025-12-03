@@ -149,8 +149,14 @@ const express = require('express');
             usageData = newUsageData;
         } else if (usageError) {
              // Handle other unexpected errors during fetch
-            console.error(`Quota check failed for user ${userId}:`, usageError.message);
+            console.error(`Quota check failed for user ${userId} (Unexpected DB Error on usage fetch):`, usageError.message);
             return { status: 'BLOCKED', usage: null, plan: null, message: 'Falha ao verificar plano. Tente novamente.' };
+        }
+        
+        // Defensive check: ensure usageData is present before proceeding
+        if (!usageData) {
+            console.error(`Quota check failed for user ${userId}: usageData is null after fetch/insert attempt.`);
+            return { status: 'BLOCKED', usage: null, plan: null, message: 'Falha crítica ao carregar dados de uso.' };
         }
         
         const usage = usageData;
