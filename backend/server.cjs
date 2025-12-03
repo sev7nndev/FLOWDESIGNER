@@ -187,7 +187,7 @@ const checkImageQuota = async (userId) => {
         const { plan_id: planId, current_usage: currentUsage, cycle_start_date: cycleStartDate } = usageData;
         console.log(`[QUOTA] User ${userId} has plan ${planId} with ${currentUsage} images used`);
 
-        // 2. Fetch plan settings
+        // 2. Fetch plan settings from plan_settings table
         const { data: planSettings, error: planError } = await supabaseService
             .from('plan_settings')
             .select('id, price, max_images_per_month')
@@ -413,7 +413,7 @@ async function uploadImageToSupabase(imageDataUrl, userId) {
 
 // --- API Endpoints ---
 
-// NEW: Get Plan Settings
+// NEW: Get Plan Settings - CORRIGIDO para usar plan_settings e plan_details
 app.get('/api/plan-settings', async (req, res, next) => {
     try {
         // Fetch both settings and details to provide the full EditablePlan structure
@@ -750,7 +750,7 @@ app.delete('/api/admin/landing-images/:id', authenticateToken, checkAdminOrDev, 
   }
 });
 
-// NEW: Admin endpoint to update plan settings
+// NEW: Admin endpoint to update plan settings - CORRIGIDO para usar plan_settings e plan_details
 app.put('/api/admin/plan-settings/update', authenticateToken, checkAdminOrDev, async (req, res, next) => {
     const { plans } = req.body;
     const userId = req.user.id;
