@@ -1,8 +1,8 @@
 import { GeneratedImage, BusinessInfo, LandingImage } from "../types";
-import { getSupabase } from "./supabaseClient";
+import { getSupabase } from "../services/supabaseClient";
 
-// URL do seu Backend Node.js local (ou deployado)
-const BACKEND_URL = "/api";
+// Usa a variável de ambiente VITE_BACKEND_URL ou fallback para localhost:3001
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 // Função auxiliar para analisar a resposta de erro
 const parseErrorResponse = async (response: Response) => {
@@ -42,7 +42,7 @@ export const api = {
     if (!session) throw new Error("Faça login para gerar artes.");
 
     try {
-      const response = await fetch(`${BACKEND_URL}/generation/generate`, {
+      const response = await fetch(`${BACKEND_URL}/api/generation/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -103,7 +103,7 @@ export const api = {
     if (!session) return [];
 
     // Chamada ao novo endpoint /api/history
-    const response = await fetch(`${BACKEND_URL}/history`, {
+    const response = await fetch(`${BACKEND_URL}/api/history`, {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${session.access_token}`
@@ -129,7 +129,7 @@ export const api = {
 
   getLandingImages: async (): Promise<LandingImage[]> => {
     // Chamada ao novo endpoint /api/landing-images
-    const response = await fetch(`${BACKEND_URL}/landing-images`, {
+    const response = await fetch(`${BACKEND_URL}/api/landing-images`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -158,7 +158,7 @@ export const api = {
         const fileName = file.name;
 
         try {
-          const response = await fetch(`${BACKEND_URL}/admin/landing-images/upload`, {
+          const response = await fetch(`${BACKEND_URL}/api/admin/landing-images/upload`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -173,7 +173,7 @@ export const api = {
           }
 
           const data = await response.json();
-          resolve(data.image); // Backend should return the full LandingImage object
+          resolve(data.image); // Backend should return full LandingImage object
         } catch (error) {
           console.error("Error uploading landing image via backend:", error);
           reject(error);
@@ -191,13 +191,13 @@ export const api = {
     if (!session) throw new Error("Faça login para deletar imagens.");
 
     try {
-      const response = await fetch(`${BACKEND_URL}/admin/landing-images/${id}`, {
+      const response = await fetch(`${BACKEND_URL}/api/admin/landing-images/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ imagePath }) // Pass the imagePath to the backend
+        body: JSON.stringify({ imagePath }) // Passa imagePath to backend
       });
 
       if (!response.ok) {
@@ -216,7 +216,7 @@ export const api = {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error("Faça login para acessar o suporte.");
 
-    const response = await fetch(`${BACKEND_URL}/generation/support-recipient`, {
+    const response = await fetch(`${BACKEND_URL}/api/generation/support-recipient`, {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${session.access_token}`
@@ -242,10 +242,10 @@ export const api = {
     return data.recipientId;
   },
   
-  // CORREÇÃO A3: Implementação da função de criação de preferência de pagamento
+  // CORREÇÃO: Implementação da função de criação de preferência de pagamento
   createPaymentPreference: async (planId: string, returnUrl: string): Promise<string> => {
     // Não precisamos do token de autenticação aqui, pois o endpoint é público
-    const response = await fetch(`${BACKEND_URL}/payments/create-preference`, {
+    const response = await fetch(`${BACKEND_URL}/api/payments/create-preference`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -164,6 +164,7 @@ export const AppContent: React.FC = () => {
       console.log('✅ Auth successful, setting user:', authUser.email, authUser.role);
       setUser(authUser);
       // O redirecionamento é tratado pelo efeito de redirecionamento
+      // Limpa a URL para remover parâmetros de pagamento
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
@@ -179,7 +180,7 @@ export const AppContent: React.FC = () => {
     
     try {
       // A returnUrl é a URL para onde o Mercado Pago deve redirecionar após o pagamento.
-      // O backend usará essa URL para construir as URLs de sucesso/falha/pendente.
+      // Usa a porta correta do frontend (5173) em vez de 3000
       const returnUrl = `${window.location.origin}/`; 
       
       const checkoutUrl = await api.createPaymentPreference(planId, returnUrl);
