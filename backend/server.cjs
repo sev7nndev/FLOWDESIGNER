@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const sanitizeHtml = require('sanitize-html');
 const { v4: uuidv4 } = require('uuid');
+// Garantindo que o .env.local seja carregado corretamente
 require('dotenv').config({ path: '.env.local' });
 
 const app = express();
@@ -37,15 +38,17 @@ const {
 } = process.env;
 
 // Clientes Supabase
-const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+// Se SUPABASE_URL ou SUPABASE_SERVICE_KEY estiverem faltando, a criação do cliente pode falhar,
+// mas o servidor ainda deve iniciar.
+const supabaseService = createClient(SUPABASE_URL || 'http://dummy.url', SUPABASE_SERVICE_KEY || 'dummy_key', {
   auth: { autoRefreshToken: false, persistSession: false },
 });
-const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+const supabaseAnon = createClient(SUPABASE_URL || 'http://dummy.url', SUPABASE_ANON_KEY || 'dummy_key', {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
 // Cliente Gemini AI
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || 'dummy_key');
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // Middleware
@@ -74,6 +77,7 @@ const authenticateToken = async (req, res, next) => {
   if (!token) return res.status(401).json({ error: 'Token de autenticação ausente.' });
 
   try {
+    // Usando supabaseAnon para verificar o token do usuário
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
     if (error || !user) {
       return res.status(403).json({ error: 'Token inválido ou expirado.' });
@@ -166,6 +170,9 @@ const checkImageQuota = async (userId) => {
 
 // Geração de prompt detalhado
 async function generateDetailedPrompt(promptInfo) {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
+  }
   const { companyName, phone, addressStreet, addressNumber, addressNeighborhood, addressCity, details } = promptInfo;
   
   const address = [addressStreet, addressNumber, addressNeighborhood, addressCity]
@@ -199,6 +206,9 @@ Diretrizes de design:
 
 // Geração de imagem com Google AI Studio (Imagen)
 async function generateImage(detailedPrompt) {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
+  }
   try {
     // Usando a API REST do Imagen 3
     const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${GEMINI_API_KEY}`;
@@ -234,6 +244,9 @@ async function generateImage(detailedPrompt) {
 
 // Upload para Supabase Storage
 async function uploadImageToSupabase(imageDataUrl, userId) {
+  if (!process.env.SUPABASE_SERVICE_KEY) {
+    throw new Error('Configuração do servidor incompleta: A chave SUPABASE_SERVICE_KEY está ausente.');
+  }
   try {
     const matches = imageDataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) throw new Error('Formato de base64 inválido.');
