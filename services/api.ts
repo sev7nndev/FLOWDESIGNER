@@ -57,7 +57,7 @@ export const api = {
         await parseErrorResponse(response); // Usa a função auxiliar
       }
 
-      const _data = await response.json();
+      const _responseBody = await response.json();
       
       // O backend agora retorna a imagem final diretamente
       // O frontend não precisa mais fazer polling
