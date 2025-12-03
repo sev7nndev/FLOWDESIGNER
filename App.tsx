@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserRole, QuotaCheckResponse } from './types';
 import { getSupabase } from './services/supabaseClient';
-import { AppTitleHeader } from './components/AppTitleHeader';
-import { LandingPage } from './components/LandingPage';
-import { AuthScreens } from './components/AuthScreens';
+import { AppTitleHeader } from './src/components/AppTitleHeader';
+import { LandingPage } from './src/components/LandingPage';
+import { AuthScreens } from './src/components/AuthScreens';
 import { Sparkles } from 'lucide-react';
 import { useGeneration } from './hooks/useGeneration';
-import { ResultDisplay } from './components/ResultDisplay';
-import { SettingsModal, UpgradeModal } from './src/components/Modals'; // Corrigido
+import { ResultDisplay } from './src/components/ResultDisplay';
+import { SettingsModal, UpgradeModal } from './src/components/Modals'; 
 import { useProfile } from './hooks/useProfile'; 
-import { GenerationForm } from './components/GenerationForm';
-import { AppHeader } from './components/AppHeader'; 
+import { GenerationForm } from './src/components/GenerationForm';
+import { AppHeader } from './src/components/AppHeader'; 
 import { useLandingImages } from './hooks/useLandingImages'; 
 import { DevPanelPage } from './src/pages/DevPanelPage'; 
 import { PlansPage } from './src/pages/PlansPage'; 
