@@ -57,12 +57,15 @@ export const useUsage = (userId: string | undefined) => {
         fetchUsageData();
     }, [fetchUsageData]);
     
-    // Helper to get current plan details
+    // 1. Tenta encontrar o plano completo (com display_name e features)
     const currentPlan = state.plans.find(p => p.id === state.quota?.usage.plan_id);
     
-    // Helper to calculate usage percentage
-    const usagePercentage = state.quota && currentPlan
-        ? (state.quota.usage.current_usage / currentPlan.max_images_per_month) * 100
+    // 2. Define o limite máximo de imagens, usando o plano completo ou o limite retornado pelo quota (backend) como fallback.
+    const maxImages = currentPlan?.max_images_per_month || state.quota?.plan.max_images_per_month || 0;
+    
+    // 3. Calcula a porcentagem de uso
+    const usagePercentage = state.quota && maxImages > 0
+        ? (state.quota.usage.current_usage / maxImages) * 100
         : 0;
 
     return {
@@ -72,6 +75,6 @@ export const useUsage = (userId: string | undefined) => {
         refreshUsage,
         quotaStatus: state.quota?.status || QuotaStatus.ALLOWED,
         currentUsage: state.quota?.usage.current_usage || 0,
-        maxImages: currentPlan?.max_images_per_month || 0,
+        maxImages: maxImages, // Usando o valor calculado
     };
 };
