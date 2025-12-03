@@ -23,9 +23,9 @@ const requiredEnvVars = [
 const missingEnvVars = requiredEnvVars.filter(v => !process.env[v]);
 
 if (missingEnvVars.length > 0) {
-  console.error(`[ERRO FATAL] Variáveis de ambiente ausentes: ${missingEnvVars.join(', ')}`);
-  console.error('Por favor, configure o arquivo .env.local com as variáveis necessárias.');
-  process.exit(1);
+  console.warn(`[AVISO] Variáveis de ambiente secretas ausentes: ${missingEnvVars.join(', ')}`);
+  console.warn('O backend iniciará, mas algumas funcionalidades (como geração de imagem) falharão.');
+  console.warn('Por favor, configure o arquivo .env.local com todas as chaves para funcionalidade completa.');
 }
 
 // Variáveis de ambiente
@@ -86,6 +86,9 @@ const authenticateToken = async (req, res, next) => {
 };
 
 const checkImageQuota = async (userId) => {
+  if (!process.env.SUPABASE_SERVICE_KEY) {
+    throw new Error('Configuração do servidor incompleta: A chave SUPABASE_SERVICE_KEY está ausente no .env.local do backend.');
+  }
   try {
     console.log(`[QUOTA] Verificando quota para usuário ${userId}`);
     
@@ -267,6 +270,10 @@ app.get('/api/check-quota', authenticateToken, async (req, res, next) => {
 });
 
 app.post('/api/generate', authenticateToken, generationLimiter, async (req, res, next) => {
+  if (!process.env.GEMINI_API_KEY || !process.env.SUPABASE_SERVICE_KEY) {
+    return next(new Error("Configuração do servidor incompleta. Verifique as chaves GEMINI_API_KEY e SUPABASE_SERVICE_KEY no arquivo .env.local do backend."));
+  }
+  
   const { promptInfo } = req.body;
   const user = req.user;
 
