@@ -391,21 +391,31 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
             message = "Você está perto do limite de gerações.";
         }
         
-        // 3. Fetch All Plans (Details + Settings)
-        const { data: allPlansData, error: allPlansError } = await supabaseServiceRole
-            .from('plan_details')
-            .select('*, plan_settings(price, max_images_per_month)');
-            
-        if (allPlansError) throw new Error("Failed to fetch all plans details.");
+        // 3. Fetch All Plans Details and Settings Separately (FIX for embedding error)
+        const [
+            { data: allDetailsData, error: allDetailsError },
+            { data: allSettingsData, error: allSettingsError }
+        ] = await Promise.all([
+            supabaseServiceRole.from('plan_details').select('*'),
+            supabaseServiceRole.from('plan_settings').select('id, price, max_images_per_month')
+        ]);
         
-        const plans = allPlansData.map(p => ({
-            id: p.id,
-            display_name: p.display_name,
-            description: p.description,
-            features: p.features,
-            price: p.plan_settings.price,
-            max_images_per_month: p.plan_settings.max_images_per_month
-        }));
+        if (allDetailsError) throw new Error("Failed to fetch all plan details.");
+        if (allSettingsError) throw new Error("Failed to fetch all plan settings.");
+        
+        const settingsMap = new Map(allSettingsData.map(s => [s.id, s]));
+        
+        const plans = allDetailsData.map(p => {
+            const setting = settingsMap.get(p.id);
+            return {
+                id: p.id,
+                display_name: p.display_name,
+                description: p.description,
+                features: p.features,
+                price: setting?.price || 0,
+                max_images_per_month: setting?.max_images_per_month || 0
+            };
+        });
 
         res.json({
             status: status,
