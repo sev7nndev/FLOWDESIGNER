@@ -39,7 +39,6 @@ async function generateImage(detailedPrompt) {
       generationConfig: {
         responseMimeType: "image/png"
       }
-      // REMOVED: imageConfig is not supported by this endpoint.
     };
 
     const response = await axios.post(GEMINI_IMAGE_URL, payload, {
@@ -52,6 +51,7 @@ async function generateImage(detailedPrompt) {
 
     return `data:image/png;base64,${base64Image}`;
   } catch (error) {
+    // Loga a resposta de erro completa do Gemini para diagnóstico
     console.error('Erro ao gerar imagem com Gemini:', error.response?.data || error.message);
     throw new Error('Falha ao gerar imagem. Verifique a GEMINI_API_KEY e se ela tem acesso a imagens.');
   }
