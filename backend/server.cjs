@@ -269,13 +269,30 @@ async function generateImage(detailedPrompt) {
       throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
     }
   } catch (error) {
-    // Logando a resposta de erro completa para diagnóstico
+    let errorMessage = 'Falha ao gerar imagem. Verifique o modelo ou a API KEY.';
+    
     if (error.response) {
-        console.error('Erro detalhado da API do Google:', JSON.stringify(error.response.data, null, 2));
+        // Tenta capturar o erro do corpo da resposta
+        const errorData = error.response.data;
+        const status = error.response.status;
+        
+        console.error(`Erro da API do Google (Status ${status}):`, JSON.stringify(errorData, null, 2));
+        
+        if (errorData && errorData.error && errorData.error.message) {
+            errorMessage = `Erro da API de Imagem: ${errorData.error.message}`;
+        } else if (status === 403) {
+            errorMessage = 'Acesso Negado (403). Verifique se o Faturamento está ativo no Google Cloud para o modelo Imagen.';
+        } else if (status === 400) {
+            errorMessage = 'Requisição Inválida (400). Verifique se o modelo Imagen está habilitado.';
+        } else {
+            errorMessage = `Erro desconhecido da API do Google (Status ${status}).`;
+        }
     } else {
         console.error('Erro de rede/timeout:', error.message);
+        errorMessage = `Erro de rede ou timeout: ${error.message}`;
     }
-    throw new Error('Falha ao gerar imagem. Verifique o modelo ou a API KEY.');
+    
+    throw new Error(errorMessage);
   }
 }
 
