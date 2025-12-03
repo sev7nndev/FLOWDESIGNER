@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { PLACEHOLDER_EXAMPLES } from '../constants';
 import { useUsage } from './useUsage'; 
 import { toast } from 'sonner';
-import { getSupabase } from '../services/supabaseClient'; // Importando getSupabase
+// import { getSupabase } from '../services/supabaseClient'; // Importando getSupabase
 
 const INITIAL_FORM: BusinessInfo = {
     companyName: '', phone: '', addressStreet: '', addressNumber: '',
@@ -24,7 +24,7 @@ export const useGeneration = (user: User | null) => {
     const [form, setForm] = useState<BusinessInfo>(INITIAL_FORM);
     const [state, setState] = useState<GenerationState>(INITIAL_STATE);
     const { usage, isLoadingUsage, refreshUsage } = useUsage(user?.id);
-    const supabase = getSupabase(); // Usando getSupabase
+    // const supabase = getSupabase(); // Usando getSupabase
 
     // Efeito para mostrar o aviso de "perto do limite"
     useEffect(() => {

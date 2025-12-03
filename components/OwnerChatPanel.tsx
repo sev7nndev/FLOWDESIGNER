@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { User } from '../types';
 import { useOwnerChat, ChatThread } from '../hooks/useOwnerChat';
-import { Loader2, MessageSquare, Send, User as UserIcon, Clock, ArrowLeft } from 'lucide-react';
+import { Loader2, MessageSquare, Send, User as UserIcon } from 'lucide-react';
 import { Button } from './Button';
 import { Input } from './Input';
 
@@ -65,11 +65,10 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ thread, isActive, onClick }
 // --- Componente de Janela de Chat Ativa ---
 interface ActiveChatWindowProps {
   thread: ChatThread;
-  ownerName: string;
-  sendMessage: (recipientId: string, content: string) => Promise<void>; // Adicionando prop
+  sendMessage: (recipientId: string, content: string) => Promise<void>;
 }
 
-const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, ownerName, sendMessage }) => {
+const ActiveChatWindow: React.FC<ActiveChatWindowProps> = ({ thread, sendMessage }) => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -221,7 +220,6 @@ export const OwnerChatPanel: React.FC<OwnerChatPanelProps> = ({ owner }) => {
         {activeThread ? (
           <ActiveChatWindow 
             thread={activeThread} 
-            ownerName={owner.first_name || 'Dono'} 
             sendMessage={sendMessage} // Passando a função de envio
           />
         ) : (

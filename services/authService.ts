@@ -105,7 +105,7 @@ export const authService = {
 
   async loginWithGoogle(): Promise<void> {
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { data: _data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/`,

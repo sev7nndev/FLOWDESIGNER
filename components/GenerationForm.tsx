@@ -1,4 +1,3 @@
-void' para a função onPlanSelect.">
 import React, { memo, useState } from 'react';
 import { BusinessInfo, GenerationStatus } from '../types';
 import { Button } from './Button';

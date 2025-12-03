@@ -122,8 +122,8 @@ export const api = {
       return [];
     }
 
-    const history = await response.json();
-    return history;
+    const _history = await response.json();
+    return _history;
   },
 
   getLandingImages: async (): Promise<LandingImage[]> => {
