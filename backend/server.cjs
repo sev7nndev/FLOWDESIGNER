@@ -293,6 +293,11 @@ async function uploadImageToSupabase(imageDataUrl, userId) {
 
 // --- API Endpoints ---
 
+// Root check (NEW)
+app.get('/', (req, res) => {
+  res.json({ status: 'Backend Root', message: 'Este é o servidor de API (porta 3001). O frontend está na porta 3000.' });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Backend está rodando!' });
