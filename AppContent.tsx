@@ -18,6 +18,7 @@ import { ClientChatPanel } from './components/ClientChatPanel';
 import { toast } from 'sonner';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { api } from './services/api';
+import { SupabaseTest } from './components/SupabaseTest';
 
 type ViewType = 'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'OWNER_PANEL' | 'CHAT';
 
@@ -27,6 +28,7 @@ export const AppContent: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+  const [showTest, setShowTest] = useState(true); // Mostrar teste inicialmente
   
   const [lastView, setLastView] = useLocalStorage<ViewType>('lastView', 'LANDING');
   
@@ -293,9 +295,25 @@ export const AppContent: React.FC = () => {
     
     switch(view) {
       case 'LANDING':
-        return <LandingPage onGetStarted={() => setView('AUTH')} onPlanSelect={handlePlanSelection} onLogin={() => setView('AUTH')} landingImages={landingImages} isLandingImagesLoading={isLandingImagesLoading} />;
+        return (
+          <>
+            {showTest && <SupabaseTest />}
+            <LandingPage 
+              onGetStarted={() => setView('AUTH')} 
+              onPlanSelect={handlePlanSelection} 
+              onLogin={() => setView('AUTH')} 
+              landingImages={landingImages} 
+              isLandingImagesLoading={isLandingImagesLoading} 
+            />
+          </>
+        );
       case 'AUTH':
-        return <AuthScreens onSuccess={handleAuthSuccess} onBack={() => setView('LANDING')} />;
+        return (
+          <>
+            {showTest && <SupabaseTest />}
+            <AuthScreens onSuccess={handleAuthSuccess} onBack={() => setView('LANDING')} />
+          </>
+        );
       case 'OWNER_PANEL':
         return <OwnerPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />;
       case 'DEV_PANEL':
