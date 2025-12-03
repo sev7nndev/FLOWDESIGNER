@@ -261,7 +261,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                             period=""
                             description={freePlan.description}
                             buttonText="Criar Conta Grátis"
-                            features={freePlan.features}
+                            // Dynamically add the quota to the features list
+                            features={[`${freePlan.max_images_per_month} imagens por mês`, ...freePlan.features.filter(f => !f.toLowerCase().includes('imagens'))]}
                             onClick={onGetStarted}
                         />
                     )}
