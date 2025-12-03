@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
-import { PlanSetting, QuotaCheckResponse, QuotaStatus, UserUsage, UserRole } from '../types';
+import { PlanSetting, QuotaCheckResponse, QuotaStatus, UserUsage, UserRole, EditablePlan } from '../types';
 
 interface UsageState {
-    plans: PlanSetting[];
+    plans: EditablePlan[]; // Changed to EditablePlan
     quota: QuotaCheckResponse | null;
     isLoading: boolean;
     error: string | null;

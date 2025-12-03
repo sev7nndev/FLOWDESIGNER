@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2 } from 'lucide-react';
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
 import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
-import { LandingImage } from '../types';
+import { LandingImage, EditablePlan } from '../types';
 import { HeroSection } from './Hero'; // Importação adicionada
+import { api } from '../services/api';
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -57,6 +58,22 @@ const FALLBACK_FLYERS: FlyerData[] = [
 
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, landingImages, isLandingImagesLoading }) => {
+  const [plans, setPlans] = useState<EditablePlan[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
+  
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const fetchedPlans = await api.getPlanSettings();
+        setPlans(fetchedPlans.sort((a, b) => a.price - b.price));
+      } catch (e) {
+        console.error("Failed to fetch plans for landing page:", e);
+      } finally {
+        setIsLoadingPlans(false);
+      }
+    };
+    fetchPlans();
+  }, []);
   
   // Use dynamic images if available, otherwise use fallback
   const carouselItems: FlyerData[] = landingImages.length > 0 ? landingImages.map((img: LandingImage) => ({
@@ -71,6 +88,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   
   // Duplicate items for infinite scroll effect
   const marqueeContent = [...carouselItems, ...carouselItems];
+  
+  const freePlan = plans.find(p => p.id === 'free');
+  const starterPlan = plans.find(p => p.id === 'starter');
+  const proPlan = plans.find(p => p.id === 'pro');
+
 
   // Componente de Card de Recurso Reutilizável
   const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string, color: 'primary' | 'secondary' | 'accent' }> = ({ icon, title, description, color }) => {
@@ -224,41 +246,53 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               <p className="text-gray-400 mt-4">Cancele a qualquer momento. Sem fidelidade.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-end">
-              
-              <PricingCard 
-                name="Free"
-                price="R$ 0"
-                period=""
-                description="Para testar a tecnologia."
-                buttonText="Criar Conta Grátis"
-                features={["3 Gerações Gratuitas", "Qualidade Padrão", "Marca d'água", "Suporte Comunitário"]}
-                onClick={onGetStarted}
-              />
+            {isLoadingPlans ? (
+                <div className="text-center py-20">
+                    <Loader2 size={32} className="animate-spin text-primary" />
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-end">
+                    
+                    {freePlan && (
+                        <PricingCard 
+                            name={freePlan.display_name}
+                            price="R$ 0"
+                            period=""
+                            description={freePlan.description}
+                            buttonText="Criar Conta Grátis"
+                            features={freePlan.features}
+                            onClick={onGetStarted}
+                        />
+                    )}
 
-              <PricingCard 
-                name="Start"
-                price="R$ 29,99"
-                period="/mês"
-                description="Ideal para autônomos."
-                buttonText="Assinar Start"
-                features={["20 Imagens Profissionais", "Qualidade 4K", "Sem marca d'água", "Uso Comercial Liberado", "Suporte por Email"]}
-                highlight={false}
-                onClick={onGetStarted}
-              />
+                    {starterPlan && (
+                        <PricingCard 
+                            name={starterPlan.display_name}
+                            price={`R$ ${starterPlan.price.toFixed(2)}`}
+                            period="/mês"
+                            description={starterPlan.description}
+                            buttonText="Assinar Start"
+                            features={starterPlan.features}
+                            highlight={false}
+                            onClick={onGetStarted}
+                        />
+                    )}
 
-              <PricingCard 
-                name="Pro"
-                price="R$ 49,99"
-                period="/mês"
-                description="Para agências e power users."
-                buttonText="Assinar Pro"
-                features={["50 Imagens Profissionais", "Qualidade Ultra 8K", "Geração Instantânea (Turbo)", "Sem marca d'água", "Acesso ao Painel Dev", "Prioridade no Suporte"]}
-                highlight={true}
-                badge="Melhor Custo-Benefício"
-                onClick={onGetStarted}
-              />
-            </div>
+                    {proPlan && (
+                        <PricingCard 
+                            name={proPlan.display_name}
+                            price={`R$ ${proPlan.price.toFixed(2)}`}
+                            period="/mês"
+                            description={proPlan.description}
+                            buttonText="Assinar Pro"
+                            features={proPlan.features}
+                            highlight={true}
+                            badge="Melhor Custo-Benefício"
+                            onClick={onGetStarted}
+                        />
+                    )}
+                </div>
+            )}
           </div>
         </section>
 

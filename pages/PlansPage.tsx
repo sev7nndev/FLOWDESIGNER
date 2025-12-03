@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, UserRole, PlanSetting } from '../types';
+import { User, UserRole, PlanSetting, EditablePlan } from '../types';
 import { useUsage } from '../hooks/useUsage';
 import { Button } from '../components/Button';
 import { Zap, Loader2, CheckCircle2, ArrowLeft, Info } from 'lucide-react';
@@ -42,18 +42,7 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, onBackToApp }) => {
         }
     };
     
-    const getPlanFeatures = (planId: UserRole): string[] => {
-        switch (planId) {
-            case 'free':
-                return [`${maxImages} Gerações Gratuitas`, "Qualidade Padrão", "Marca d'água", "Suporte Comunitário"];
-            case 'starter':
-                return [`${maxImages} Imagens Profissionais`, "Qualidade 4K", "Sem marca d'água", "Uso Comercial Liberado", "Suporte por Email"];
-            case 'pro':
-                return [`${maxImages} Imagens Profissionais`, "Qualidade Ultra 8K", "Geração Instantânea (Turbo)", "Sem marca d'água", "Acesso ao Painel Dev (se for Dev/Admin)", "Prioridade no Suporte"];
-            default:
-                return [];
-        }
-    };
+    // Removed hardcoded getPlanFeatures, now using plan.features directly
 
     if (isLoading) {
         return (
@@ -93,7 +82,7 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, onBackToApp }) => {
                 {currentPlan && quota && (
                     <div className="bg-zinc-900/50 p-8 rounded-2xl border border-white/10 shadow-xl mb-12 max-w-4xl mx-auto">
                         <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                            <CheckCircle2 size={24} className="text-primary" /> Seu Plano Atual: <span className={`text-white text-lg font-bold uppercase px-3 py-1 rounded-full ${currentPlan.id === 'free' ? 'bg-gray-500' : currentPlan.id === 'starter' ? 'bg-yellow-600' : 'bg-primary'}`}>{currentPlan.id}</span>
+                            <CheckCircle2 size={24} className="text-primary" /> Seu Plano Atual: <span className={`text-white text-lg font-bold uppercase px-3 py-1 rounded-full ${currentPlan.id === 'free' ? 'bg-gray-500' : currentPlan.id === 'starter' ? 'bg-yellow-600' : 'bg-primary'}`}>{currentPlan.display_name}</span>
                         </h2>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
@@ -116,7 +105,7 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, onBackToApp }) => {
                             <div className="space-y-3">
                                 <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-2">Benefícios do Plano</h3>
                                 <ul className="space-y-2">
-                                    {getPlanFeatures(currentPlan.id as UserRole).map((feature, index) => (
+                                    {currentPlan.features.map((feature, index) => (
                                         <li key={index} className="flex items-center gap-2 text-sm text-gray-300">
                                             <CheckCircle2 size={16} className="text-green-500 flex-shrink-0" />
                                             {feature}
@@ -142,15 +131,15 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, onBackToApp }) => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-end">
-                    {sortedPlans.map((plan: PlanSetting) => (
+                    {sortedPlans.map((plan: EditablePlan) => (
                         <PricingCard 
                             key={plan.id}
-                            name={plan.id.toUpperCase()}
+                            name={plan.display_name} // Use display_name
                             price={plan.price === 0 ? 'Grátis' : `R$ ${plan.price.toFixed(2)}`}
                             period={plan.price === 0 ? '' : '/mês'}
-                            description={plan.id === 'free' ? 'Para testar a tecnologia.' : plan.id === 'starter' ? 'Ideal para autônomos.' : 'Para agências e power users.'}
+                            description={plan.description} // Use description
                             buttonText={currentPlan?.id === plan.id ? 'Plano Atual' : plan.id === 'free' ? 'Começar Grátis' : 'Assinar Agora'}
-                            features={getPlanFeatures(plan.id as UserRole)}
+                            features={plan.features} // Use features
                             highlight={plan.id === 'pro'}
                             badge={plan.id === 'pro' ? 'Melhor Custo-Benefício' : undefined}
                             onClick={() => {
