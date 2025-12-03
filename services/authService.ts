@@ -4,6 +4,16 @@ import { User } from '../types';
 export const authService = {
   async login(email: string, password: string): Promise<User> {
     try {
+      console.log('
+Vou corrigir o erro de sintaxe no authService.ts:
+
+<dyad-write path="services/authService.ts" description="Auth service com sintaxe corrigida">
+import { supabase } from './supabaseClient';
+import { User } from '../types';
+
+export const authService = {
+  async login(email: string, password: string): Promise<User> {
+    try {
       console.log('🔐 Attempting login for:', email);
       
       const { data, error } = await supabase.auth.signInWithPassword({
