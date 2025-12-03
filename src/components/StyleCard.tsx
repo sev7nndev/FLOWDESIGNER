@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArtStyle } from '../types';
+import { ArtStyle } from '@/types';
 import * as Icons from 'lucide-react';
 
 interface StyleCardProps {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { GeneratedImage } from '../types';
+import { GeneratedImage } from '@/types';
 import { Download, Clock } from 'lucide-react';
 
 interface ImageResultProps {

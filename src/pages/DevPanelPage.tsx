@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info } from 'lucide-react';
 import { Button } from '../components/Button';
-import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '../types';
-import { useLandingImages } from '../hooks/useLandingImages';
-import { useAdminGeneratedImages } from '../hooks/useAdminGeneratedImages';
-import { api } from '../services/api';
+import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '@/types';
+import { useLandingImages } from '../../hooks/useLandingImages';
+import { useAdminGeneratedImages } from '../../hooks/useAdminGeneratedImages';
+import { api } from '../../services/api';
 import { toast } from 'sonner';
-import { getSupabase } from '../services/supabaseClient'; // Import getSupabase directly
+import { getSupabase } from '../../services/supabaseClient'; // Import getSupabase directly
 
 interface DevPanelPageProps {
   user: User | null; // User can be null if profile is still loading or not authenticated

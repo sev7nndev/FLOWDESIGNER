@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { BusinessInfo, GenerationStatus, QuotaStatus, PlanSetting } from '../types';
+import { BusinessInfo, GenerationStatus, QuotaStatus, PlanSetting } from '@/types';
 import { Button } from './Button';
 import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2, AlertTriangle } from 'lucide-react';
 

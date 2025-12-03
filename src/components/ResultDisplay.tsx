@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, memo } from 'react';
-import { GeneratedImage, GenerationState, GenerationStatus } from '../types';
+import { GeneratedImage, GenerationState, GenerationStatus } from '@/types';
 import { ImageResult } from './ImageResult';
 import { GalleryModal } from './Modals';
 import { History, Sparkles, Loader2 } from 'lucide-react';

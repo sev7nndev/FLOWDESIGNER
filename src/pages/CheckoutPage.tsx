@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { User, EditablePlan } from '../types';
+import { User, EditablePlan } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/Button';
 import { ArrowLeft, CheckCircle, CreditCard, Loader2, Lock, Zap } from 'lucide-react';

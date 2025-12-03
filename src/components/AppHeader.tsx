@@ -1,6 +1,6 @@
 import React from 'react';
 import { LogOut, Settings, Sparkles, User as UserIcon, Code, Zap, AlertTriangle } from 'lucide-react';
-import { User, UserRole, QuotaStatus } from '../types';
+import { User, UserRole, QuotaStatus } from '@/types';
 import { Button } from './Button';
 
 interface AppHeaderProps {

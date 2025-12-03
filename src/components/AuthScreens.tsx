@@ -3,7 +3,7 @@ import { Button } from '../components/Button';
 import { Sparkles, ArrowLeft, CheckCircle2, Zap, DollarSign } from 'lucide-react';
 import { authService } from '../services/authService';
 import { GoogleIcon } from './GoogleIcon';
-import { User, EditablePlan } from '../types'; // Import User type and EditablePlan
+import { User, EditablePlan } from '@/types'; // Import User type and EditablePlan
 
 interface AuthScreensProps {
   onSuccess: (user: User | null) => void; 
