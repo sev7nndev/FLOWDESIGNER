@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient';
 import { User } from '../types';
 
 export const authService = {
-  async login(email: string, password: string): Promise<void> {
+  async login(email: string, password: string): Promise<User> {
     try {
       console.log('🔐 Attempting login for:', email);
       
@@ -52,7 +52,18 @@ export const authService = {
         console.error('Error fetching profile after login:', profileErr);
       }
 
-      console.log('✅ Login successful:', data.user.id);
+      // Retorna o usuário completo com perfil
+      const userWithProfile: User = {
+        id: data.user.id,
+        email: data.user.email || '',
+        firstName: '',
+        lastName: '',
+        createdAt: data.user.created_at ? new Date(data.user.created_at).getTime() : Date.now(),
+        role: profile?.role || 'free',
+      };
+
+      console.log('✅ Login successful:', userWithProfile.id);
+      return userWithProfile;
     } catch (error: any) {
       console.error('AuthService login error:', error);
       throw new Error(error.message || 'Falha no login. Tente novamente.');

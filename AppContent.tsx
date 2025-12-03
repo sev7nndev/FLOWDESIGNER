@@ -82,7 +82,10 @@ export const AppContent: React.FC = () => {
           if (currentUser) {
             console.log('✅ User found:', currentUser.email, 'Role:', currentUser.role);
             setUser(currentUser);
-            // A visualização será definida pelo efeito de redirecionamento abaixo
+            // Define a view baseada no role imediatamente
+            const roleView = getRoleBasedView(currentUser.role);
+            setView(roleView);
+            setLastView(roleView);
           } else {
             console.log('👤 No user session, showing landing');
             setView('LANDING');
@@ -104,6 +107,10 @@ export const AppContent: React.FC = () => {
       if (authUser) {
         console.log('✅ User authenticated, setting user state');
         setUser(authUser);
+        // Define a view baseada no role imediatamente
+        const roleView = getRoleBasedView(authUser.role);
+        setView(roleView);
+        setLastView(roleView);
       } else {
         console.log('👤 User logged out, clearing state');
         setUser(null);
@@ -163,7 +170,10 @@ export const AppContent: React.FC = () => {
     if (authUser) {
       console.log('✅ Auth successful, setting user:', authUser.email, authUser.role);
       setUser(authUser);
-      // O redirecionamento é tratado pelo efeito de redirecionamento
+      // Define a view baseada no role imediatamente
+      const roleView = getRoleBasedView(authUser.role);
+      setView(roleView);
+      setLastView(roleView);
       // Limpa a URL para remover parâmetros de pagamento
       window.history.replaceState({}, document.title, window.location.pathname);
     }
