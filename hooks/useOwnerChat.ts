@@ -117,7 +117,7 @@ export const useOwnerChat = (): UseOwnerChatResult => {
               timestamp: newMessage.timestamp,
               sender: 'owner'
             }
-          };
+          } as ChatThread; // Explicitamente tipado
         }
         return thread;
       }));
@@ -169,7 +169,7 @@ export const useOwnerChat = (): UseOwnerChatResult => {
                                 sender: 'client'
                             },
                             unreadCount: thread.unreadCount + 1 // Incrementa não lidas
-                        };
+                        } as ChatThread; // Explicitamente tipado
                     }
                     return thread;
                 });

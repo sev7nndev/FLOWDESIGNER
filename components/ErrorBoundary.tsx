@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from './Button';
@@ -37,6 +36,9 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
+      // Usando import.meta.env para variáveis de ambiente no frontend
+      const isDevelopment = import.meta.env.DEV; 
+
       return (
         <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
           <div className="max-w-md w-full bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl text-center">
@@ -70,7 +72,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
 
-            {process.env.NODE_ENV === 'development' && (
+            {isDevelopment && (
               <details className="mt-6 text-left">
                 <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400">
                   Detalhes do Erro (Dev)
