@@ -78,6 +78,7 @@ export const AppContent: React.FC = () => {
           setView('AUTH');
         } else {
           // Check current session
+          console.log('🔍 Checking current session...');
           const currentUser = await authService.getCurrentUser();
           if (currentUser) {
             console.log('✅ User found:', currentUser.email, 'Role:', currentUser.role);
