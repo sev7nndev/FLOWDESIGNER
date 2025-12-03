@@ -2,11 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
-const jwt = require('jsonwebtoken');
-const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
-const multer = require('multer');
-const sanitizeHtml = require('sanitize-html');
 const mercadopago = require('mercadopago');
 
 dotenv.config();
@@ -42,9 +38,11 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    console.warn("WARNING: SUPABASE_URL or SUPABASE_SERVICE_KEY is missing. Backend routes requiring Service Role will fail.");
+    console.warn("WARNING: Supabase keys are missing. Backend routes requiring Service Role will fail.");
 }
 
+// Cria clientes Supabase, usando strings vazias se as chaves estiverem ausentes.
+// O SDK do Supabase pode lançar um erro se a URL for vazia, mas a versão 2.x é mais tolerante.
 const supabaseAnon = createClient(
     SUPABASE_URL,
     SUPABASE_ANON_KEY
@@ -56,12 +54,13 @@ const supabaseServiceRole = createClient(
 );
 
 // --- Mercado Pago Configuration ---
-if (process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+const MP_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+if (MP_ACCESS_TOKEN) {
     mercadopago.configure({
-        access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN,
+        access_token: MP_ACCESS_TOKEN,
     });
 } else {
-    console.warn("MERCADO_PAGO_ACCESS_TOKEN not found. Payment routes will be mocked or fail.");
+    console.warn("WARNING: MERCADO_PAGO_ACCESS_TOKEN not found. Payment routes will be mocked or fail.");
 }
 
 // --- Middleware de Autenticação e Autorização ---
@@ -76,7 +75,7 @@ const verifyAuth = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     
     try {
-        // Use o cliente anon para verificar o token (ou jwt.decode se preferir, mas o SDK é mais seguro)
+        // Use o cliente anon para verificar o token
         const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
         
         if (error || !user) {
@@ -91,7 +90,7 @@ const verifyAuth = async (req, res, next) => {
     }
 };
 
-// 2. Verifica se o usuário é Admin/Dev/Owner (Security Finding 2 Fix)
+// 2. Verifica se o usuário é Admin/Dev/Owner
 const authorizeAdmin = async (req, res, next) => {
     if (!req.user) {
         return res.status(403).json({ error: 'Forbidden: Authentication required.' });
@@ -130,9 +129,6 @@ const authorizeAdmin = async (req, res, next) => {
 
 // Rota de Geração de Imagem
 app.post('/api/generate', verifyAuth, async (req, res) => {
-    // Placeholder: Implementação real da IA e salvamento no DB
-    // A lógica de quota deve ser verificada aqui antes de chamar a IA.
-    
     if (!SUPABASE_SERVICE_KEY) {
         return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
     }
@@ -163,7 +159,6 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
     
     console.log(`User ${req.user.id} checked quota.`);
     
-    // Simulação de retorno de quota (usando dados do DB para garantir a estrutura)
     try {
         const { data: usageData, error: usageError } = await supabaseServiceRole
             .from('user_usage')
@@ -172,7 +167,6 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
             .single();
             
         if (usageError || !usageData) {
-            // Se não houver uso, assume-se o plano 'free'
             const defaultUsage = { user_id: req.user.id, plan_id: 'free', current_usage: 0, cycle_start_date: new Date().toISOString() };
             const { data: planSettings, error: planError } = await supabaseServiceRole
                 .from('plan_settings')
@@ -182,7 +176,6 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
                 
             if (planError || !planSettings) throw new Error("Plan settings not found.");
             
-            // Fetch all plans for the frontend modal context
             const { data: allPlans, error: allPlansError } = await supabaseServiceRole
                 .from('plan_details')
                 .select('*, plan_settings(price, max_images_per_month)');
@@ -207,7 +200,6 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
             });
         }
         
-        // Busca o plano correspondente
         const { data: planSettings, error: planError } = await supabaseServiceRole
             .from('plan_settings')
             .select('id, max_images_per_month, price')
@@ -228,7 +220,6 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
             message = "Você está perto do limite de gerações.";
         }
         
-        // Fetch all plans for the frontend modal context
         const { data: allPlans, error: allPlansError } = await supabaseServiceRole
             .from('plan_details')
             .select('*, plan_settings(price, max_images_per_month)');
@@ -248,7 +239,7 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
             status: status,
             usage: usageData,
             plan: planSettings,
-            plans: plans, // Include all plans
+            plans: plans,
             message: message
         });
         
@@ -262,7 +253,7 @@ app.get('/api/check-quota', verifyAuth, async (req, res) => {
 app.post('/api/subscribe', verifyAuth, async (req, res) => {
     const { planId } = req.body;
     
-    if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+    if (!MP_ACCESS_TOKEN) {
         return res.status(500).json({ error: "Erro de configuração: Token do Mercado Pago não está definido no servidor." });
     }
     
@@ -270,10 +261,8 @@ app.post('/api/subscribe', verifyAuth, async (req, res) => {
         return res.status(500).json({ error: 'Erro de configuração: Chave de Serviço Supabase ausente.' });
     }
     
-    // Placeholder: Lógica de criação de preferência de pagamento no Mercado Pago
     console.log(`User ${req.user.id} initiating subscription for plan ${planId}`);
     
-    // Simulação de busca de preço
     const { data: planSettings, error } = await supabaseServiceRole
         .from('plan_settings')
         .select('price')
@@ -286,14 +275,12 @@ app.post('/api/subscribe', verifyAuth, async (req, res) => {
     
     const price = planSettings.price;
     
-    // Simulação de criação de preferência
     const preference = {
         items: [{
             title: `Assinatura Flow Designer - ${planId.toUpperCase()}`,
             unit_price: parseFloat(price),
             quantity: 1,
         }],
-        // Redirecionamento de sucesso/falha deve ser configurado aqui
         back_urls: {
             success: `${process.env.FRONTEND_URL}/checkout/success?plan=${planId}`,
             failure: `${process.env.FRONTEND_URL}/checkout/failure?plan=${planId}`,
@@ -328,7 +315,6 @@ app.get('/api/admin/images', verifyAuth, authorizeAdmin, async (req, res) => {
     console.log(`Admin ${req.user.id} fetching all images.`);
     
     try {
-        // Usar Service Role para ignorar RLS e buscar todas as imagens
         const { data, error } = await supabaseServiceRole
             .from('images')
             .select('id, user_id, prompt, image_url, business_info, created_at')
@@ -350,22 +336,19 @@ app.delete('/api/admin/images/:imageId', verifyAuth, authorizeAdmin, async (req,
     }
     
     const { imageId } = req.params;
-    const { imageUrl } = req.body; // imageUrl is the storage path (e.g., images/user_id/file.png)
+    const { imageUrl } = req.body;
     
     console.log(`Admin ${req.user.id} deleting image ${imageId} at path ${imageUrl}.`);
     
     try {
-        // 1. Deletar do Storage (Service Role)
         const { error: storageError } = await supabaseServiceRole.storage
             .from('images')
             .remove([imageUrl]);
             
         if (storageError && storageError.message !== 'The resource was not found') {
-            // Ignoramos 'not found' mas reportamos outros erros
             console.warn("Storage deletion warning:", storageError.message);
         }
         
-        // 2. Deletar do Banco de Dados (Service Role)
         const { error: dbError } = await supabaseServiceRole
             .from('images')
             .delete()
@@ -398,7 +381,6 @@ app.post('/api/admin/landing-images/upload', verifyAuth, authorizeAdmin, async (
     const storagePath = `landing-carousel/${uuidv4()}.${fileExtension}`;
     
     try {
-        // 1. Upload para o Storage (Service Role)
         const { error: uploadError } = await supabaseServiceRole.storage
             .from('landing-carousel')
             .upload(storagePath, buffer, {
@@ -408,20 +390,18 @@ app.post('/api/admin/landing-images/upload', verifyAuth, authorizeAdmin, async (
             
         if (uploadError) throw uploadError;
         
-        // 2. Inserir no Banco de Dados (Service Role)
         const { data: insertedImage, error: dbError } = await supabaseServiceRole
             .from('landing_carousel_images')
             .insert({
                 image_url: storagePath,
                 created_by: userId,
-                sort_order: 0 // Default sort order
+                sort_order: 0
             })
             .select('id, image_url, sort_order')
             .single();
             
         if (dbError) throw dbError;
         
-        // 3. Gerar URL pública para retorno ao frontend
         const { data: { publicUrl } } = supabaseAnon.storage
             .from('landing-carousel')
             .getPublicUrl(insertedImage.image_url);
@@ -448,12 +428,11 @@ app.delete('/api/admin/landing-images/:id', verifyAuth, authorizeAdmin, async (r
     }
     
     const { id } = req.params;
-    const { imagePath } = req.body; // imagePath is the storage path (e.g., landing-carousel/file.png)
+    const { imagePath } = req.body;
     
     console.log(`Admin ${req.user.id} deleting landing image ${id} at path ${imagePath}.`);
     
     try {
-        // 1. Deletar do Storage (Service Role)
         const { error: storageError } = await supabaseServiceRole.storage
             .from('landing-carousel')
             .remove([imagePath]);
@@ -462,7 +441,6 @@ app.delete('/api/admin/landing-images/:id', verifyAuth, authorizeAdmin, async (r
             console.warn("Storage deletion warning:", storageError.message);
         }
         
-        // 2. Deletar do Banco de Dados (Service Role)
         const { error: dbError } = await supabaseServiceRole
             .from('landing_carousel_images')
             .delete()
@@ -483,12 +461,8 @@ app.get('/api/admin/mp-connect', verifyAuth, authorizeAdmin, async (req, res) =>
         return res.status(500).json({ error: "Erro de configuração: MERCADO_PAGO_CLIENT_ID ou FRONTEND_URL não definidos." });
     }
     
-    // Esta rota deve retornar a URL de OAuth do Mercado Pago
-    
-    // NOTE: O Mercado Pago exige que o redirect_uri seja configurado no painel do MP.
     const redirectUri = process.env.FRONTEND_URL + '/dev-panel'; 
     
-    // Simulação de URL de conexão (substitua pela lógica real de MP OAuth)
     const connectUrl = `https://auth.mercadopago.com/oauth/authorize?client_id=${process.env.MERCADO_PAGO_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code`;
     
     res.json({ connectUrl });
