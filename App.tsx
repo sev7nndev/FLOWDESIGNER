@@ -7,16 +7,16 @@ import { AuthScreens } from './components/AuthScreens';
 import { Sparkles } from 'lucide-react';
 import { useGeneration } from './hooks/useGeneration';
 import { ResultDisplay } from './components/ResultDisplay';
-import { SettingsModal, UpgradeModal } from './components/Modals'; // Import UpgradeModal
+import { SettingsModal, UpgradeModal } from './src/components/Modals'; // Corrigido
 import { useProfile } from './hooks/useProfile'; 
 import { GenerationForm } from './components/GenerationForm';
 import { AppHeader } from './components/AppHeader'; 
 import { useLandingImages } from './hooks/useLandingImages'; 
-import { DevPanelPage } from './src/pages/DevPanelPage'; // Corrigido
-import { PlansPage } from './src/pages/PlansPage'; // Corrigido
-import { useUsage } from './hooks/useUsage'; // Import useUsage
-import { Toaster } from 'sonner'; // Import Toaster
-import { CheckoutPage } from './src/pages/CheckoutPage'; // Corrigido
+import { DevPanelPage } from './src/pages/DevPanelPage'; 
+import { PlansPage } from './src/pages/PlansPage'; 
+import { useUsage } from './hooks/useUsage'; 
+import { Toaster } from 'sonner'; 
+import { CheckoutPage } from './src/pages/CheckoutPage'; 
 
 // Define a minimal structure for the authenticated user before profile is loaded
 interface AuthUser {
