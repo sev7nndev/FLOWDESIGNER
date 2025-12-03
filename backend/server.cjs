@@ -234,32 +234,36 @@ Diretrizes de design:
   return response.text();
 }
 
-// Geração de imagem usando Imagen 3 (SDK correto)
+// Geração de imagem usando a sintaxe generateContent (compatível com o SDK atual)
 async function generateImage(detailedPrompt) {
-  if (!GEMINI_API_KEY) {
-    throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
-  }
+  if (!GEMINI_API_KEY) throw new Error('Chave GEMINI_API_KEY ausente.');
 
   console.log(`[GENERATE] Iniciando geração de imagem com o prompt: ${detailedPrompt.substring(0, 120)}...`);
 
   try {
-    const result = await genAI.images.generate({
-      model: "imagen-3.0",
-      prompt: detailedPrompt,
-      size: "1024x1365" // 3:4 (vertical)
-    });
+    // Usando o modelo de geração de imagem via getGenerativeModel
+    const imageModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
 
-    if (!result?.data?.[0]?.b64_json) {
-      throw new Error("A API não retornou a imagem corretamente.");
+    // Chamando generateContent com a estrutura de array de objetos para imagem
+    const result = await imageModel.generateContent([{
+      type: "image",
+      prompt: detailedPrompt,
+      image_config: { size: "1024x1365" } // 3:4 vertical
+    }]);
+
+    // Extraindo o Base64 do caminho correto na resposta
+    const imageBase64 = result.response?.candidates?.[0]?.content?.[0]?.image?.data;
+
+    if (!imageBase64) {
+      console.error("Estrutura de resposta da API de Imagem inesperada:", JSON.stringify(result.response, null, 2));
+      throw new Error("A API não retornou a imagem corretamente. Verifique a estrutura da resposta.");
     }
 
-    const base64Image = result.data[0].b64_json;
+    return `data:image/png;base64,${imageBase64}`;
 
-    return `data:image/png;base64,${base64Image}`;
-    
   } catch (error) {
     console.error("[GENERATE] ERRO DURANTE A GERAÇÃO DE IMAGEM:", error);
-    throw new Error(`Erro da API de Imagem: ${error?.message || "Falha desconhecida"}`);
+    throw new Error(`Erro da API de Imagem: ${error?.message || "Erro desconhecido"}`);
   }
 }
 
