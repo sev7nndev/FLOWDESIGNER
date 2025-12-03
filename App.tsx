@@ -16,6 +16,7 @@ import { DevPanelPage } from './pages/DevPanelPage';
 import { PlansPage } from './pages/PlansPage'; // Import PlansPage
 import { useUsage } from './hooks/useUsage'; // Import useUsage
 import { Toaster } from 'sonner'; // Import Toaster
+import { CheckoutPage } from './pages/CheckoutPage'; // Import CheckoutPage
 
 // Define a minimal structure for the authenticated user before profile is loaded
 interface AuthUser {
@@ -27,7 +28,7 @@ interface AuthUser {
 export const App: React.FC = () => {
   // Auth State
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'PLANS'>('LANDING'); // Added 'PLANS' view
+  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'PLANS' | 'CHECKOUT'>('LANDING'); // Added 'CHECKOUT' view
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState<QuotaCheckResponse | null>(null); // State for Upgrade Modal
@@ -41,7 +42,6 @@ export const App: React.FC = () => {
   
   // Usage Hook
   const { 
-    // plans, // Removed unused import
     quota, 
     isLoading: isUsageLoading, 
     refreshUsage, 
@@ -49,8 +49,8 @@ export const App: React.FC = () => {
     currentUsage, 
     maxImages,
     currentPlan,
-    plans // Keep plans available for AuthScreens/LandingPage
-  } = useUsage(authUser?.id, profileRole); // <-- Passed profileRole here
+    plans 
+  } = useUsage(authUser?.id, profileRole); 
 
   // Combined User State (passed to hooks/components)
   const user: User | null = authUser && profile ? {
@@ -70,18 +70,27 @@ export const App: React.FC = () => {
   // Generation Logic Hook
   const { 
     form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage
-  } = useGeneration(user, refreshUsage, openUpgradeModal); // Pass refreshUsage and openUpgradeModal
+  } = useGeneration(user, refreshUsage, openUpgradeModal); 
   
   // Landing Images Hook (Used by LandingPage and DevPanel)
   const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
 
-  // NEW: Handle plan selection from Landing Page (Leads to AUTH screen)
+  // NEW: Handle plan selection from Landing Page or Plans Page
   const handleSelectPlan = useCallback((planId: string) => {
       setSelectedPlanId(planId);
-      setView('AUTH');
-  }, []);
+      if (planId === 'free') {
+          setView('AUTH'); // Free plan -> Auth/Signup
+      } else {
+          // Paid plan -> Checkout. If user is already logged in, proceed to checkout. If not, they will be prompted to log in/sign up first.
+          if (authUser) {
+              setView('CHECKOUT');
+          } else {
+              setView('AUTH'); // If not logged in, go to auth first. Checkout logic will handle redirection after successful auth.
+          }
+      }
+  }, [authUser]);
   
-  // NEW: Handle generic start/show plans (Leads to PLANS screen, which is accessible even if logged out)
+  // NEW: Handle generic start/show plans (Leads to PLANS screen)
   const handleShowPlans = useCallback(() => {
       setView('PLANS');
   }, []);
@@ -94,8 +103,14 @@ export const App: React.FC = () => {
       createdAt: Date.parse(supabaseUser.created_at) || Date.now()
     };
     setAuthUser(newAuthUser);
-    setView('APP');
-    setSelectedPlanId(null); // Clear selected plan after successful login
+    
+    // If a plan was selected before authentication, redirect to checkout immediately after successful login
+    if (selectedPlanId && selectedPlanId !== 'free') {
+        setView('CHECKOUT');
+    } else {
+        setView('APP');
+    }
+    setSelectedPlanId(null); // Clear selected plan after successful login/redirection
   };
 
   // Init Auth & History
@@ -154,9 +169,9 @@ export const App: React.FC = () => {
       <>
         <Toaster position="top-right" richColors />
         <LandingPage 
-          onGetStarted={() => {}} // LandingPage agora gerencia a rolagem internamente
+          onGetStarted={handleShowPlans} // CTA principal agora leva para a página de planos
           onLogin={() => setView('AUTH')} 
-          onSelectPlan={handleSelectPlan} // Seleção de plano na seção de preços leva para AUTH
+          onSelectPlan={handleSelectPlan} // Seleção de plano na seção de preços leva para AUTH/CHECKOUT
           onShowPlans={handleShowPlans} // Botão Criar Conta na navbar leva para a página de planos
           landingImages={landingImages}
           isLandingImagesLoading={isLandingImagesLoading}
@@ -179,42 +194,39 @@ export const App: React.FC = () => {
     );
   }
   
-  if (view === 'DEV_PANEL') {
+  if (view === 'PLANS') {
     return (
       <>
         <Toaster position="top-right" richColors />
-        <DevPanelPage user={user} onBackToApp={() => setView('APP')} onLogout={handleLogout} />
+        <PlansPage 
+            user={user} 
+            onBackToApp={() => setView(user ? 'APP' : 'LANDING')} 
+            onSelectPlan={handleSelectPlan} 
+            plans={plans} 
+            isLoadingPlans={isUsageLoading} 
+        />
       </>
     );
   }
   
-  if (view === 'PLANS') {
-    // If user is logged in, show PlansPage. If not, show a simplified version or redirect to AUTH/LANDING.
-    // Since PlansPage requires a 'user' object, we must handle the unauthenticated case.
-    // For now, we redirect unauthenticated users back to the landing page, 
-    // but we will update PlansPage to handle unauthenticated view if needed later.
-    if (!user) {
-        // If unauthenticated, show a simplified view of plans and redirect to AUTH on selection
-        return (
-            <>
-                <Toaster position="top-right" richColors />
-                <PlansPage 
-                    user={null as any} // Pass null user to indicate unauthenticated state
-                    onBackToApp={() => setView('LANDING')} 
-                    onSelectPlan={handleSelectPlan} // Pass the handler to select a plan and go to AUTH
-                    plans={plans} // Pass plans data
-                    isLoadingPlans={isUsageLoading} // Use isUsageLoading as it fetches plans
-                />
-            </>
-        );
-    }
-    
-    return (
-      <>
-        <Toaster position="top-right" richColors />
-        <PlansPage user={user} onBackToApp={() => setView('APP')} />
-      </>
-    );
+  if (view === 'CHECKOUT') {
+      if (!selectedPlanId || !user) {
+          // If no plan selected or user is not logged in, redirect to plans page
+          setView('PLANS');
+          return null;
+      }
+      return (
+          <>
+              <Toaster position="top-right" richColors />
+              <CheckoutPage 
+                  user={user}
+                  planId={selectedPlanId} 
+                  onBack={() => setView('PLANS')} 
+                  onSuccess={() => setView('APP')} 
+                  plans={plans}
+              />
+          </>
+      );
   }
   
   // MAIN APP UI (Protected)
@@ -234,8 +246,8 @@ export const App: React.FC = () => {
         onLogout={handleLogout} 
         onShowSettings={() => setShowSettings(true)} 
         onShowDevPanel={() => setView('DEV_PANEL')}
-        onShowPlans={() => setView('PLANS')} // New handler
-        quotaStatus={quotaStatus} // Pass quota status
+        onShowPlans={() => setView('PLANS')} 
+        quotaStatus={quotaStatus} 
         currentUsage={currentUsage}
         maxImages={maxImages}
       />
@@ -257,7 +269,7 @@ export const App: React.FC = () => {
                 handleLogoUpload={handleLogoUpload}
                 handleGenerate={handleGenerate}
                 loadExample={loadExample}
-                quotaStatus={quotaStatus} // Pass quota status
+                quotaStatus={quotaStatus} 
                 currentUsage={currentUsage}
                 maxImages={maxImages}
                 currentPlan={currentPlan}

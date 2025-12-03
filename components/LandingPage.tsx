@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
-import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2 } from 'lucide-react';
+import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2, ArrowLeft } from 'lucide-react';
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
 import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
 import { LandingImage, EditablePlan } from '../types';
-import { HeroSection } from './Hero'; // Importação adicionada
+import { HeroSection } from './Hero'; 
 import { api } from '../services/api';
 
 interface LandingPageProps {
   onGetStarted: () => void; // Agora leva para a página de planos
   onLogin: () => void;
-  onSelectPlan: (planId: string) => void; // Seleção de plano -> AUTH
-  onShowPlans: () => void; // NEW: Handler for generic start/show plans -> PLANS view
+  onSelectPlan: (planId: string) => void; // Seleção de plano -> AUTH/CHECKOUT
+  onShowPlans: () => void; // Handler for generic start/show plans -> PLANS view
   landingImages: LandingImage[];
   isLandingImagesLoading: boolean;
 }
@@ -96,13 +96,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   const starterPlan = plans.find(p => p.id === 'starter');
   const proPlan = plans.find(p => p.id === 'pro');
 
-  // NEW: Função de rolagem para o CTA principal
-  const handleScrollToPlans = () => {
-    const plansSection = document.getElementById('precos');
-    if (plansSection) {
-      plansSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
+  // Revert to original behavior: onGetStarted now calls the prop function
+  const handleGetStarted = onGetStarted;
 
 
   // Componente de Card de Recurso Reutilizável
@@ -167,7 +162,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <button onClick={onLogin} className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
               Entrar
             </button>
-            <Button onClick={handleScrollToPlans} className="hidden md:block text-sm font-medium px-5 py-2 rounded-full">
+            <Button onClick={onShowPlans} className="hidden md:block text-sm font-medium px-5 py-2 rounded-full">
               Criar Conta
             </Button>
           </div>
@@ -175,7 +170,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       </nav>
 
       <main>
-        <HeroSection onGetStarted={handleScrollToPlans} />
+        <HeroSection onGetStarted={handleGetStarted} />
 
         {/* Marquee Gallery (Infinite Scroll) */}
         <section className="py-10 border-y border-white/5 bg-black/30 overflow-hidden relative">
@@ -246,7 +241,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
           </div>
         </section>
 
-        {/* Pricing Section */}
+        {/* Pricing Section (Still visible on landing page, but CTA redirects to PLANS view) */}
         <section className="py-24 px-6 relative overflow-hidden bg-zinc-900/30" id="precos">
            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
 
@@ -286,7 +281,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                             buttonText="Assinar Start"
                             features={starterPlan.features}
                             highlight={false}
-                            onClick={() => onSelectPlan('starter')} // Seleção de plano -> AUTH
+                            onClick={() => onSelectPlan('starter')} // Seleção de plano -> CHECKOUT
                         />
                     )}
 
@@ -300,7 +295,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                             features={proPlan.features}
                             highlight={true}
                             badge="Melhor Custo-Benefício"
-                            onClick={() => onSelectPlan('pro')} // Seleção de plano -> AUTH
+                            onClick={() => onSelectPlan('pro')} // Seleção de plano -> CHECKOUT
                         />
                     )}
                 </div>
@@ -365,7 +360,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
                     Comece a gerar artes de alta conversão em segundos com a inteligência artificial do Flow Designer.
                 </p>
-                <Button onClick={handleScrollToPlans} className="h-14 px-10 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20">
+                <Button onClick={onShowPlans} className="h-14 px-10 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20">
                     Quero Minhas Artes Agora <ChevronRight className="ml-2" />
                 </Button>
             </div>
