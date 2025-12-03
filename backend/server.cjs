@@ -234,7 +234,7 @@ Diretrizes de design:
   return response.text();
 }
 
-// Geração de imagem com Google AI Studio (Imagen) - PAYLOAD CORRIGIDO
+// Geração de imagem com Google AI Studio (Imagen) - USANDO O SDK CORRETAMENTE
 async function generateImage(detailedPrompt) {
   if (!GEMINI_API_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
@@ -242,61 +242,34 @@ async function generateImage(detailedPrompt) {
   
   console.log(`[GENERATE] Iniciando geração de imagem com o prompt: ${detailedPrompt.substring(0, 100)}...`);
   
-  // Endpoint e payload corretos para Imagen 3.0
-  const IMAGEN_MODEL = 'imagen-3.0-generate-001';
-  const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGEN_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-  
-  // CORREÇÃO: Mover aspectRatio para o nível superior do payload
-  const requestBody = {
-    contents: [{
-      parts: [{
-        text: detailedPrompt
-      }]
-    }],
-    // CORREÇÃO: Mover aspectRatio para fora de generationConfig
-    aspectRatio: "3:4",
-    generationConfig: {
-      responseMimeType: "image/png",
-      responseModalities: ["Image"]
-    }
-  };
-
   try {
-    const response = await axios.post(IMAGEN_API_URL, requestBody, {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 60000 // 60 segundos timeout
-    });
+    // CORREÇÃO: Obter o modelo de imagem diretamente do SDK
+    const imageModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
     
-    if (response.data?.candidates?.length > 0 && response.data.candidates[0]?.content?.parts?.length > 0) {
-      const base64Image = response.data.candidates[0].content.parts[0].inlineData.data;
+    const result = await imageModel.generateContent({
+      contents: [{ parts: [{ text: detailedPrompt }] }],
+      generationConfig: {
+        responseMimeType: "image/png",
+        responseModalities: ["Image"],
+        aspectRatio: "3:4"
+      }
+    });
+
+    if (result.response.candidates && result.response.candidates.length > 0 && result.response.candidates[0].content && result.response.candidates[0].content.parts && result.response.candidates[0].content.parts.length > 0) {
+      const base64Image = result.response.candidates[0].content.parts[0].inlineData.data;
       return `data:image/png;base64,${base64Image}`;
     } else {
       throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
     }
   } catch (error) {
-    let errorMessage = 'Falha ao gerar imagem. Verifique o modelo ou a API KEY.';
+    console.error(`[GENERATE] ERRO DURANTE A GERAÇÃO DE IMAGEM:`, error);
     
-    if (error.response) {
-        const errorData = error.response.data;
-        const status = error.response.status;
-        
-        console.error(`Erro da API do Google (Status ${status}):`, JSON.stringify(errorData, null, 2));
-        
-        if (errorData && errorData.error && errorData.error.message) {
-            errorMessage = `Erro da API de Imagem: ${errorData.error.message}`;
-        } else if (status === 403) {
-            errorMessage = 'Acesso Negado (403). Verifique se o Faturamento está ativo no Google Cloud para o modelo Imagen.';
-        } else if (status === 400) {
-            errorMessage = 'Requisição Inválida (400). Verifique se o modelo Imagen está habilitado.';
-        } else {
-            errorMessage = `Erro desconhecido da API do Google (Status ${status}).`;
-        }
-    } else {
-        console.error('Erro de rede/timeout:', error.message);
-        errorMessage = `Erro de rede ou timeout: ${error.message}`;
+    // O SDK do Google pode lançar um erro com mais detalhes
+    if (error.message) {
+        throw new Error(`Erro da API de Imagem: ${error.message}`);
     }
     
-    throw new Error(errorMessage);
+    throw new Error('Falha ao gerar imagem. Verifique os logs do servidor para mais detalhes.');
   }
 }
 
