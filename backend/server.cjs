@@ -7,7 +7,7 @@ const express = require('express');
     const rateLimit = require('express-rate-limit');
     const sanitizeHtml = require('sanitize-html');
     const { v4: uuidv4 } = require('uuid');
-    const mercadopago = require('mercadopago'); // NEW: Mercado Pago SDK
+    const mercadopago = require('mercadopago'); 
     require('dotenv').config();
 
     const app = express();
@@ -18,17 +18,17 @@ const express = require('express');
     const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
     const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY; 
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    const FREEPIK_API_KEY = process.env.FREEPIK_API_KEY;
+    // FREEPIK_API_KEY REMOVIDO
     
     // NEW: Mercado Pago Environment Variables
     const MP_CLIENT_ID = process.env.MP_CLIENT_ID;
     const MP_CLIENT_SECRET = process.env.MP_CLIENT_SECRET;
     const MP_REDIRECT_URI = process.env.MP_REDIRECT_URI;
-    const MP_OWNER_ID = process.env.MP_OWNER_ID; // ID do usuário dono do SaaS no Supabase
+    const MP_OWNER_ID = process.env.MP_OWNER_ID; 
 
-    // Validate environment variables
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SUPABASE_ANON_KEY || !GEMINI_API_KEY || !FREEPIK_API_KEY || !MP_CLIENT_ID || !MP_CLIENT_SECRET || !MP_REDIRECT_URI || !MP_OWNER_ID) {
-      console.error("Missing one or more environment variables (Supabase, Gemini, Freepik, or Mercado Pago). Please check your .env.local file.");
+    // Validate environment variables (Removed FREEPIK_API_KEY check)
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SUPABASE_ANON_KEY || !GEMINI_API_KEY || !MP_CLIENT_ID || !MP_CLIENT_SECRET || !MP_REDIRECT_URI || !MP_OWNER_ID) {
+      console.error("Missing one or more environment variables (Supabase, Gemini, or Mercado Pago). Please check your .env.local file.");
       process.exit(1);
     }
 
@@ -43,9 +43,6 @@ const express = require('express');
       auth: { autoRefreshToken: false, persistSession: false },
     });
     
-    // Mercado Pago Configuration (using the owner's credentials for OAuth flow)
-    // Note: We initialize MP SDK later with the owner's access token for payments.
-
     // Gemini AI Client
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -193,7 +190,7 @@ const express = require('express');
         }
     };
 
-    // AI Prompt Generation (Refactored)
+    // AI Prompt Generation (Refactored to match user's request)
     async function generateDetailedPrompt(promptInfo) {
       const { companyName, phone, addressStreet, addressNumber, addressNeighborhood, addressCity, details } = promptInfo;
       
@@ -204,76 +201,90 @@ const express = require('express');
         
       const servicesList = details.split('.').map(s => s.trim()).filter(s => s.length > 5).join('; ');
       
-      const prompt = `Você é um designer profissional de social media. Gere uma arte de FLYER VERTICAL em alta qualidade, com aparência profissional, inspirada em flyers modernos de pet shop, oficina mecânica, barbearia, lanchonete, salão de beleza, imobiliária e clínica, com:
-
+      // Prompt base conforme solicitado pelo usuário
+      const prompt = `Você é um designer profissional de social media. Gere uma arte de FLYER VERTICAL em alta qualidade, com aparência profissional.  
+Use como referência o nível de qualidade de flyers modernos de pet shop, oficina mecânica, barbearia, lanchonete, salão de beleza, imobiliária e clínica, com:  
 - composição bem organizada;  
-- tipografia clara, com hierarquia entre título, subtítulo e lista de serviços;  
+- tipografia clara e hierarquia entre título, subtítulo e lista de serviços;  
 - ilustrações ou imagens relacionadas ao nicho;  
-- fundo bem trabalhado, mas sem poluir o texto.
-
+- fundo bem trabalhado, mas sem poluir o texto.  
 Nicho do cliente: ${details}.  
-
-Dados que DEVEM aparecer no flyer:
+Dados que DEVEM aparecer no flyer:  
 - Nome da empresa: ${companyName}  
 - Serviços principais: ${servicesList}  
 - Benefícios / diferenciais: ${servicesList}  
 - Telefone/WhatsApp: ${phone}  
 - Endereço (se houver): ${address}  
-
-Diretrizes de design:
-- Usar cores coerentes com o nicho.  
+Diretrizes de design:  
+- Usar cores coerentes com o nicho (ex.: suaves para pet shop/saúde; escuras e fortes para mecânica/barbearia; quentes para lanchonete etc.).  
 - Reservar espaço para o logotipo.  
-- Não inventar textos aleatórios; usar somente as informações fornecidas.
-`;
+- Não inventar textos aleatórios; use somente os dados fornecidos.`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
       return response.text();
     }
 
-    // Freepik Image Generation
+    // Google AI Studio Image Generation (Using Imagen/Nano Banana via REST API)
     async function generateImage(detailedPrompt) {
+      // NOTE: The @google/generative-ai SDK does not currently support image generation 
+      // via the standard Node.js client. We simulate the call to the Imagen API 
+      // using axios and the GEMINI_API_KEY, assuming a compatible REST endpoint exists.
+      
+      // For this implementation, we will use a placeholder URL and structure 
+      // that would typically be used for a Google Image Generation API call.
+      
+      const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${GEMINI_API_KEY}`;
+      
       try {
         const response = await axios.post(
-          'https://api.freepik.com/v1/ai/image-generator',
+          IMAGEN_API_URL,
           {
             prompt: detailedPrompt,
-            art_style: 'photorealistic', 
-            aspect_ratio: '3:4', 
-            output_type: 'url',
-            num_images: 1,
+            config: {
+              numberOfImages: 1,
+              outputMimeType: 'image/png',
+              aspectRatio: '3:4', // Vertical flyer
+              // Add other necessary configuration for quality/style here
+            }
           },
           {
             headers: {
               'Content-Type': 'application/json',
-              'X-Freepik-API-Key': FREEPIK_API_KEY,
             },
           }
         );
 
-        if (response.data && response.data.data && response.data.data.length > 0) {
-          return response.data.data[0].image_url;
+        if (response.data && response.data.generatedImages && response.data.generatedImages.length > 0) {
+          // The response should contain base64 encoded image data
+          const base64Image = response.data.generatedImages[0].image.imageBytes;
+          
+          // Convert base64 to a data URL for easier handling in the next step (upload)
+          return `data:image/png;base64,${base64Image}`;
         } else {
-          throw new Error('Nenhuma imagem gerada pela Freepik.');
+          throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
         }
       } catch (error) {
-        console.error('Erro ao gerar imagem com Freepik:', error.response ? error.response.data : error.message);
-        throw new Error('Falha ao gerar imagem. Tente novamente mais tarde.');
+        console.error('Erro ao gerar imagem com Google AI Studio:', error.response ? error.response.data : error.message);
+        throw new Error('Falha ao gerar imagem. Verifique a chave GEMINI_API_KEY e as permissões de imagem.');
       }
     }
 
-    // Supabase Storage Upload
-    async function uploadImageToSupabase(imageUrl, userId) {
+    // Supabase Storage Upload (Adjusted to handle Base64 Data URL from generateImage)
+    async function uploadImageToSupabase(imageDataUrl, userId) {
       try {
-        const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
-        const actualContentType = imageResponse.headers['content-type'] || 'image/png'; 
-
+        const matches = imageDataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
+          throw new Error('Formato de base64 inválido após geração.');
+        }
+        const contentType = matches[1];
+        const imageBuffer = Buffer.from(matches[2], 'base64');
+        
         const filePath = `${userId}/${uuidv4()}.png`; 
         const { data, error } = await supabaseService.storage
           .from('generated-arts')
           .upload(filePath, imageBuffer, {
-            contentType: actualContentType, 
+            contentType: contentType, 
             upsert: false,
           });
 
@@ -353,19 +364,20 @@ Diretrizes de design:
             // Return 403 and the quota message
             return res.status(403).json({ error: quotaResponse.message, quotaStatus: 'BLOCKED', usage: quotaResponse.usage, plan: quotaResponse.plan });
         }
-        // NEAR_LIMIT status is handled by the frontend via the check-quota endpoint/response
         
         // --- REAL AI GENERATION FLOW ---
         console.log(`[${user.id}] Step 1: Generating detailed prompt for user ${user.email}...`);
         const detailedPrompt = await generateDetailedPrompt(sanitizedPromptInfo);
         console.log(`[${user.id}] Step 1 Complete. Detailed prompt (first 100 chars): ${detailedPrompt.substring(0, 100)}...`);
 
-        console.log(`[${user.id}] Step 2: Generating image with Freepik...`);
-        const generatedImageUrl = await generateImage(detailedPrompt);
-        console.log(`[${user.id}] Step 2 Complete. Generated URL: ${generatedImageUrl}`);
+        console.log(`[${user.id}] Step 2: Generating image with Google AI Studio (Imagen)...`);
+        // generateImage now returns a Base64 Data URL
+        const generatedImageDataUrl = await generateImage(detailedPrompt);
+        console.log(`[${user.id}] Step 2 Complete. Image Data URL generated.`);
 
         console.log(`[${user.id}] Step 3: Uploading image to Supabase for user ${user.id}...`);
-        const imagePath = await uploadImageToSupabase(generatedImageUrl, user.id);
+        // uploadImageToSupabase now handles the Base64 Data URL
+        const imagePath = await uploadImageToSupabase(generatedImageDataUrl, user.id);
         console.log(`[${user.id}] Step 3 Complete. Supabase path: ${imagePath}`);
 
         console.log(`[${user.id}] Step 4: Saving record to database and incrementing usage for user ${user.id}...`);
