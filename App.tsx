@@ -35,6 +35,9 @@ export const App: React.FC = () => {
   // Profile Hook
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
 
+  // Combined User State (passed to hooks/components)
+  const profileRole = (profile?.role || 'free') as UserRole;
+  
   // Usage Hook
   const { 
     plans, 
@@ -45,11 +48,9 @@ export const App: React.FC = () => {
     currentUsage, 
     maxImages,
     currentPlan
-  } = useUsage(authUser?.id);
+  } = useUsage(authUser?.id, profileRole); // <-- Passed profileRole here
 
   // Combined User State (passed to hooks/components)
-  const profileRole = (profile?.role || 'free') as UserRole;
-  
   const user: User | null = authUser && profile ? {
     id: authUser.id,
     email: authUser.email,
