@@ -234,65 +234,57 @@ Diretrizes de design:
   return response.text();
 }
 
-// Geração de imagem com Google AI Studio (Imagen)
+// Geração de imagem com Google AI Studio (Imagen) - SIMPLIFICADA
 async function generateImage(detailedPrompt) {
   if (!GEMINI_API_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');
   }
   
-  // Usando o modelo mais estável e comum para geração de imagens
-  const IMAGEN_MODEL = 'imagen-3.0'; // Mantendo o 3.0, mas se falhar, o problema é na chave/permissão.
+  console.log(`[GENERATE] Iniciando geração de imagem com o prompt: ${detailedPrompt.substring(0, 100)}...`);
+  
+  const IMAGEN_MODEL = 'imagen-3.0';
   const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGEN_MODEL}:generateImages?key=${GEMINI_API_KEY}`;
   
+  const requestBody = {
+    prompt: detailedPrompt,
+    config: { 
+      numberOfImages: 1, 
+      outputMimeType: 'image/png', 
+      aspectRatio: '3:4',
+      language: "pt"
+    }
+  };
+
   try {
-    const response = await axios.post(
-      IMAGEN_API_URL,
-      {
-        prompt: detailedPrompt,
-        config: { 
-          numberOfImages: 1, 
-          outputMimeType: 'image/png', 
-          aspectRatio: '3:4',
-          language: "pt"
-        }
-      },
-      { 
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 60000 // 60 segundos timeout
-      }
-    );
+    console.log(`[GENERATE] Enviando requisição para a API do Google...`);
+    const response = await axios.post(IMAGEN_API_URL, requestBody, { 
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 60000 
+    });
+    
+    console.log(`[GENERATE] Resposta da API recebida. Status: ${response.status}`);
+    console.log(`[GENERATE] Corpo da resposta:`, JSON.stringify(response.data, null, 2));
     
     if (response.data?.generatedImages?.length > 0) {
       const base64Image = response.data.generatedImages[0].image.imageBytes;
       return `data:image/png;base64,${base64Image}`;
     } else {
-      throw new Error('Nenhuma imagem gerada pelo Google AI Studio.');
+      throw new Error('Nenhuma imagem gerada pelo Google AI Studio. Resposta inesperada.');
     }
   } catch (error) {
-    let errorMessage = 'Falha ao gerar imagem. Verifique o modelo ou a API KEY.';
-    
+    console.error(`[GENERATE] ERRO DURANTE A CHAMADA DA API DE IMAGEM:`);
     if (error.response) {
-        // Tenta capturar o erro do corpo da resposta
-        const errorData = error.response.data;
-        const status = error.response.status;
-        
-        console.error(`Erro da API do Google (Status ${status}):`, JSON.stringify(errorData, null, 2));
-        
-        if (errorData && errorData.error && errorData.error.message) {
-            errorMessage = `Erro da API de Imagem: ${errorData.error.message}`;
-        } else if (status === 403) {
-            errorMessage = 'Acesso Negado (403). Verifique se o Faturamento está ativo no Google Cloud para o modelo Imagen.';
-        } else if (status === 400) {
-            errorMessage = 'Requisição Inválida (400). Verifique se o modelo Imagen está habilitado.';
-        } else {
-            errorMessage = `Erro desconhecido da API do Google (Status ${status}).`;
-        }
+      console.error(`Status: ${error.response.status}`);
+      console.error(`Headers:`, error.response.headers);
+      console.error(`Data:`, JSON.stringify(error.response.data, null, 2));
+    } else if (error.request) {
+      console.error(`Request:`, error.request);
     } else {
-        console.error('Erro de rede/timeout:', error.message);
-        errorMessage = `Erro de rede ou timeout: ${error.message}`;
+      console.error(`Message:`, error.message);
     }
     
-    throw new Error(errorMessage);
+    // Lança um erro genérico para ser capturado pelo handler principal
+    throw new Error('Falha ao gerar imagem. Verifique os logs do servidor para mais detalhes.');
   }
 }
 
@@ -337,6 +329,8 @@ app.get('/api/check-quota', authenticateToken, async (req, res, next) => {
 });
 
 app.post('/api/generate', authenticateToken, generationLimiter, async (req, res, next) => {
+  console.log(`[GENERATE] Requisição de geração recebida para o usuário: ${req.user.id}`);
+  
   if (!GEMINI_API_KEY || !SUPABASE_SERVICE_KEY) {
     return next(new Error("Configuração do servidor incompleta. Verifique as chaves GEMINI_API_KEY e SUPABASE_SERVICE_KEY."));
   }
@@ -367,9 +361,10 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res,
 
   try {
     // Verificar quota
+    console.log(`[GENERATE] Verificando quota...`);
     const quotaResponse = await checkImageQuota(user.id);
     if (quotaResponse.status === 'BLOCKED') {
-        // Retorna a resposta completa de quota para o frontend
+        console.log(`[GENERATE] Usuário bloqueado por quota.`);
         return res.status(403).json({ error: quotaResponse.message, quotaStatus: 'BLOCKED', ...quotaResponse });
     }
     
@@ -399,6 +394,7 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res,
     res.json({ message: 'Arte gerada com sucesso!', image });
 
   } catch (error) {
+    console.error(`[ERRO GLOBAL] Erro no endpoint /api/generate:`, error);
     next(error);
   }
 });
