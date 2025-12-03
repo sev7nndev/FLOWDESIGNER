@@ -211,9 +211,9 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                     </span>
                 </Button>
                 {error && (
-                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 animate-fade-in">
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />
-                        <p>{error}</p>
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-start gap-2 animate-fade-in">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0 mt-1" />
+                        <p className="break-words">{error}</p>
                     </div>
                 )}
             </div>
