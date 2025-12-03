@@ -929,6 +929,12 @@ app.post('/api/subscribe', authenticateToken, async (req, res, next) => {
 });
 
 // NEW: Mercado Pago Webhook/IPN Endpoint
+// Adicionado para que o teste de URL do Mercado Pago (que usa GET) funcione.
+// Ela apenas confirma que a URL está ativa.
+app.get('/api/mp-webhook', (req, res) => {
+    res.status(200).send('OK');
+});
+
 app.post('/api/mp-webhook', async (req, res) => {
     const { type, data } = req.body;
     
