@@ -22,7 +22,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, planId, plans,
     if (!selectedPlan) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white">
-                <p>Plano não encontrado. <Button variant="link" onClick={onBack}>Voltar</Button></p>
+                <p>Plano não encontrado. <Button variant="ghost" onClick={onBack}>Voltar</Button></p>
             </div>
         );
     }
