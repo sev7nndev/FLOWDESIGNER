@@ -49,7 +49,7 @@ const supabaseAnon = createClient(SUPABASE_URL || 'http://dummy.url', SUPABASE_A
 
 // Cliente Gemini AI
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || 'dummy_key');
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+// Não inicializamos o modelo aqui, mas sim na função generateDetailedPrompt
 
 // Middleware
 app.use(cors({
@@ -199,7 +199,8 @@ Diretrizes de design:
 - Reservar espaço para o logotipo.  
 - Não inventar textos aleatórios; use somente os dados fornecidos.`;
 
-  const result = await model.generateContent(prompt);
+  // Usando o modelo diretamente na chamada
+  const result = await genAI.getGenerativeModel({ model: "gemini-2.5-flash" }).generateContent(prompt);
   const response = await result.response;
   return response.text();
 }
@@ -347,6 +348,13 @@ app.post('/api/generate', authenticateToken, generationLimiter, async (req, res,
     next(error);
   }
 });
+
+// --- Admin Endpoints (Placeholder for brevity, assuming they exist) ---
+// ... (other admin endpoints)
+
+// --- Mercado Pago Endpoints (Placeholder for brevity, assuming they exist) ---
+// ... (other MP endpoints)
+
 
 // Error Handler
 app.use((err, req, res, next) => {
