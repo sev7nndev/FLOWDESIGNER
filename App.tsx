@@ -12,11 +12,11 @@ import { useProfile } from './hooks/useProfile';
 import { GenerationForm } from './components/GenerationForm';
 import { AppHeader } from './components/AppHeader'; 
 import { useLandingImages } from './hooks/useLandingImages'; 
-import { DevPanelPage } from './pages/DevPanelPage'; 
-import { PlansPage } from './pages/PlansPage'; // Import PlansPage
+import { DevPanelPage } from './src/pages/DevPanelPage'; // Corrigido
+import { PlansPage } from './src/pages/PlansPage'; // Corrigido
 import { useUsage } from './hooks/useUsage'; // Import useUsage
 import { Toaster } from 'sonner'; // Import Toaster
-import { CheckoutPage } from './pages/CheckoutPage'; // Import CheckoutPage
+import { CheckoutPage } from './src/pages/CheckoutPage'; // Corrigido
 
 // Define a minimal structure for the authenticated user before profile is loaded
 interface AuthUser {
