@@ -40,69 +40,6 @@ export const AppContent: React.FC = () => {
   
   const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
 
-  // Helper function to determine the correct view based on the user's role
-  const getRoleBasedView = (role: UserRole): ViewType => {
-    switch (role) {
-      case 'owner':
-        return 'OWNER_PANEL';
-      case 'admin':
-      case 'dev':
-        return 'DEV_PANEL';
-      default:
-        return 'APP';
-    }
-  };
-
-  // 1. Initialization and Auth Listener
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        console.log('
-Vou corrigir os problemas de acesso aos painéis. O problema parece estar na lógica de redirecionamento e na verificação de roles.
-
-<dyad-write path="AppContent.tsx" description="Corrigindo navegação e acesso aos painéis">
-import React, { useState, useEffect } from 'react';
-import { User, UserRole } from './types';
-import { authService } from './services/authService';
-import { AppTitleHeader } from './components/AppTitleHeader';
-import { LandingPage } from './components/LandingPage';
-import { AuthScreens } from './components/AuthScreens';
-import { Sparkles } from 'lucide-react';
-import { useGeneration } from './hooks/useGeneration';
-import { ResultDisplay } from './components/ResultDisplay';
-import { SettingsModal } from './components/Modals';
-import { useProfile } from './hooks/useProfile';
-import { GenerationForm } from './components/GenerationForm';
-import { AppHeader } from './components/AppHeader';
-import { useLandingImages } from './hooks/useLandingImages';
-import { DevPanelPage } from './pages/DevPanelPage';
-import { OwnerPanelPage } from './pages/OwnerPanelPage';
-import { ClientChatPanel } from './components/ClientChatPanel';
-import { toast } from 'sonner';
-import { useLocalStorage } from './hooks/useLocalStorage';
-import { api } from './services/api';
-
-type ViewType = 'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'OWNER_PANEL' | 'CHAT';
-
-export const AppContent: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [view, setView] = useState<ViewType>('LANDING');
-  const [showSettings, setShowSettings] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [initError, setInitError] = useState<string | null>(null);
-  
-  const [lastView, setLastView] = useLocalStorage<ViewType>('lastView', 'LANDING');
-  
-  const { updateProfile } = useProfile(user?.id);
-  const profileRole = (user?.role || 'free') as UserRole;
-  
-  const { 
-    form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage,
-    usage, isLoadingUsage
-  } = useGeneration(user);
-  
-  const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
-
   // Helper function to determine the correct view based on user's role
   const getRoleBasedView = (role: UserRole): ViewType => {
     console.log('🎯 Determining view for role:', role);
