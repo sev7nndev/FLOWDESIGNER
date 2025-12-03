@@ -31,6 +31,7 @@ export const App: React.FC = () => {
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState<QuotaCheckResponse | null>(null); // State for Upgrade Modal
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null); // NEW: Track selected plan before auth
   
   // Profile Hook
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
@@ -47,7 +48,8 @@ export const App: React.FC = () => {
     quotaStatus, 
     currentUsage, 
     maxImages,
-    currentPlan
+    currentPlan,
+    plans // Keep plans available for AuthScreens/LandingPage
   } = useUsage(authUser?.id, profileRole); // <-- Passed profileRole here
 
   // Combined User State (passed to hooks/components)
@@ -73,6 +75,11 @@ export const App: React.FC = () => {
   // Landing Images Hook (Used by LandingPage and DevPanel)
   const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
 
+  // NEW: Handle plan selection from Landing Page
+  const handleSelectPlan = useCallback((planId: string) => {
+      setSelectedPlanId(planId);
+      setView('AUTH');
+  }, []);
 
   const fetchAuthUser = (supabaseUser: any) => {
     const newAuthUser: AuthUser = {
@@ -82,6 +89,7 @@ export const App: React.FC = () => {
     };
     setAuthUser(newAuthUser);
     setView('APP');
+    setSelectedPlanId(null); // Clear selected plan after successful login
   };
 
   // Init Auth & History
@@ -140,8 +148,9 @@ export const App: React.FC = () => {
       <>
         <Toaster position="top-right" richColors />
         <LandingPage 
-          onGetStarted={() => setView('AUTH')} 
+          onGetStarted={() => handleSelectPlan('free')} // Default to free plan on generic start
           onLogin={() => setView('AUTH')} 
+          onSelectPlan={handleSelectPlan} // Pass new handler
           landingImages={landingImages}
           isLandingImagesLoading={isLandingImagesLoading}
         />
@@ -153,7 +162,12 @@ export const App: React.FC = () => {
     return (
       <>
         <Toaster position="top-right" richColors />
-        <AuthScreens onSuccess={() => {}} onBack={() => setView('LANDING')} />
+        <AuthScreens 
+            onSuccess={() => {}} 
+            onBack={() => { setView('LANDING'); setSelectedPlanId(null); }} 
+            selectedPlanId={selectedPlanId} // Pass selected plan
+            plans={plans} // Pass plans for context
+        />
       </>
     );
   }

@@ -12,6 +12,7 @@ import { api } from '../services/api';
 interface LandingPageProps {
   onGetStarted: () => void;
   onLogin: () => void;
+  onSelectPlan: (planId: string) => void; // NEW: Handler for selecting a plan
   landingImages: LandingImage[];
   isLandingImagesLoading: boolean;
 }
@@ -57,7 +58,7 @@ const FALLBACK_FLYERS: FlyerData[] = [
 ];
 
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, landingImages, isLandingImagesLoading }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onSelectPlan, landingImages, isLandingImagesLoading }) => {
   const [plans, setPlans] = useState<EditablePlan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   
@@ -157,7 +158,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <button onClick={onLogin} className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
               Entrar
             </button>
-            <Button onClick={onGetStarted} className="hidden md:block text-sm font-medium px-5 py-2 rounded-full">
+            <Button onClick={() => onSelectPlan('free')} className="hidden md:block text-sm font-medium px-5 py-2 rounded-full">
               Criar Conta
             </Button>
           </div>
@@ -165,7 +166,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       </nav>
 
       <main>
-        <HeroSection onGetStarted={onGetStarted} />
+        <HeroSection onGetStarted={() => onSelectPlan('free')} />
 
         {/* Marquee Gallery (Infinite Scroll) */}
         <section className="py-10 border-y border-white/5 bg-black/30 overflow-hidden relative">
@@ -263,7 +264,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                             buttonText="Criar Conta Grátis"
                             // Dynamically add the quota to the features list
                             features={[`${freePlan.max_images_per_month} imagens por mês`, ...freePlan.features.filter(f => !f.toLowerCase().includes('imagens'))]}
-                            onClick={onGetStarted}
+                            onClick={() => onSelectPlan('free')} // Use onSelectPlan
                         />
                     )}
 
@@ -276,7 +277,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                             buttonText="Assinar Start"
                             features={starterPlan.features}
                             highlight={false}
-                            onClick={onGetStarted}
+                            onClick={() => onSelectPlan('starter')} // Use onSelectPlan
                         />
                     )}
 
@@ -290,7 +291,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                             features={proPlan.features}
                             highlight={true}
                             badge="Melhor Custo-Benefício"
-                            onClick={onGetStarted}
+                            onClick={() => onSelectPlan('pro')} // Use onSelectPlan
                         />
                     )}
                 </div>
@@ -355,7 +356,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
                     Comece a gerar artes de alta conversão em segundos com a inteligência artificial do Flow Designer.
                 </p>
-                <Button onClick={onGetStarted} className="h-14 px-10 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20">
+                <Button onClick={() => onSelectPlan('free')} className="h-14 px-10 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20">
                     Quero Minhas Artes Agora <ChevronRight className="ml-2" />
                 </Button>
             </div>

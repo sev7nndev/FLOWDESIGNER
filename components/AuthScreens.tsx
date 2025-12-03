@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { Button } from './Button';
-import { Sparkles, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Sparkles, ArrowLeft, CheckCircle2, Zap, DollarSign } from 'lucide-react';
 import { authService } from '../services/authService';
 import { GoogleIcon } from './GoogleIcon';
-import { User } from '../types'; // Import User type
+import { User, EditablePlan } from '../types'; // Import User type and EditablePlan
 
 interface AuthScreensProps {
   onSuccess: (user: User | null) => void; 
   onBack: () => void;
+  selectedPlanId: string | null; // NEW: ID of the plan the user intends to subscribe to
+  plans: EditablePlan[]; // NEW: Full list of plans for display context
 }
 
-export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) => {
+export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, selectedPlanId, plans }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -59,7 +61,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
       setIsLoading(false);
     }
   };
-
+  
   const handleGoogleLogin = async () => {
     setError('');
     setIsGoogleLoading(true);
@@ -70,6 +72,9 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
       setIsGoogleLoading(false);
     }
   };
+  
+  const selectedPlan = selectedPlanId ? plans.find(p => p.id === selectedPlanId) : null;
+  const isPaidPlan = selectedPlanId && selectedPlanId !== 'free';
 
   // --- TELA DE SUCESSO PÓS-CADASTRO ---
   if (successMessage) {
@@ -97,6 +102,24 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack }) =
         <button onClick={onBack} className="absolute top-8 left-8 text-gray-500 hover:text-white">
           <ArrowLeft size={20} />
         </button>
+        
+        {/* NEW: Plan Intent Message */}
+        {selectedPlan && (
+            <div className={`p-4 rounded-xl mb-6 text-center ${isPaidPlan ? 'bg-primary/10 border border-primary/30' : 'bg-green-500/10 border border-green-500/30'}`}>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                    {isPaidPlan ? <DollarSign size={20} className="text-primary" /> : <Zap size={20} className="text-green-400" />}
+                    <h3 className="text-lg font-bold text-white">
+                        {isPaidPlan ? `Assinar Plano ${selectedPlan.display_name}` : 'Começar Grátis'}
+                    </h3>
+                </div>
+                <p className="text-sm text-gray-400">
+                    {isLogin 
+                        ? `Faça login para prosseguir com a assinatura do plano ${selectedPlan.display_name}.`
+                        : `Crie sua conta para iniciar o plano ${selectedPlan.display_name}.`
+                    }
+                </p>
+            </div>
+        )}
 
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-4">
