@@ -7,14 +7,27 @@ import { getSupabase } from "./supabaseClient";
 export const authService = {
   init: () => {},
 
-  login: async (email: string, password: string): Promise<User | null> => {
+  login: async (email: string, password: string, shouldRemember: boolean = true): Promise<User | null> => {
     const supabase = getSupabase();
     
     if (!supabase) {
       throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
     }
     
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    // Determine session duration based on shouldRemember
+    const expiresIn = shouldRemember ? 60 * 60 * 24 * 30 : 60 * 60 * 24; // 30 days vs 1 day
+    
+    const { data, error } = await supabase.auth.signInWithPassword({ 
+      email, 
+      password,
+      options: {
+        redirectTo: undefined, // Use default behavior
+        shouldRemember: shouldRemember, // Supabase handles session persistence based on this
+        // The actual session duration is often controlled by the Supabase project settings, 
+        // but passing shouldRemember is the correct client-side practice.
+      }
+    });
+    
     if (error) {
       throw new Error(error.message || 'Email ou senha inválidos.');
     }

@@ -9,12 +9,13 @@ const generateDetailedPrompt = (promptInfo) => {
   const address = [addressStreet, addressNumber, addressNeighborhood, addressCity].filter(Boolean).join(', ');
   const servicesList = details.split(/[.;]/).map(s => s.trim()).filter(s => s.length > 5).join(', ');
 
-  return `Create a professional VERTICAL FLYER design (9:16 aspect ratio) for social media and printing.
+  return `Create a high-conversion, professional, modern VERTICAL FLYER design (9:16 aspect ratio) for social media and printing. The style must be hyper-detailed, cinematic, and visually striking, suitable for a premium marketing campaign.
 
 CRITICAL REQUIREMENTS:
-- The flyer must fill the ENTIRE image area - NO backgrounds, frames, shadows, or mockups around it
-- The flyer itself IS the complete image - edge to edge
-- Design should be ready to post/print directly without any cropping needed
+- The flyer must fill the ENTIRE image area - NO backgrounds, frames, shadows, or mockups around it. The image IS the final design.
+- Use high-contrast lighting, deep shadows, and vibrant colors.
+- Focus on a single, powerful visual element (product, service, or concept).
+- The final output must be a complete, ready-to-use flyer with no additional backgrounds or frames.
 
 BUSINESS INFORMATION:
 Company: ${companyName}
@@ -23,27 +24,18 @@ Phone/WhatsApp: ${phone}
 Address: ${address}
 
 DESIGN SPECIFICATIONS:
-1. LAYOUT: Modern, professional vertical flyer layout with clear visual hierarchy
-2. TYPOGRAPHY: Bold, readable fonts for headlines; clean fonts for body text
-3. COLORS: Vibrant, eye-catching color scheme appropriate for the business niche (${details})
+1. LAYOUT: Dynamic, professional vertical layout. Clear separation between visual and text areas.
+2. TYPOGRAPHY: Use bold, modern, sans-serif fonts for headlines. Text must be highly readable and integrated into the design.
+3. COLORS: Select a color palette that strongly contrasts with the background for maximum impact.
 4. COMPOSITION: 
-   - Company name/logo prominently at top
-   - Main message/offer in the center with large, bold text
-   - Services/products listed clearly with icons or bullet points
-   - Contact information (phone/WhatsApp) highly visible at bottom
+   - Company name/logo prominently displayed.
+   - Main offer/CTA (Call to Action) in large, attention-grabbing text.
+   - Contact information (phone/WhatsApp) clearly visible at the bottom or center-right.
    - Address included if space permits
-5. VISUAL ELEMENTS:
-   - High-quality imagery related to the business
-   - Professional graphics, icons, or illustrations
-   - Balanced use of negative space
-   - Modern design trends (gradients, geometric shapes, etc.)
-6. STYLE: Contemporary, polished, and marketing-focused design that grabs attention
-
-The final output must be a complete, ready-to-use flyer with no additional backgrounds or frames.`;
+5. STYLE: High-end advertising, digital art, cinematic lighting, 8K resolution, ultra-detailed, high-conversion marketing design.`;
 };
 
-// Geração de imagem com Gemini 2.5 Image
-// Geração de imagem com Imagen 3
+// Geração de imagem com Imagen 4
 async function generateImage(detailedPrompt) {
   if (!GEMINI_API_KEY) {
     throw new Error('Configuração do servidor incompleta: A chave GEMINI_API_KEY está ausente.');

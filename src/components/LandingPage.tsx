@@ -8,6 +8,7 @@ import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
 import { LandingImage, EditablePlan } from '@/types';
 import { HeroSection } from './Hero'; 
 import { api } from '@/services/api';
+import { FlowDesignerLogo } from './FlowDesignerLogo'; // Import the new logo component
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -152,12 +153,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-zinc-950/95">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary/20 p-1.5 rounded-lg border border-primary/20">
-               <Sparkles size={16} className="text-primary" />
-            </div>
-            <span className="text-white font-bold tracking-tight text-lg">FlowDesigner</span>
-          </div>
+          <FlowDesignerLogo iconSize={16} className="text-lg" />
           <div className="flex gap-4 items-center">
             <button onClick={onLogin} className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
               Entrar
@@ -332,7 +328,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                         role="Esteticista" 
                         text="Minha clínica precisava de uma identidade mais premium. O Flow Designer capturou exatamente o estilo 'clean' que eu queria. Recomendo!" 
                         stars={5}
-                        image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop"
+                        image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto-format&fit=crop"
                       />
                     </div>
                     <div className="w-[300px] md:w-[400px] flex-shrink-0">
@@ -341,7 +337,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                         role="Lojista de Moda" 
                         text="As vendas da minha loja aumentaram muito depois que comecei a usar os templates de oferta. É muito rápido e profissional." 
                         stars={5}
-                        image="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop"
+                        image="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto-format&fit=crop"
                       />
                     </div>
                  </React.Fragment>
@@ -388,12 +384,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
         {/* Footer */}
         <footer className="border-t border-white/5 py-12 bg-zinc-950 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-             <div className="bg-white/10 p-1.5 rounded-lg">
-               <Sparkles size={16} className="text-white" />
-            </div>
-            <span className="text-white font-bold">FlowDesigner</span>
-          </div>
+          <FlowDesignerLogo iconSize={16} className="justify-center mb-4" />
           <p className="text-gray-500 text-sm">© 2024 Flow Designer. Todos os direitos reservados.</p>
         </footer>
       </main>

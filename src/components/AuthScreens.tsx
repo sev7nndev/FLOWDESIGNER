@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../components/Button';
-import { Sparkles, ArrowLeft, CheckCircle2, Zap, DollarSign } from 'lucide-react';
+import { Sparkles, ArrowLeft, CheckCircle2, Zap, DollarSign, Eye, EyeOff } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { GoogleIcon } from './GoogleIcon';
 import { User, EditablePlan } from '@/types'; // Import User type and EditablePlan
@@ -18,6 +18,8 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // NEW: Password visibility state
+  const [rememberMe, setRememberMe] = useState(true); // NEW: Remember me state
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -34,7 +36,8 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
 
     try {
       if (isLogin) {
-        await authService.login(formData.email, formData.password);
+        // Pass rememberMe state to authService.login
+        await authService.login(formData.email, formData.password, rememberMe);
         onSuccess(null); 
       } else {
         if (!formData.firstName) throw new Error("Primeiro nome é obrigatório");
@@ -172,15 +175,43 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
           
           <div>
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Senha</label>
-            <input 
-              type="password" 
-              required 
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, password: e.target.value})}
-            />
+            <div className="relative">
+                <input 
+                  type={showPassword ? 'text' : 'password'} // Toggle type
+                  required 
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none pr-12"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, password: e.target.value})}
+                />
+                <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-white"
+                >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+            </div>
           </div>
+          
+          {isLogin && (
+            <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                    <input
+                        id="remember-me"
+                        name="remember-me"
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="h-4 w-4 text-primary border-gray-600 rounded bg-black/50 focus:ring-primary"
+                    />
+                    <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-400">
+                        Lembrar login
+                    </label>
+                </div>
+                {/* Optional: Forgot Password link could go here */}
+            </div>
+          )}
 
           {error && <p className="text-red-400 text-xs text-center">{error}</p>}
 
