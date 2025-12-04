@@ -35,7 +35,6 @@ export default {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'fade-in': 'fadeIn 0.8s ease-out forwards',
         'shimmer': 'shimmer 2s linear infinite',
-        'scroll': 'scroll 320s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -46,10 +45,6 @@ export default {
           '0%': { backgroundPosition: '0% 0%' },
           '100%': { backgroundPosition: '-200% 0%' },
         },
-        scroll: {
-          '0%': { transform: 'translateX(0)' },
-          '100%': { transform: 'translateX(-50%)' },
-        }
       }
     },
   },

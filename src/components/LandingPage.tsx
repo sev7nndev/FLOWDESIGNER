@@ -8,6 +8,7 @@ import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
 import { LandingImage, EditablePlan } from '@/types';
 import { HeroSection } from './Hero'; 
 import { api } from '@/services/api';
+import { motion } from 'framer-motion'; // Importando Framer Motion
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -149,7 +150,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 <Loader2 size={24} className="animate-spin mr-2" /> Carregando carrossel...
             </div>
           ) : (
-            <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-4 p-4">
+            <motion.div 
+              className="flex w-max gap-4 p-4"
+              animate={{ x: '-50%' }}
+              transition={{
+                ease: 'linear',
+                duration: 200, // Duração bem longa para movimento lento
+                repeat: Infinity,
+                repeatType: 'loop'
+              }}
+            >
               {marqueeContent.map((item: FlyerMockupProps, idx: number) => (
                 <FlyerMockup 
                   key={idx} 
@@ -157,7 +167,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                   title={item.title} 
                 />
               ))}
-            </div>
+            </motion.div>
           )}
         </section>
 
