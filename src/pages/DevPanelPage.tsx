@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info } from 'lucide-react';
+import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info, ImageUp } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '@/types';
 import { useLandingImages } from '@/hooks/useLandingImages';
@@ -7,11 +7,14 @@ import { useAdminGeneratedImages } from '@/hooks/useAdminGeneratedImages';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
 import { getSupabase } from '@/services/supabaseClient';
+import { FlowDesignerIcon } from '../components/FlowDesignerLogo';
 
 interface DevPanelPageProps {
   user: User | null;
   onBackToApp: () => void;
   onLogout: () => void;
+  saasLogoUrl: string | null; // NEW
+  refreshConfig: () => void; // NEW
 }
 
 // --- Image Upload Component (Reused) ---
@@ -100,6 +103,92 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUpload }) => {
         </div>
     );
 };
+
+// --- NEW: SaaS Logo Manager Component ---
+interface SaasLogoManagerProps {
+    user: User;
+    saasLogoUrl: string | null;
+    refreshConfig: () => void;
+}
+
+const SaasLogoManager: React.FC<SaasLogoManagerProps> = ({ user, saasLogoUrl, refreshConfig }) => {
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+
+    const handleUploadLogo = useCallback(async (file: File) => {
+        setDeleteError(null);
+        try {
+            await api.uploadSaasLogo(file);
+            toast.success("Logo atualizado com sucesso!");
+            refreshConfig();
+        } catch (e: any) {
+            toast.error(e.message || "Falha ao fazer upload do logo.");
+            throw e; // Re-throw to be caught by ImageUpload component
+        }
+    }, [refreshConfig]);
+    
+    const handleDeleteLogo = useCallback(async () => {
+        setIsDeleting(true);
+        setDeleteError(null);
+        try {
+            await api.deleteSaasLogo();
+            toast.success("Logo removido. Revertendo para o logo padrão.");
+            refreshConfig();
+        } catch (e: any) {
+            setDeleteError(e.message || "Falha ao deletar o logo.");
+            toast.error(e.message || "Falha ao deletar o logo.");
+        } finally {
+            setIsDeleting(false);
+        }
+    }, [refreshConfig]);
+
+    return (
+        <div className="space-y-4 bg-zinc-900/50 p-6 rounded-xl border border-white/10">
+            <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2 flex items-center gap-2">
+                <ImageUp size={20} className="text-primary" /> Gerenciamento do Logo Principal
+            </h3>
+            
+            <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-lg border border-white/5">
+                <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 flex items-center justify-center bg-black rounded-lg border border-white/10">
+                        {saasLogoUrl ? (
+                            <img src={saasLogoUrl} alt="Logo Atual" className="h-10 w-10 object-contain" />
+                        ) : (
+                            <FlowDesignerIcon size={24} className="text-primary" />
+                        )}
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-white">Logo Atual</p>
+                        <p className="text-xs text-gray-500 truncate max-w-[200px]">{saasLogoUrl || 'Usando SVG Padrão'}</p>
+                    </div>
+                </div>
+                
+                {saasLogoUrl && (
+                    <Button 
+                        variant="danger" 
+                        onClick={handleDeleteLogo}
+                        isLoading={isDeleting}
+                        className="h-8 px-3 text-xs"
+                        icon={<Trash2 size={14} />}
+                    >
+                        Deletar
+                    </Button>
+                )}
+            </div>
+            
+            {deleteError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{deleteError}</div>
+            )}
+
+            <ImageUpload onUpload={handleUploadLogo} userId={user.id} />
+            
+            <p className="text-xs text-gray-500 pt-2">
+                O upload de um novo arquivo substituirá o logo atual em todas as telas do aplicativo.
+            </p>
+        </div>
+    );
+};
+
 
 // --- Componente de Gerenciamento de Imagens Geradas ---
 const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole }) => {
@@ -557,7 +646,7 @@ const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
 
 
 // --- Main Dev Panel Page ---
-export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, onLogout }) => {
+export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, onLogout, saasLogoUrl, refreshConfig }) => {
     // Conditional rendering for access control
     if (!user || (user.role !== 'admin' && user.role !== 'dev' && user.role !== 'owner')) {
         return (
@@ -594,6 +683,9 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
                 </div>
 
                 <div className="space-y-12">
+                    {/* Seção 0.5: Gerenciamento do Logo */}
+                    <SaasLogoManager user={user} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
+                    
                     {/* Seção 0: Gerenciamento de Pagamentos (Apenas Owner) */}
                     {user && <MercadoPagoManager user={user} />}
                     

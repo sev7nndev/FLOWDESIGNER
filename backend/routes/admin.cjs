@@ -167,4 +167,91 @@ router.get('/mp-connect', verifyAuth, authorizeAdmin, async (req, res) => {
     res.json({ connectUrl });
 });
 
+// --- NEW: Logo Management Routes ---
+
+// Rota Admin: Upload e substituição do Logo do SaaS
+router.post('/logo/upload', verifyAuth, authorizeAdmin, async (req, res) => {
+    if (!supabaseServiceRole || !supabaseAnon) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Client ausente.' });
+    }
+    
+    const { fileBase64, fileName } = req.body;
+    
+    if (!fileBase64 || !fileName) {
+        return res.status(400).json({ error: "Missing file data." });
+    }
+    
+    const base64Data = fileBase64.replace(/^data:image\/\w+;base64,/, "");
+    const buffer = Buffer.from(base64Data, 'base64');
+    const fileExtension = fileName.split('.').pop();
+    // Use a path fixa para garantir que o upload sempre substitua o logo principal
+    const storagePath = `saas-logo/main-logo.${fileExtension}`; 
+    const bucketName = 'landing-carousel'; // Reusing existing bucket for simplicity
+    
+    try {
+        // 1. Upload/Replace file
+        const { error: uploadError } = await supabaseServiceRole.storage
+            .from(bucketName)
+            .upload(storagePath, buffer, {
+                contentType: `image/${fileExtension}`,
+                upsert: true, // Use upsert to replace the existing file
+            });
+            
+        if (uploadError) throw uploadError;
+        
+        // 2. Get public URL
+        const { data: { publicUrl } } = supabaseAnon.storage
+            .from(bucketName)
+            .getPublicUrl(storagePath);
+            
+        // 3. Update app_config table with the new URL
+        const { error: configError } = await supabaseServiceRole
+            .from('app_config')
+            .upsert({
+                key: 'saas_logo_url',
+                value: publicUrl,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'key' });
+            
+        if (configError) throw configError;
+        
+        res.json({ 
+            message: 'Logo uploaded and config updated successfully',
+            logoUrl: publicUrl
+        });
+        
+    } catch (e) {
+        console.error("Admin logo upload failed:", e);
+        res.status(500).json({ error: e.message || 'Failed to upload SaaS logo.' });
+    }
+});
+
+// Rota Admin: Deletar Logo do SaaS (e reverter para o padrão)
+router.delete('/logo/delete', verifyAuth, authorizeAdmin, async (req, res) => {
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
+    }
+    
+    console.log(`Admin ${req.user.id} deleting SaaS logo.`);
+    
+    try {
+        // 1. Delete app_config entry
+        const { error: configError } = await supabaseServiceRole
+            .from('app_config')
+            .delete()
+            .eq('key', 'saas_logo_url');
+            
+        if (configError) throw configError;
+        
+        // NOTE: We skip storage deletion here as it requires knowing the exact path/extension, 
+        // which is complex when using upsert. Deleting the config key is sufficient to revert the app.
+        
+        res.status(200).json({ message: 'SaaS logo configuration deleted successfully. Reverting to default SVG.' });
+    } catch (e) {
+        console.error("Admin delete logo failed:", e);
+        res.status(500).json({ error: 'Failed to delete SaaS logo configuration.' });
+    }
+});
+
+
 module.exports = router;

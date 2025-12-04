@@ -17,6 +17,7 @@ import { useUsage } from './hooks/useUsage';
 import { Toaster } from 'sonner';
 import { CheckoutPage } from './src/pages/CheckoutPage';
 import { DevPanelPage } from './src/pages/DevPanelPage';
+import { useAppConfig } from '../hooks/useAppConfig'; // Import new hook
 
 // Define a minimal structure for authenticated user before profile is loaded
 interface AuthUser {
@@ -33,6 +34,9 @@ export const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState<QuotaCheckResponse | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+
+  // App Config Hook (Logo URL)
+  const { saasLogoUrl, refreshConfig } = useAppConfig();
 
   // Profile Hook
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
@@ -172,6 +176,7 @@ export const App: React.FC = () => {
           onShowPlans={handleShowPlans}
           landingImages={landingImages}
           isLandingImagesLoading={isLandingImagesLoading}
+          saasLogoUrl={saasLogoUrl} // Pass logo URL
         />
       </div>
     );
@@ -186,6 +191,7 @@ export const App: React.FC = () => {
           onBack={() => { setView('LANDING'); setSelectedPlanId(null); }}
           selectedPlanId={selectedPlanId}
           plans={plans}
+          saasLogoUrl={saasLogoUrl} // Pass logo URL
         />
       </div>
     );
@@ -201,6 +207,7 @@ export const App: React.FC = () => {
           onSelectPlan={handleSelectPlan}
           plans={plans}
           isLoadingPlans={isUsageLoading}
+          saasLogoUrl={saasLogoUrl} // Pass logo URL
         />
       </div>
     );
@@ -236,6 +243,8 @@ export const App: React.FC = () => {
           user={user}
           onBackToApp={() => setView('APP')}
           onLogout={handleLogout}
+          saasLogoUrl={saasLogoUrl} // Pass logo URL
+          refreshConfig={refreshConfig} // Pass refresh function
         />
       </div>
     );
@@ -261,6 +270,7 @@ export const App: React.FC = () => {
         quotaStatus={quotaStatus}
         currentUsage={currentUsage}
         maxImages={maxImages}
+        saasLogoUrl={saasLogoUrl} // Pass logo URL
       />
 
       <div className="relative z-10 -mt-8 md:-mt-10">

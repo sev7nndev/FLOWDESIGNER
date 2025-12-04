@@ -17,6 +17,7 @@ interface LandingPageProps {
   onShowPlans: () => void;
   landingImages: LandingImage[];
   isLandingImagesLoading: boolean;
+  saasLogoUrl: string | null; // NEW
 }
 
 // Definindo o tipo localmente para garantir a compatibilidade
@@ -56,11 +57,11 @@ const FALLBACK_FLYERS: FlyerData[] = [
       phone: "www.site.com",
       theme: "tech",
       badge: "50% OFF"
-    },
+    }
 ];
 
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onSelectPlan, onShowPlans, landingImages, isLandingImagesLoading }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onSelectPlan, onShowPlans, landingImages, isLandingImagesLoading, saasLogoUrl }) => {
   const [plans, setPlans] = useState<EditablePlan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   
@@ -153,7 +154,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-zinc-950/95">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <FlowDesignerLogo iconSize={16} className="text-lg" />
+          <FlowDesignerLogo iconSize={16} className="text-lg" logoUrl={saasLogoUrl} />
           <div className="flex gap-4 items-center">
             <button onClick={onLogin} className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
               Entrar
@@ -384,7 +385,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
         {/* Footer */}
         <footer className="border-t border-white/5 py-12 bg-zinc-950 text-center">
-          <FlowDesignerLogo iconSize={16} className="justify-center mb-4" />
+          <FlowDesignerLogo iconSize={16} className="justify-center mb-4" logoUrl={saasLogoUrl} />
           <p className="text-gray-500 text-sm">© 2024 Flow Designer. Todos os direitos reservados.</p>
         </footer>
       </main>

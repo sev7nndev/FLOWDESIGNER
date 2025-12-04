@@ -11,9 +11,10 @@ interface AuthScreensProps {
   onBack: () => void;
   selectedPlanId: string | null; // NEW: ID of the plan the user intends to subscribe to
   plans: EditablePlan[]; // NEW: Full list of plans for display context
+  saasLogoUrl: string | null; // NEW
 }
 
-export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, selectedPlanId, plans }) => {
+export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, selectedPlanId, plans, saasLogoUrl }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -127,7 +128,11 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
 
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-4">
-            <FlowDesignerIcon size={24} /> {/* Using the corrected icon here */}
+            {saasLogoUrl ? (
+                <img src={saasLogoUrl} alt="SaaS Logo" className="h-8 w-8 object-contain" />
+            ) : (
+                <FlowDesignerIcon size={24} />
+            )}
           </div>
           <h2 className="text-2xl font-bold text-white">{isLogin ? 'Bem-vindo de volta' : 'Criar Conta'}</h2>
           <p className="text-gray-500 text-sm mt-2">

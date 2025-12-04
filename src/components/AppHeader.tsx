@@ -13,9 +13,10 @@ interface AppHeaderProps {
   quotaStatus: QuotaStatus;
   currentUsage: number;
   maxImages: number;
+  saasLogoUrl: string | null; // NEW
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel, onShowPlans, quotaStatus, currentUsage, maxImages }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel, onShowPlans, quotaStatus, currentUsage, maxImages, saasLogoUrl }) => {
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Admin', color: 'bg-red-600' },
     dev: { name: 'Dev', color: 'bg-cyan-600' },
@@ -38,7 +39,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         
         {/* Logo */}
-        <FlowDesignerLogo iconSize={18} className="text-xl" />
+        <FlowDesignerLogo iconSize={18} className="text-xl" logoUrl={saasLogoUrl} />
         
         {/* User Actions */}
         <div className="flex items-center gap-4">

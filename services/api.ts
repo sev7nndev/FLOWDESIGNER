@@ -410,6 +410,97 @@ export const api = {
         }
     },
 
+    // --- NEW LOGO MANAGEMENT API ---
+    
+    uploadSaasLogo: async (file: File): Promise<string> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Acesso negado. Faça login como administrador.");
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const fileBase64 = reader.result as string;
+                const fileName = file.name;
+
+                try {
+                    const response = await fetch(`${BACKEND_URL}/admin/logo/upload`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${session.access_token}`
+                        },
+                        body: JSON.stringify({ fileBase64, fileName })
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || `Falha ao fazer upload do logo: Status ${response.status}`);
+                    }
+                    const data = await response.json();
+                    resolve(data.logoUrl); // Returns the new public URL
+                } catch (error) {
+                    console.error("Error uploading SaaS logo via backend:", error);
+                    reject(error);
+                }
+            };
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+    },
+    
+    deleteSaasLogo: async (): Promise<void> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Acesso negado. Faça login como administrador.");
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/admin/logo/delete`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${session.access_token}`
+                }
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || `Falha ao deletar configuração do logo: Status ${response.status}`);
+            }
+        } catch (error) {
+            console.error("Error deleting SaaS logo config via backend:", error);
+            throw error;
+        }
+    },
+    
+    getSaasLogoUrl: async (): Promise<string | null> => {
+        const supabase = getSupabase();
+        if (!supabase) return null;
+
+        try {
+            // Public read access is enabled via RLS
+            const { data, error } = await supabase
+                .from('app_config')
+                .select('value')
+                .eq('key', 'saas_logo_url')
+                .single();
+
+            if (error && error.code !== 'PGRST116') { // PGRST116: No rows found
+                console.error("Error fetching saas_logo_url:", error);
+                return null;
+            }
+            
+            // The value is stored as JSONB, so we expect data.value to be the URL string
+            return data?.value || null;
+        } catch (error) {
+            console.error("Error fetching saas logo URL:", error);
+            return null;
+        }
+    },
+
     getDownloadUrl: async (path: string): Promise<string> => {
         const supabase = getSupabase();
         if (!supabase) throw new Error("Supabase not configured.");

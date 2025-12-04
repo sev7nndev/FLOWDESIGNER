@@ -33,12 +33,22 @@ export const FlowDesignerIcon: React.FC<FlowDesignerLogoProps> = ({ size = 24, c
 interface LogoTextProps {
     className?: string;
     iconSize?: number;
+    logoUrl?: string | null; // NEW: Dynamic logo URL
 }
 
-export const FlowDesignerLogo: React.FC<LogoTextProps> = ({ className = '', iconSize = 24 }) => {
+export const FlowDesignerLogo: React.FC<LogoTextProps> = ({ className = '', iconSize = 24, logoUrl }) => {
     return (
         <div className={`flex items-center gap-2 ${className}`}>
-            <FlowDesignerIcon size={iconSize} className="text-primary" />
+            {logoUrl ? (
+                <img 
+                    src={logoUrl} 
+                    alt="SaaS Logo" 
+                    style={{ width: iconSize, height: iconSize }}
+                    className="object-contain"
+                />
+            ) : (
+                <FlowDesignerIcon size={iconSize} className="text-primary" />
+            )}
             <span className="font-extrabold text-xl tracking-tight text-white">
                 Flow<span className="text-primary">Designer</span>
             </span>
