@@ -9,13 +9,37 @@ const generateDetailedPrompt = (promptInfo) => {
   const address = [addressStreet, addressNumber, addressNeighborhood, addressCity].filter(Boolean).join(', ');
   const servicesList = details.split(/[.;]/).map(s => s.trim()).filter(s => s.length > 5).join(', ');
 
-  return `Você é um designer profissional de social media. Gere uma arte de FLYER VERTICAL em alta qualidade, estilo moderno e atraente.
-Nicho: ${details}.
-Informações de contato e negócio:
-- Nome da Empresa: ${companyName}
-- Serviços/Detalhes: ${servicesList}
-- Telefone/WhatsApp: ${phone}
-- Endereço: ${address}`;
+  return `Create a professional VERTICAL FLYER design (9:16 aspect ratio) for social media and printing.
+
+CRITICAL REQUIREMENTS:
+- The flyer must fill the ENTIRE image area - NO backgrounds, frames, shadows, or mockups around it
+- The flyer itself IS the complete image - edge to edge
+- Design should be ready to post/print directly without any cropping needed
+
+BUSINESS INFORMATION:
+Company: ${companyName}
+Services/Products: ${servicesList}
+Phone/WhatsApp: ${phone}
+Address: ${address}
+
+DESIGN SPECIFICATIONS:
+1. LAYOUT: Modern, professional vertical flyer layout with clear visual hierarchy
+2. TYPOGRAPHY: Bold, readable fonts for headlines; clean fonts for body text
+3. COLORS: Vibrant, eye-catching color scheme appropriate for the business niche (${details})
+4. COMPOSITION: 
+   - Company name/logo prominently at top
+   - Main message/offer in the center with large, bold text
+   - Services/products listed clearly with icons or bullet points
+   - Contact information (phone/WhatsApp) highly visible at bottom
+   - Address included if space permits
+5. VISUAL ELEMENTS:
+   - High-quality imagery related to the business
+   - Professional graphics, icons, or illustrations
+   - Balanced use of negative space
+   - Modern design trends (gradients, geometric shapes, etc.)
+6. STYLE: Contemporary, polished, and marketing-focused design that grabs attention
+
+The final output must be a complete, ready-to-use flyer with no additional backgrounds or frames.`;
 };
 
 // Geração de imagem com Gemini 2.5 Image
@@ -26,8 +50,8 @@ async function generateImage(detailedPrompt) {
   }
 
   try {
-    // Using Imagen 3 via REST API
-    const IMAGEN_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${GEMINI_API_KEY}`;
+    // Using Imagen 4 via REST API
+    const IMAGEN_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${GEMINI_API_KEY}`;
 
     const payload = {
       instances: [
