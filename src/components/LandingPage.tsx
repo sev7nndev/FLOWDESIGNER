@@ -10,6 +10,7 @@ import { HeroSection } from './Hero';
 import { api } from '@/services/api';
 import { motion } from 'framer-motion';
 import { FeatureCard } from './FeatureCard';
+import { BackgroundBeams } from './BackgroundBeams';
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -132,6 +133,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden">
+      <BackgroundBeams className="z-0" />
       
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'border-b border-white/10 bg-zinc-950/80 backdrop-blur-lg' : 'border-b border-transparent'} ${headerVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -147,7 +149,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
         </div>
       </nav>
 
-      <main>
+      <main className="relative z-10">
         <HeroSection onGetStarted={handleGetStarted} />
 
         <motion.section 
@@ -273,7 +275,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <div className="space-y-4">
               <Accordion title="As imagens têm direitos autorais?">Sim, você pode usar todas as imagens geradas nos planos pagos para fins comerciais (Instagram, Facebook, Impressos) sem problemas.</Accordion>
               <Accordion title="Funciona no celular?">Perfeitamente. O Flow Designer foi criado pensando no mobile. Você cria a arte e baixa direto na galeria do seu telefone.</Accordion>
-              <Accordion title="Posso cancelar quando quiser?">Sim, não há contrato de fidelidade. Você pode cancelar a assinatura a qualquer momento no seu panel.</Accordion>
+              <Accordion title="Posso cancelar quando quiser?">Sim, não há contrato de fidelidade. Você pode cancelar a assinatura a qualquer momento no seu painel.</Accordion>
             </div>
           </div>
         </motion.section>
