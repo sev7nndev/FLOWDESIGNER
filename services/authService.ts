@@ -19,9 +19,7 @@ export const authService = {
     const { data, error } = await supabase.auth.signInWithPassword({ 
       email, 
       password,
-      options: {
-        shouldRemember: shouldRemember,
-      }
+      // Removed 'shouldRemember' from options as it causes TS error and session persistence is handled globally.
     });
     
     if (error) {
