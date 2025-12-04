@@ -68,14 +68,16 @@ void main(void) {
     
     // App Primary Color: #8b5cf6 (0.545, 0.36, 0.965)
     vec3 primaryColor = vec3(0.545, 0.36, 0.965);
+    // App Secondary Color (Pink/Fuchsia): #d946ef (0.85, 0.275, 0.937)
+    vec3 secondaryColor = vec3(0.85, 0.275, 0.937);
     
 	for (float i=1.; i<12.; i++) {
 		uv+=.1*cos(i*vec2(.1+.01*i, .8)+i*i+T*.5+.1*uv.x);
 		vec2 p=uv;
 		float d=length(p);
         
-        // Use primary color for the glow/lines
-		col+=.00125/d*(cos(sin(i)*primaryColor)+1.); 
+        // Use secondary color for the glow/lines (Pink/Fuchsia)
+		col+=.00125/d*(cos(sin(i)*secondaryColor)+1.); 
         
 		float b=noise(i+p+bg*1.731);
 		col+=.002*b/length(max(p,vec2(b*p.x*.02,p.y)));

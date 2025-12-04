@@ -33,7 +33,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
       <ShaderBackground className="z-0 opacity-70" />
       
       {/* Content Overlay */}
-      <div className="relative z-10 container mx-auto h-full">
+      <div className="relative z-20 container mx-auto h-full"> {/* Increased z-index to z-20 */}
         <div className="flex gap-8 py-16 lg:py-24 items-center justify-center flex-col text-center px-4"> {/* Added px-4 for mobile padding */}
           <div className="flex gap-4 flex-col">
             <h1 className="text-5xl md:text-7xl max-w-3xl tracking-tighter font-regular">
