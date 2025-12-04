@@ -146,14 +146,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
       <main className="relative z-10">
         
-        {/* Hero Section with Gradient Background */}
+        {/* Hero Section with Shader Background */}
         <section className="relative w-full overflow-hidden h-[80vh] md:h-[90vh] flex items-center justify-center bg-zinc-950">
-            {/* Gradient Background */}
-            <div className="absolute inset-0 z-0 bg-gradient-to-b from-zinc-950 via-zinc-950/90 to-primary/10">
-                {/* Adicionando um brilho sutil no topo */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-primary/10 blur-[100px] opacity-50 pointer-events-none" />
-            </div>
-            
             {/* Hero Content (Relative positioning, z-index 10) */}
             <div className="relative z-10 h-full flex flex-col justify-center w-full">
                 <HeroSection onGetStarted={handleGetStarted} />

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { MoveRight } from "lucide-react";
 import { Button } from "./Button";
+import { ShaderBackground } from "./ShaderBackground"; // Import the new background
 
 interface HeroSectionProps {
   onGetStarted: () => void;
@@ -26,8 +27,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
   }, [titleNumber, titles]);
 
   return (
-    <div className="w-full">
-      <div className="container mx-auto">
+    <div className="w-full relative h-full">
+      
+      {/* Shader Background */}
+      <ShaderBackground className="z-0 opacity-70" />
+      
+      {/* Content Overlay */}
+      <div className="relative z-10 container mx-auto h-full">
         <div className="flex gap-8 py-20 lg:py-40 items-center justify-center flex-col text-center">
           <div className="flex gap-4 flex-col">
             <h1 className="text-5xl md:text-7xl max-w-3xl tracking-tighter font-regular">
