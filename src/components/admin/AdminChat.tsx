@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '../Button';
 import { useAdminChat } from '@/hooks/useAdminChat';
