@@ -9,7 +9,6 @@ import { LandingImage, EditablePlan } from '@/types';
 import { HeroSection } from './Hero'; 
 import { api } from '@/services/api';
 import { FeatureCard } from './FeatureCard';
-import { DotScreenShader } from './DotScreenShader'; // Import the new component
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -147,11 +146,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
       <main className="relative z-10">
         
-        {/* Hero Section with Shader Background */}
-        <section className="relative w-full overflow-hidden h-[80vh] md:h-[90vh] flex items-center justify-center">
-            {/* Shader Background (Absolute positioning) */}
-            <div className="absolute inset-0 z-0">
-                <DotScreenShader />
+        {/* Hero Section with Gradient Background */}
+        <section className="relative w-full overflow-hidden h-[80vh] md:h-[90vh] flex items-center justify-center bg-zinc-950">
+            {/* Gradient Background */}
+            <div className="absolute inset-0 z-0 bg-gradient-to-b from-zinc-950 via-zinc-950/90 to-primary/10">
+                {/* Adicionando um brilho sutil no topo */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-primary/10 blur-[100px] opacity-50 pointer-events-none" />
             </div>
             
             {/* Hero Content (Relative positioning, z-index 10) */}
