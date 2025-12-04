@@ -86,7 +86,7 @@ const TESTIMONIAL_DATA = [
 ];
 
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onSelectPlan, onShowPlans, landingImages, isLandingImagesLoading, saasLogoUrl }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onSelectPlan, onShowPlans, landingImages, saasLogoUrl }) => {
   const [plans, setPlans] = useState<EditablePlan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   

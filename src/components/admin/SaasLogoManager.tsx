@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, Trash2, Loader2, CheckCircle2, AlertTriangle, ImageUp } from 'lucide-react';
+import { Upload, Trash2, CheckCircle2, AlertTriangle, ImageUp } from 'lucide-react';
 import { Button } from '../Button';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
