@@ -155,7 +155,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               animate={{ x: '-50%' }}
               transition={{
                 ease: 'linear',
-                duration: 200, // Duração bem longa para movimento lento
+                duration: 80, 
                 repeat: Infinity,
                 repeatType: 'loop'
               }}
