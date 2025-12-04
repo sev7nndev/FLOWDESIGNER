@@ -15,7 +15,7 @@ const DotMaterial = shaderMaterial(
     mouseTrail: null,
     render: 0,
     rotation: 0,
-    gridSize: 100, // Increased density
+    gridSize: 100, 
     dotOpacity: 0.05
   },
   /* glsl */ `
@@ -105,13 +105,14 @@ function Scene() {
   const rotation = 0
   const gridSize = 100
 
-  // Hardcoded theme colors (App uses fixed dark theme: background: #09090b, primary: #8b5cf6)
+  // Usando cores fixas do tema do app
   const themeColors = useMemo(() => ({
-    dotColor: '#8b5cf6',
-    bgColor: '#09090b',
+    dotColor: '#8b5cf6', // primary
+    bgColor: '#09090b', // background
     dotOpacity: 0.05
   }), [])
 
+  // Configuração do rastreamento do mouse
   const [trail, onMove] = useTrailTexture({
     size: 512,
     radius: 0.1,
@@ -131,13 +132,16 @@ function Scene() {
     dotMaterial.uniforms.dotColor.value.setHex(themeColors.dotColor.replace('#', '0x'))
     dotMaterial.uniforms.bgColor.value.setHex(themeColors.bgColor.replace('#', '0x'))
     dotMaterial.uniforms.dotOpacity.value = themeColors.dotOpacity
-  }, [dotMaterial, themeColors])
+    // Passando a textura de rastreamento para o shader
+    dotMaterial.uniforms.mouseTrail.value = trail
+  }, [dotMaterial, themeColors, trail])
 
   useFrame((state) => {
     dotMaterial.uniforms.time.value = state.clock.elapsedTime
   })
 
   const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
+    // Chamando a função de rastreamento do mouse
     onMove(e)
   }
 
@@ -151,7 +155,6 @@ function Scene() {
         resolution={[size.width * viewport.dpr, size.height * viewport.dpr]}
         rotation={rotation}
         gridSize={gridSize}
-        mouseTrail={trail}
         render={0}
       />
     </mesh>
