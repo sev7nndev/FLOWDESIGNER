@@ -20,7 +20,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative z-10 flex flex-col items-center text-center px-6"
       >
-        <h1 className="bg-gradient-to-br from-white to-gray-400 py-4 bg-clip-text text-5xl md:text-7xl font-bold tracking-tighter text-transparent leading-tight">
+        <h1 className="font-heading bg-gradient-to-r from-white via-gray-300 to-white py-4 bg-clip-text text-5xl md:text-7xl font-black tracking-tighter text-transparent leading-tight bg-[length:200%_auto] animate-shimmer drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]">
           Crie Artes Profissionais <br /> com Inteligência Artificial
         </h1>
         <p className="mt-4 text-lg md:text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">

@@ -26,6 +26,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        heading: ['Poppins', 'sans-serif'],
       },
       backgroundImage: {
         'gradient-conic': 'conic-gradient(var(--tw-gradient-stops))',
@@ -34,7 +35,7 @@ export default {
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'fade-in': 'fadeIn 0.8s ease-out forwards',
-        'shimmer': 'shimmer 2s linear infinite',
+        'shimmer': 'shimmer 4s linear infinite',
         'scroll': 'scroll 80s linear infinite',
       },
       keyframes: {
@@ -43,8 +44,8 @@ export default {
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         shimmer: {
-          '0%': { backgroundPosition: '0% 0%' },
-          '100%': { backgroundPosition: '-200% 0%' },
+          'from': { backgroundPosition: '200% 0' },
+          'to': { backgroundPosition: '-200% 0' },
         },
         scroll: {
           '0%': { transform: 'translateX(0)' },
