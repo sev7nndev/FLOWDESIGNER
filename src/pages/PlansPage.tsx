@@ -27,7 +27,7 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlan
     };
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center pt-16 pb-10 px-4 relative">
+        <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center pt-16 pb-24 px-4 relative">
             <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
             
             <div className="w-full max-w-7xl relative z-10">
