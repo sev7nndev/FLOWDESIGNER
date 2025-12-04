@@ -34,7 +34,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
       
       {/* Content Overlay */}
       <div className="relative z-10 container mx-auto h-full">
-        <div className="flex gap-8 py-16 lg:py-24 items-center justify-center flex-col text-center">
+        <div className="flex gap-8 py-16 lg:py-24 items-center justify-center flex-col text-center px-4"> {/* Added px-4 for mobile padding */}
           <div className="flex gap-4 flex-col">
             <h1 className="text-5xl md:text-7xl max-w-3xl tracking-tighter font-regular">
               <span className="text-white">Crie artes</span>

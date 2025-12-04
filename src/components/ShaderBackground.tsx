@@ -398,7 +398,7 @@ export const ShaderBackground: React.FC<ShaderBackgroundProps> = ({ className })
     return (
         <canvas
             ref={canvasRef}
-            className={cn("absolute inset-0 w-full h-full object-contain touch-none", className)}
+            className={cn("absolute inset-0 w-full h-full object-cover touch-none", className)}
             style={{ background: '#09090b' }} // Ensure background is the app's dark background
         />
     );
