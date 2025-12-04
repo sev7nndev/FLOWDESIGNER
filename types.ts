@@ -107,31 +107,3 @@ export interface QuotaCheckResponse {
   plans: EditablePlan[]; // ADDED: Full list of plans for context in modals/pages
   message?: string;
 }
-
-// NEW: Admin Metrics
-export interface AdminMetrics {
-  totalRevenue: string; // Stored as string/number in backend, use string for display
-  activeSubscriptions: number;
-  inactiveSubscriptions: number;
-  totalUsers: number;
-}
-
-// NEW: Admin User List
-export interface AdminUser {
-  id: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  role: UserRole;
-  created_at: string;
-}
-
-// NEW: Chat Message
-export interface ChatMessage {
-  id: string;
-  created_at: string;
-  sender_id: string;
-  recipient_id: string;
-  content: string;
-  is_admin_message: boolean;
-}

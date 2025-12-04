@@ -29,34 +29,6 @@ const ModalWrapper: React.FC<ModalWrapperProps> = ({ title, onClose, children, m
   </div>
 );
 
-// --- NEW: Full Screen Image Modal ---
-interface FullScreenImageModalProps {
-    imageUrl: string;
-    onClose: () => void;
-}
-
-export const FullScreenImageModal: React.FC<FullScreenImageModalProps> = ({ imageUrl, onClose }) => {
-    return (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
-            <button 
-                onClick={onClose} 
-                className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white z-50 transition-colors"
-                title="Fechar"
-            >
-                <X size={24} />
-            </button>
-            <div className="relative max-w-full max-h-full w-auto h-auto">
-                <img 
-                    src={imageUrl} 
-                    alt="Visualização em Tela Cheia" 
-                    className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl border border-white/10"
-                />
-            </div>
-        </div>
-    );
-};
-
-
 // --- Gallery Modal ---
 interface GalleryModalProps {
   history: GeneratedImage[];
@@ -65,8 +37,6 @@ interface GalleryModalProps {
 }
 
 export const GalleryModal: React.FC<GalleryModalProps> = ({ history, onClose, onDownload }) => {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    
   return (
     <ModalWrapper title={`Minha Galeria (${history.length})`} onClose={onClose}>
       {history.length === 0 ? (
@@ -77,11 +47,7 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({ history, onClose, on
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {history.map((img: GeneratedImage) => (
-            <div 
-              key={img.id} 
-              className="group relative aspect-[3/4] bg-black rounded-xl overflow-hidden border border-white/10 shadow-lg transition-all hover:border-primary/50 cursor-pointer"
-              onClick={() => setSelectedImage(img.url)}
-            >
+            <div key={img.id} className="group relative aspect-[3/4] bg-black rounded-xl overflow-hidden border border-white/10 shadow-lg transition-all hover:border-primary/50">
               <img 
                 src={img.url} 
                 alt="Arte" 
@@ -93,7 +59,7 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({ history, onClose, on
                 <p className="text-[10px] text-gray-400 truncate mb-2">{img.businessInfo.companyName}</p>
                 <Button 
                   variant="primary" 
-                  onClick={(e) => { e.stopPropagation(); onDownload(img); }} 
+                  onClick={() => onDownload(img)} 
                   className="h-8 px-3 text-xs w-full"
                   icon={<Download size={14} />}
                 >
@@ -104,7 +70,6 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({ history, onClose, on
           ))}
         </div>
       )}
-      {selectedImage && <FullScreenImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />}
     </ModalWrapper>
   );
 };
@@ -174,7 +139,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
             
             <div className="flex justify-between items-center">
                 <span className="text-gray-400 text-sm flex items-center gap-2"><UserIcon size={16} className="text-primary" /> Plano:</span>
-                <span className="text-white text-xs font-bold uppercase px-3 py-1 rounded-full ${currentRole.color}">
+                <span className={`text-white text-xs font-bold uppercase px-3 py-1 rounded-full ${currentRole.color}`}>
                     {currentRole.name}
                 </span>
             </div>

@@ -1,7 +1,6 @@
 import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import dyadComponentTagger from '@dyad-sh/react-vite-component-tagger';
 
 export default defineConfig({
   server: {
@@ -15,7 +14,7 @@ export default defineConfig({
       }
     }
   },
-  plugins: [dyadComponentTagger(), react()],
+  plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),

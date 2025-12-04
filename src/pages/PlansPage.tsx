@@ -3,7 +3,6 @@ import { User, EditablePlan } from '@/types';
 import { Button } from '../components/Button';
 import { ArrowLeft, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
 import { PricingCard } from '../components/PricingCard';
-import { FlowDesignerLogo } from '../components/FlowDesignerLogo'; // Import logo
 
 interface PlansPageProps {
     user: User | null;
@@ -11,10 +10,9 @@ interface PlansPageProps {
     isLoadingPlans: boolean;
     onBackToApp: () => void;
     onSelectPlan: (planId: string) => void;
-    saasLogoUrl: string | null; // NEW
 }
 
-export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlans, onBackToApp, onSelectPlan, saasLogoUrl }) => {
+export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlans, onBackToApp, onSelectPlan }) => {
     
     const freePlan = useMemo(() => plans.find(p => p.id === 'free'), [plans]);
     const starterPlan = useMemo(() => plans.find(p => p.id === 'starter'), [plans]);
@@ -29,22 +27,19 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlan
     };
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center pt-16 pb-24 px-4 relative">
+        <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center pt-16 pb-10 px-4 relative">
             <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
             
             <div className="w-full max-w-7xl relative z-10">
-                <div className="flex justify-between items-center mb-8">
-                    <Button 
-                        variant="ghost" 
-                        onClick={onBackToApp} 
-                        className="text-gray-400 hover:text-white"
-                    >
-                        <ArrowLeft size={16} className="mr-2" /> {user ? 'Voltar ao App' : 'Voltar à Home'}
-                    </Button>
-                    <FlowDesignerLogo iconSize={18} className="text-xl" logoUrl={saasLogoUrl} />
-                </div>
+                <Button 
+                    variant="ghost" 
+                    onClick={onBackToApp} 
+                    className="absolute top-4 left-0 text-gray-400 hover:text-white hidden md:flex"
+                >
+                    <ArrowLeft size={16} className="mr-2" /> {user ? 'Voltar ao App' : 'Voltar à Home'}
+                </Button>
                 
-                <div className="text-center mb-16 mt-4">
+                <div className="text-center mb-16 mt-12">
                     <Sparkles size={32} className="text-primary mx-auto mb-4" />
                     <h1 className="text-4xl md:text-5xl font-bold text-white">Escolha Seu Plano</h1>
                     <p className="text-gray-400 mt-3 text-lg">

@@ -1,7 +1,6 @@
 import React from 'react';
-import { LogOut, Settings, User as UserIcon, Code, Zap, AlertTriangle } from 'lucide-react';
+import { LogOut, Settings, Sparkles, User as UserIcon, Code, Zap, AlertTriangle } from 'lucide-react';
 import { User, UserRole, QuotaStatus } from '@/types';
-import { FlowDesignerLogo } from './FlowDesignerLogo'; // Import the new logo component
 
 interface AppHeaderProps {
   user: User | null;
@@ -13,10 +12,9 @@ interface AppHeaderProps {
   quotaStatus: QuotaStatus;
   currentUsage: number;
   maxImages: number;
-  saasLogoUrl: string | null; // NEW
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel, onShowPlans, quotaStatus, currentUsage, maxImages, saasLogoUrl }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogout, onShowSettings, onShowDevPanel, onShowPlans, quotaStatus, currentUsage, maxImages }) => {
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
     admin: { name: 'Admin', color: 'bg-red-600' },
     dev: { name: 'Dev', color: 'bg-cyan-600' },
@@ -39,7 +37,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         
         {/* Logo */}
-        <FlowDesignerLogo iconSize={18} className="text-xl" logoUrl={saasLogoUrl} />
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/20 p-1.5 rounded-lg border border-primary/20">
+            <Sparkles size={18} className="text-primary" />
+          </div>
+          <span className="font-extrabold text-xl tracking-tight text-white">Flow<span className="text-primary">Designer</span></span>
+        </div>
         
         {/* User Actions */}
         <div className="flex items-center gap-4">

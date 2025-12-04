@@ -4,11 +4,10 @@ import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCar
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
-import { FlyerMockup } from './FlyerMockup';
+import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
 import { LandingImage, EditablePlan } from '@/types';
 import { HeroSection } from './Hero'; 
 import { api } from '@/services/api';
-import { FlowDesignerLogo } from './FlowDesignerLogo'; // Import the new logo component
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -17,19 +16,10 @@ interface LandingPageProps {
   onShowPlans: () => void;
   landingImages: LandingImage[];
   isLandingImagesLoading: boolean;
-  saasLogoUrl: string | null; // NEW
 }
 
 // Definindo o tipo localmente para garantir a compatibilidade
-type FlyerData = {
-  bg: string;
-  title: string;
-  subtitle: string;
-  phone: string;
-  theme: 'mechanic' | 'food' | 'law' | 'tech';
-  badge: string;
-  price?: string;
-};
+type FlyerData = Omit<FlyerMockupProps, 'theme'> & { theme: 'mechanic' | 'food' | 'law' | 'tech' };
 
 // Hardcoded fallback data (used if DB is empty or loading fails)
 const FALLBACK_FLYERS: FlyerData[] = [
@@ -65,36 +55,11 @@ const FALLBACK_FLYERS: FlyerData[] = [
       phone: "www.site.com",
       theme: "tech",
       badge: "50% OFF"
-    }
-];
-
-// Dados fixos dos depoimentos para duplicação
-const TESTIMONIAL_DATA = [
-    {
-        name: "Carlos Mendes",
-        role: "Dono de Oficina",
-        text: "Eu gastava 300 reais por semana com designer. Agora faço os posts da oficina em 5 minutos tomando café. A qualidade impressiona.",
-        stars: 5,
-        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop"
     },
-    {
-        name: "Dra. Julia Santos",
-        role: "Esteticista",
-        text: "Minha clínica precisava de uma identidade mais premium. O Flow Designer capturou exatamente o estilo 'clean' que eu queria. Recomendo!",
-        stars: 5,
-        image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop"
-    },
-    {
-        name: "Mariana Costa",
-        role: "Lojista de Moda",
-        text: "As vendas da minha loja aumentaram muito depois que comecei a usar os templates de oferta. É muito rápido e profissional.",
-        stars: 5,
-        image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop"
-    }
 ];
 
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onSelectPlan, onShowPlans, landingImages, saasLogoUrl }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onSelectPlan, onShowPlans, landingImages, isLandingImagesLoading }) => {
   const [plans, setPlans] = useState<EditablePlan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   
@@ -126,9 +91,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   
   // Duplicate items for infinite scroll effect
   const marqueeContent = [...carouselItems, ...carouselItems];
-  
-  // Duplicate testimonial content three times for a safer loop
-  const testimonialContentTriple = [...TESTIMONIAL_DATA, ...TESTIMONIAL_DATA, ...TESTIMONIAL_DATA];
   
   const freePlan = plans.find(p => p.id === 'free');
   const starterPlan = plans.find(p => p.id === 'starter');
@@ -190,7 +152,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-zinc-950/95">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <FlowDesignerLogo iconSize={16} className="text-lg" logoUrl={saasLogoUrl} />
+          <div className="flex items-center gap-2">
+            <div className="bg-primary/20 p-1.5 rounded-lg border border-primary/20">
+               <Sparkles size={16} className="text-primary" />
+            </div>
+            <span className="text-white font-bold tracking-tight text-lg">FlowDesigner</span>
+          </div>
           <div className="flex gap-4 items-center">
             <button onClick={onLogin} className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
               Entrar
@@ -210,20 +177,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
           <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
           <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
           
-          <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-4 p-4">
-            {marqueeContent.map((item: FlyerData, idx: number) => (
-              <FlyerMockup 
-                key={idx} 
-                bg={item.bg} 
-                title={item.title} 
-                subtitle={item.subtitle} 
-                phone={item.phone} 
-                theme={item.theme} 
-                badge={item.badge} 
-                price={item.price} 
-              />
-            ))}
-          </div>
+          {isLandingImagesLoading ? (
+            <div className="flex items-center justify-center h-40 text-gray-500">
+                <Loader2 size={24} className="animate-spin mr-2" /> Carregando carrossel...
+            </div>
+          ) : (
+            <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-4 p-4">
+              {marqueeContent.map((item: FlyerData, idx: number) => (
+                <FlyerMockup 
+                  key={idx} 
+                  bg={item.bg} 
+                  title={item.title} 
+                  subtitle={item.subtitle} 
+                  phone={item.phone} 
+                  theme={item.theme} 
+                  badge={item.badge} 
+                  price={item.price} 
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Bento Grid Features */}
@@ -340,18 +313,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <div className="absolute inset-y-0 left-0 w-12 md:w-32 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
             <div className="absolute inset-y-0 right-0 w-12 md:w-32 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
             
-            <div className="flex w-max animate-scroll-slow hover:[animation-play-state:paused] gap-6 px-6">
-               {/* Usando o conteúdo triplicado para garantir o loop */}
-               {testimonialContentTriple.map((item, i) => (
-                 <div key={i} className="w-[300px] md:w-[400px] flex-shrink-0">
+            <div className="flex w-max animate-scroll gap-6 px-6 hover:[animation-play-state:paused]">
+               {/* Duplicating for infinite scroll effect */}
+               {[...Array(2)].map((_: undefined, i: number) => (
+                 <React.Fragment key={i}>
+                    <div className="w-[300px] md:w-[400px] flex-shrink-0">
                       <TestimonialCard 
-                        name={item.name} 
-                        role={item.role} 
-                        text={item.text} 
-                        stars={item.stars}
-                        image={item.image}
+                        name="Carlos Mendes" 
+                        role="Dono de Oficina" 
+                        text="Eu gastava 300 reais por semana com designer. Agora faço os posts da oficina em 5 minutos tomando café. A qualidade impressiona." 
+                        stars={5}
+                        image="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop"
                       />
                     </div>
+                    <div className="w-[300px] md:w-[400px] flex-shrink-0">
+                      <TestimonialCard 
+                        name="Dra. Julia Santos" 
+                        role="Esteticista" 
+                        text="Minha clínica precisava de uma identidade mais premium. O Flow Designer capturou exatamente o estilo 'clean' que eu queria. Recomendo!" 
+                        stars={5}
+                        image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop"
+                      />
+                    </div>
+                    <div className="w-[300px] md:w-[400px] flex-shrink-0">
+                      <TestimonialCard 
+                        name="Mariana Costa" 
+                        role="Lojista de Moda" 
+                        text="As vendas da minha loja aumentaram muito depois que comecei a usar os templates de oferta. É muito rápido e profissional." 
+                        stars={5}
+                        image="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop"
+                      />
+                    </div>
+                 </React.Fragment>
                ))}
             </div>
           </div>
@@ -395,7 +388,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
         {/* Footer */}
         <footer className="border-t border-white/5 py-12 bg-zinc-950 text-center">
-          <FlowDesignerLogo iconSize={16} className="justify-center mb-4" logoUrl={saasLogoUrl} />
+          <div className="flex items-center justify-center gap-2 mb-4">
+             <div className="bg-white/10 p-1.5 rounded-lg">
+               <Sparkles size={16} className="text-white" />
+            </div>
+            <span className="text-white font-bold">FlowDesigner</span>
+          </div>
           <p className="text-gray-500 text-sm">© 2024 Flow Designer. Todos os direitos reservados.</p>
         </footer>
       </main>
