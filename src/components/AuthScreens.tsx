@@ -6,19 +6,21 @@ import { GoogleIcon } from './GoogleIcon';
 import { User, EditablePlan } from '@/types'; // Import User type and EditablePlan
 
 interface AuthScreensProps {
-  onSuccess: (user: User | null) => void; 
+  onSuccess: (user: User | null) => void;
   onBack: () => void;
   selectedPlanId: string | null; // NEW: ID of the plan the user intends to subscribe to
   plans: EditablePlan[]; // NEW: Full list of plans for display context
 }
 
 export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, selectedPlanId, plans }) => {
-  const [isLogin, setIsLogin] = useState(true);
+  // If a plan is selected (e.g. 'free'), default to Register (isLogin = false).
+  // If no plan (Login button clicked), default to Login (isLogin = true).
+  const [isLogin, setIsLogin] = useState(!selectedPlanId);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -35,18 +37,22 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
     try {
       if (isLogin) {
         await authService.login(formData.email, formData.password);
-        onSuccess(null); 
+        // Login successful. We intentionally do NOT set isLoading(false) here.
+        // We leave it true so the spinner persists until the App component
+        // detects the auth change and unmounts the AuthScreens.
+        onSuccess(null);
       } else {
         if (!formData.firstName) throw new Error("Primeiro nome é obrigatório");
-        
+
         await authService.register(formData.firstName, formData.lastName, formData.email, formData.password);
-        
+
         // Exibe a mensagem de sucesso em vez de tentar redirecionar
         setSuccessMessage('Cadastro realizado! Verifique seu e-mail para confirmar sua conta e poder fazer o login.');
+        setIsLoading(false); // Stop loading for registration to show message
       }
     } catch (err: any) {
       let errorMessage = err.message || 'Ocorreu um erro desconhecido.';
-      
+
       // Traduzindo erros comuns do Supabase
       if (errorMessage.includes('you can only request this after')) {
         errorMessage = 'Muitas tentativas. Por favor, aguarde um minuto e tente novamente.';
@@ -55,24 +61,28 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
       } else if (errorMessage.includes('Invalid login credentials')) {
         errorMessage = 'Email ou senha inválidos.';
       }
-      
+
       setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Stop loading on error
     }
   };
-  
+
   const handleGoogleLogin = async () => {
     setError('');
     setIsGoogleLoading(true);
     try {
       await authService.loginWithGoogle();
+      // Reset loading after 15s in case redirect fails/blocks
+      setTimeout(() => {
+        setIsGoogleLoading(false);
+        // Optional: setError('O redirecionamento demorou muito. Tente novamente.');
+      }, 15000);
     } catch (err: any) {
       setError(err.message || 'Ocorreu um erro desconhecido.');
       setIsGoogleLoading(false);
     }
   };
-  
+
   const selectedPlan = selectedPlanId ? plans.find(p => p.id === selectedPlanId) : null;
   const isPaidPlan = selectedPlanId && selectedPlanId !== 'free';
 
@@ -97,32 +107,32 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative">
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] pointer-events-none" />
-      
-      <div className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative z-10 animate-fade-in">
+
+      <div className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl relative z-10 animate-fade-in">
         <button onClick={onBack} className="absolute top-8 left-8 text-gray-500 hover:text-white">
           <ArrowLeft size={20} />
         </button>
-        
+
         {/* NEW: Plan Intent Message */}
         {selectedPlan && (
-            <div className={`p-4 rounded-xl mb-6 text-center ${isPaidPlan ? 'bg-primary/10 border border-primary/30' : 'bg-green-500/10 border border-green-500/30'}`}>
-                <div className="flex items-center justify-center gap-2 mb-2">
-                    {isPaidPlan ? <DollarSign size={20} className="text-primary" /> : <Zap size={20} className="text-green-400" />}
-                    <h3 className="text-lg font-bold text-white">
-                        {isPaidPlan ? `Assinar Plano ${selectedPlan.display_name}` : 'Começar Grátis'}
-                    </h3>
-                </div>
-                <p className="text-sm text-gray-400">
-                    {isLogin 
-                        ? `Faça login para prosseguir com a assinatura do plano ${selectedPlan.display_name}.`
-                        : `Crie sua conta para iniciar o plano ${selectedPlan.display_name}.`
-                    }
-                </p>
+          <div className={`p-3 rounded-xl mb-4 text-center ${isPaidPlan ? 'bg-primary/10 border border-primary/30' : 'bg-green-500/10 border border-green-500/30'}`}>
+            <div className="flex items-center justify-center gap-2 mb-2">
+              {isPaidPlan ? <DollarSign size={20} className="text-primary" /> : <Zap size={20} className="text-green-400" />}
+              <h3 className="text-lg font-bold text-white">
+                {isPaidPlan ? `Assinar Plano ${selectedPlan.display_name}` : 'Começar Grátis'}
+              </h3>
             </div>
+            <p className="text-sm text-gray-400">
+              {isLogin
+                ? `Faça login para prosseguir com a assinatura do plano ${selectedPlan.display_name}.`
+                : `Crie sua conta para iniciar o plano ${selectedPlan.display_name}.`
+              }
+            </p>
+          </div>
         )}
 
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-4">
+        <div className="text-center mb-5">
+          <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary mb-3">
             <Sparkles size={24} />
           </div>
           <h2 className="text-2xl font-bold text-white">{isLogin ? 'Bem-vindo de volta' : 'Criar Conta'}</h2>
@@ -131,65 +141,65 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {!isLogin && (
             <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Primeiro Nome</label>
-                    <input 
-                        type="text" 
-                        required 
-                        className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
-                        placeholder="Seu nome"
-                        value={formData.firstName}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, firstName: e.target.value})}
-                    />
-                </div>
-                <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Sobrenome (Opcional)</label>
-                    <input 
-                        type="text" 
-                        className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
-                        placeholder="Seu sobrenome"
-                        value={formData.lastName}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, lastName: e.target.value})}
-                    />
-                </div>
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Primeiro Nome</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary outline-none"
+                  placeholder="Seu nome"
+                  value={formData.firstName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, firstName: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Sobrenome (Opcional)</label>
+                <input
+                  type="text"
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary outline-none"
+                  placeholder="Seu sobrenome"
+                  value={formData.lastName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, lastName: e.target.value })}
+                />
+              </div>
             </div>
           )}
-          
+
           <div>
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Email</label>
-            <input 
-              type="email" 
-              required 
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
+            <input
+              type="email"
+              required
+              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary outline-none"
               placeholder="seu@email.com"
               value={formData.email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, email: e.target.value})}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
-          
+
           <div>
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Senha</label>
-            <input 
-              type="password" 
-              required 
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary outline-none"
+            <input
+              type="password"
+              required
+              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary outline-none"
               placeholder="••••••••"
               value={formData.password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, password: e.target.value})}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password: e.target.value })}
             />
           </div>
 
           {error && <p className="text-red-400 text-xs text-center">{error}</p>}
 
-          <Button type="submit" isLoading={isLoading} className="w-full h-12 rounded-lg">
+          <Button type="submit" isLoading={isLoading} className="w-full h-10 rounded-lg">
             {isLogin ? 'Entrar' : 'Cadastrar'}
           </Button>
         </form>
 
-        <div className="relative my-6">
+        <div className="relative my-4">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-white/10" />
           </div>
@@ -199,9 +209,9 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
         </div>
 
         <div>
-          <Button 
-            variant="secondary" 
-            className="w-full h-12 rounded-lg"
+          <Button
+            variant="secondary"
+            className="w-full h-10 rounded-lg"
             onClick={handleGoogleLogin}
             isLoading={isGoogleLoading}
             icon={<GoogleIcon className="h-5 w-5" />}
@@ -210,8 +220,8 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
           </Button>
         </div>
 
-        <div className="mt-6 text-center">
-          <button 
+        <div className="mt-4 text-center">
+          <button
             onClick={() => { setIsLogin(!isLogin); setError(''); setSuccessMessage(''); }}
             className="text-sm text-gray-400 hover:text-white transition-colors"
           >

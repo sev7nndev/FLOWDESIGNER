@@ -35,5 +35,19 @@ export const ART_STYLES: ArtStyle[] = [
     iconName: 'Cube',
     previewColor: 'from-indigo-500/20 to-violet-500/20',
     description: 'Elementos com aparência tridimensional, iluminação e sombras realistas, visual de computação gráfica. Excelente para produtos, games e tecnologia.'
+  },
+  {
+    id: 'luxury',
+    name: 'Luxo & Premium',
+    iconName: 'Gem',
+    previewColor: 'from-yellow-400/20 to-amber-600/20',
+    description: 'Design sofisticado, preto e dourado, tipografia serifada clássica, layouts minimalistas de alto padrão. Perfeito para joalherias, imóveis de luxo e marcas exclusivas.'
+  },
+  {
+    id: 'corporate',
+    name: 'Corporativo',
+    iconName: 'Building2',
+    previewColor: 'from-slate-400/20 to-blue-800/20',
+    description: 'Profissional, estruturado, confiança e seriedade. Cores azul/branco/cinza, grades organizadas, fotos de negócios. Ideal para escritórios, consultoria e B2B.'
   }
 ];

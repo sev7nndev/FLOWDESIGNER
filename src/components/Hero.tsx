@@ -33,14 +33,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
 
   return (
     <div className="w-full relative h-full">
-      
+
       {/* Shader Background */}
       <ShaderBackground className="z-0 opacity-70" />
-      
+      {/* <div className="absolute inset-0 z-0 bg-gradient-to-br from-purple-900/50 via-black to-pink-900/30 opacity-70" /> */}
+
       {/* Content Overlay */}
       <div className="relative z-20 container mx-auto h-full">
         <div className="flex gap-8 py-16 lg:py-24 items-center justify-center flex-col text-center px-4 h-full">
-          
+
           {/* Content Wrapper (Removed backdrop blur) */}
           <div className="max-w-4xl">
             <div className="flex gap-4 flex-col">
@@ -57,13 +58,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
                       animate={
                         titleNumber === index
                           ? {
-                              y: 0,
-                              opacity: 1,
-                            }
+                            y: 0,
+                            opacity: 1,
+                          }
                           : {
-                              y: titleNumber > index ? -150 : 150,
-                              opacity: 0,
-                            }
+                            y: titleNumber > index ? -150 : 150,
+                            opacity: 0,
+                          }
                       }
                       style={textShadowStyle} // Aplicando sombra também ao texto dinâmico
                     >
@@ -83,7 +84,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
               </Button>
             </div>
           </div>
-          
+
         </div>
       </div>
     </div>

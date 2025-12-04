@@ -1,0 +1,4 @@
+﻿{
+  "npm.packageManager": "npm",
+  "npm.exclude": "**/node_modules/**"
+}

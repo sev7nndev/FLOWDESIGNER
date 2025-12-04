@@ -5,21 +5,21 @@ import { getSupabase } from "./supabaseClient";
 // const SESSION_KEY is now unused.
 
 export const authService = {
-  init: () => {},
+  init: () => { },
 
   login: async (email: string, password: string): Promise<User | null> => {
     const supabase = getSupabase();
-    
+
     if (!supabase) {
       throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
     }
-    
+
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       throw new Error(error.message || 'Email ou senha inválidos.');
     }
     if (!data.user) return null;
-    
+
     // We return null here. App.tsx will handle fetching the profile/role 
     // and setting the final User state based on the verified session.
     return null;
@@ -32,18 +32,32 @@ export const authService = {
       throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
     }
 
-    // SUPABASE REGISTER
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { first_name: firstName, last_name: lastName } }
-    });
-    
-    if (error) throw new Error(error.message);
-    if (!data.user) throw new Error("Erro ao criar usuário. Verifique seu email.");
+    // BACKEND REGISTER (Safe Profile Creation)
+    try {
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, firstName, lastName })
+      });
 
-    // We return null here. App.tsx will handle fetching the profile/role 
-    // and setting the final User state based on the verified session.
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Falha no cadastro");
+      }
+
+      // After server creates user, we try to login immediately to set the session on the client
+      const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+      if (loginError) {
+        // If auto-login fails (maybe email confirmation needed), just return null
+        // The UI will likely show "Success, please login" anyway.
+        console.warn("Auto-login after register failed:", loginError);
+      }
+
+    } catch (e: any) {
+      throw new Error(e.message);
+    }
+
     return null;
   },
 
@@ -61,7 +75,11 @@ export const authService = {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // redirectTo: window.location.origin // Removido para usar a URL padrão configurada no Supabase, que está autorizada no Google.
+        redirectTo: window.location.origin,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent select_account',
+        },
       }
     });
 

@@ -8,13 +8,17 @@ export interface GeneratedImage {
 
 export interface BusinessInfo {
   companyName: string;
-  logo?: string; 
   phone: string;
+  email?: string;
+  instagram?: string; // New
+  facebook?: string;  // New
+  website?: string;
   addressStreet: string;
   addressNumber: string;
   addressNeighborhood: string;
   addressCity: string;
   details: string;
+  logo: string;
 }
 
 export enum GenerationStatus {
@@ -82,7 +86,7 @@ export interface PlanDetail {
 }
 
 // NEW: Combined Plan Type for Dev Panel
-export interface EditablePlan extends PlanSetting, PlanDetail {}
+export interface EditablePlan extends PlanSetting, PlanDetail { }
 
 
 // NEW: User Usage Type

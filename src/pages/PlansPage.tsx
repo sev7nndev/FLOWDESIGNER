@@ -13,7 +13,7 @@ interface PlansPageProps {
 }
 
 export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlans, onBackToApp, onSelectPlan }) => {
-    
+
     const freePlan = useMemo(() => plans.find(p => p.id === 'free'), [plans]);
     const starterPlan = useMemo(() => plans.find(p => p.id === 'starter'), [plans]);
     const proPlan = useMemo(() => plans.find(p => p.id === 'pro'), [plans]);
@@ -27,22 +27,25 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlan
     };
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center pt-16 pb-10 px-4 relative">
+        <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-start pt-4 pb-12 px-4 relative">
             <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
-            
-            <div className="w-full max-w-7xl relative z-10">
-                <Button 
-                    variant="ghost" 
-                    onClick={onBackToApp} 
-                    className="absolute top-4 left-0 text-gray-400 hover:text-white hidden md:flex"
-                >
-                    <ArrowLeft size={16} className="mr-2" /> {user ? 'Voltar ao App' : 'Voltar à Home'}
-                </Button>
-                
-                <div className="text-center mb-16 mt-12">
-                    <Sparkles size={32} className="text-primary mx-auto mb-4" />
-                    <h1 className="text-4xl md:text-5xl font-bold text-white">Escolha Seu Plano</h1>
-                    <p className="text-gray-400 mt-3 text-lg">
+
+            <div className="w-full max-w-7xl relative z-10 flex flex-col items-center">
+                {/* Top Left Back Button */}
+                <div className="w-full flex justify-start mb-8 pl-4 md:pl-0">
+                    <Button
+                        variant="ghost"
+                        onClick={onBackToApp}
+                        className="text-gray-400 hover:text-white flex items-center gap-2 pl-0 hover:bg-transparent transition-colors"
+                    >
+                        <ArrowLeft size={16} /> {user ? 'Voltar ao App' : 'Voltar à Home'}
+                    </Button>
+                </div>
+
+                <div className="text-center mb-8">
+                    <Sparkles size={24} className="text-primary mx-auto mb-2" />
+                    <h1 className="text-3xl md:text-4xl font-bold text-white">Escolha Seu Plano</h1>
+                    <p className="text-gray-400 mt-2 text-base">
                         {user ? `Olá, ${user.firstName}! Seu plano atual é ${user.role}.` : 'Comece grátis ou libere recursos ilimitados.'}
                     </p>
                 </div>
@@ -60,22 +63,22 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlan
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-end">
-                        
+
                         {freePlan && (
-                            <PricingCard 
+                            <PricingCard
                                 name={freePlan.display_name}
                                 price="R$ 0"
                                 period=""
                                 description={freePlan.description}
                                 buttonText={user?.role === 'free' ? 'Plano Atual' : 'Começar Grátis'}
                                 features={formatFeatures(freePlan)}
-                                onClick={() => onSelectPlan('free')} 
+                                onClick={() => onSelectPlan('free')}
                                 disabled={user?.role === 'free'}
                             />
                         )}
 
                         {starterPlan && (
-                            <PricingCard 
+                            <PricingCard
                                 name={starterPlan.display_name}
                                 price={`R$ ${starterPlan.price.toFixed(2)}`}
                                 period="/mês"
@@ -83,13 +86,13 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlan
                                 buttonText={user?.role === 'starter' ? 'Plano Atual' : 'Assinar Start'}
                                 features={formatFeatures(starterPlan)}
                                 highlight={false}
-                                onClick={() => onSelectPlan('starter')} 
+                                onClick={() => onSelectPlan('starter')}
                                 disabled={user?.role === 'starter'}
                             />
                         )}
 
                         {proPlan && (
-                            <PricingCard 
+                            <PricingCard
                                 name={proPlan.display_name}
                                 price={`R$ ${proPlan.price.toFixed(2)}`}
                                 period="/mês"
@@ -98,7 +101,7 @@ export const PlansPage: React.FC<PlansPageProps> = ({ user, plans, isLoadingPlan
                                 features={formatFeatures(proPlan)}
                                 highlight={true}
                                 badge="Melhor Custo-Benefício"
-                                onClick={() => onSelectPlan('pro')} 
+                                onClick={() => onSelectPlan('pro')}
                                 disabled={user?.role === 'pro'}
                             />
                         )}

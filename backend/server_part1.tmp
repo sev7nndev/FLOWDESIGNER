@@ -1,0 +1,236 @@
+﻿const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const { createClient } = require('@supabase/supabase-js');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const mercadopago = require('mercadopago');
+const axios = require('axios');
+const { v4: uuidv4 } = require('uuid');
+
+dotenv.config({ path: '.env.local' });
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// --- Configuration ---
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const MP_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+const MP_CLIENT_ID = process.env.MERCADO_PAGO_CLIENT_ID;
+const MP_CLIENT_SECRET = process.env.MERCADO_PAGO_CLIENT_SECRET;
+const MP_REDIRECT_URI = process.env.MERCADO_PAGO_REDIRECT_URI || 'http://localhost:3000/saas-panel';
+
+console.log("ðŸš€ Flow Designer Backend Starting...");
+console.log("SUPABASE_URL:", SUPABASE_URL ? "âœ“" : "âœ—");
+console.log("SUPABASE_SERVICE_KEY:", SUPABASE_SERVICE_KEY ? "âœ“" : "âœ—");
+console.log("GEMINI_API_KEY:", GEMINI_API_KEY ? "âœ“" : "âœ—");
+console.log("MP_CLIENT_ID:", MP_CLIENT_ID ? "âœ“" : "âœ—");
+
+// Initialize Clients
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  console.error("âŒ Missing Supabase credentials. Check .env.local");
+}
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+// Mercado Pago Configuration (v2 SDK)
+const mpClient = new mercadopago.MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
+
+// --- Middleware ---
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'DELETE', 'PUT', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({ limit: '10mb' }));
+
+// --- Helpers ---
+const getAuthUser = async (req) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return null;
+  const token = authHeader.split(' ')[1];
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return null;
+  return user;
+};
+
+// --- Routes ---
+
+// 1. AI: Professional Image Generation with Google Imagen (REST API)
+app.post('/api/generate', async (req, res) => {
+  try {
+    console.log('ðŸŽ¨ Generation request received');
+    const user = await getAuthUser(req);
+    if (!user) return res.status(401).json({ error: 'NÃ£o autorizado' });
+    console.log('âœ“ User authenticated:', user.id);
+
+    const { promptInfo, artStyle } = req.body;
+    console.log('ðŸ“ Prompt info:', promptInfo);
+
+    // Fetch user role
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    const role = profile?.role || 'free';
+    console.log('ðŸ‘¤ User role:', role);
+
+    // UNLIMITED GENERATION FOR OWNER AND DEV
+    const hasUnlimitedGeneration = role === 'owner' || role === 'dev';
+
+    if (!hasUnlimitedGeneration) {
+      // Check Quota for regular users
+      const { data: usageData, error: usageError } = await supabase
+        .from('user_usage')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (usageError && usageError.code !== 'PGRST116') {
+        console.error('âŒ Usage error:', usageError);
+        throw usageError;
+      }
+
+      // Fetch plan limits - CORRECT VALUES: 3/20/50
+      const limit = role === 'pro' ? 50 : (role === 'starter' ? 20 : 3);
+      console.log(`ðŸ“Š Quota: ${usageData?.images_generated || 0}/${limit}`);
+
+      if (usageData && usageData.images_generated >= limit) {
+        return res.status(403).json({
+          error: 'Limite de geraÃ§Ã£o atingido.',
+          quotaStatus: 'BLOCKED',
+          usage: usageData.images_generated,
+          plan: role
+        });
+      }
+    } else {
+      console.log('âœ¨ Unlimited generation enabled for', role);
+    }
+
+    // STAGE 1: THE DIRECTOR (Prompt Enhancement & Style Decision)
+    console.log('ðŸ§  Stage 1: The Director is planning the artwork...');
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const directorPrompt = `You are a World-Class Creative Director and Senior Prompt Engineer (Nano Banana Level).
+
+CLIENT BRIEFING:
+- Company: ${promptInfo.companyName}
+- Context/Details: ${promptInfo.details}
+- Location: ${promptInfo.addressCity || 'Not specified'}
+- Phone: ${promptInfo.phone || 'Not specified'}
+- Address: ${promptInfo.addressStreet}, ${promptInfo.addressNumber} - ${promptInfo.addressNeighborhood}
+
+YOUR MISSION:
+1. **ANALYZE**: Understand the client's niche (e.g., Tech, Food, Auto, Beauty).
+2. **FILL GAPS**: The client might have been brief. You MUST creatively invent professional, context-appropriate details to make the flyer "Surreal and Eye-Catching". Add slogans, visual elements, lighting effects, and composition details that fit the niche perfectly.
+3. **DECIDE STYLE**: Choose the BEST art style for this specific business (e.g., Cyberpunk for Tech, Minimalist Luxury for Jewelry, Warm/Rustic for Bakery).
+4. **TEXT SAFETY**: Design the image so text is CENTERED and SAFE from cropping.
+
+OUTPUT:
+Write a HIGHLY DETAILED, PROFESSIONAL prompt for Google Imagen.
+Structure:
+"[Main Subject/Scene], [Art Style Keywords], [Lighting/Atmosphere], [Camera/Render Quality]. Text overlay in bold professional typography: '${promptInfo.companyName}'. Secondary text: '${promptInfo.phone}'. Bottom text: '${promptInfo.addressCity}'. High contrast, 8k, trending on ArtStation, award winning design."
+
+CRITICAL RULES:
+- **CURRENCY**: Use "R$" for any prices.
+- **TEXT**: Portuguese text must be PERFECT.
+- **AESTHETICS**: Make it look like a Senior Human Designer made it. "Nano Banana" quality.
+- **COMPOSITION**: Leave negative space in the center or top for the text to ensure it is NOT cut off.
+
+Return ONLY the prompt.`;
+
+    let professionalPrompt;
+    try {
+      const result = await model.generateContent(directorPrompt);
+      const response = await result.response;
+      professionalPrompt = response.text().trim().replace(/```[\s\S]*?```/g, '').trim();
+      console.log('âœ… Director\'s Vision:', professionalPrompt.substring(0, 100) + '...');
+    } catch (geminiError) {
+      console.error('âš ï¸ Director Failed:', geminiError.message);
+      professionalPrompt = `Professional commercial flyer for ${promptInfo.companyName}. ${promptInfo.details}. Text: "${promptInfo.companyName}" and "${promptInfo.phone}". High quality, 8k.`;
+    }
+
+    // STAGE 2: THE ARTIST (Image Generation)
+    const generateImage = async (prompt) => {
+      console.log('ðŸŽ¨ Stage 2: The Artist is painting...');
+      const imagenModel = 'imagen-4.0-generate-001'; // Using the latest model
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${imagenModel}:predict?key=${GEMINI_API_KEY}`;
+
+      const response = await axios.post(url, {
+        instances: [{ prompt }],
+        parameters: { sampleCount: 1, aspectRatio: "1:1" }
+      }, { headers: { 'Content-Type': 'application/json' } });
+
+      const prediction = response.data.predictions?.[0];
+      const b64 = prediction?.bytesBase64Encoded || prediction?.image?.bytesBase64Encoded;
+      if (!b64) throw new Error('No image generated');
+      return b64;
+    };
+
+    let imageBase64 = await generateImage(professionalPrompt);
+    let finalPrompt = professionalPrompt;
+
+    // STAGE 3: THE CRITIC (Vision Check & Retry)
+    // Only run critic if we have a vision model available (gemini-2.5-flash supports vision)
+    console.log('ðŸ§ Stage 3: The Critic is reviewing...');
+
+    try {
+      const criticModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+      // Convert base64 to part for Gemini
+      const imagePart = {
+        inlineData: {
+          data: imageBase64,
+          mimeType: "image/png",
+        },
+      };
+
+      const criticPrompt = `Act as a Senior Design Critic. Review this generated flyer for "${promptInfo.companyName}".
+      
+      CHECKLIST:
+      1. Is the text "${promptInfo.companyName}" visible and NOT cut off?
+      2. Is the phone number "${promptInfo.phone}" visible?
+      3. Is the aesthetic "Surreal/Professional"?
+      
+      If the image is BAD (text cut off, ugly, wrong text), reply with "REJECT: [Reason] | [Improved Prompt Suggestion]".
+      If the image is GOOD, reply with "APPROVE".
+      
+      Be strict about text cutoff.`;
+
+      const criticResult = await criticModel.generateContent([criticPrompt, imagePart]);
+      const criticVerdict = criticResult.response.text().trim();
+      console.log('ðŸ“ Critic Verdict:', criticVerdict);
+
+      if (criticVerdict.startsWith('REJECT')) {
+        console.log('âš ï¸ Image rejected! Retrying ONE time with improved instructions...');
+        const improvement = criticVerdict.split('|')[1] || "Ensure text is centered and smaller to avoid cutoff.";
+
+        // Retry with improved prompt
+        finalPrompt = `${professionalPrompt}. IMPORTANT FIX: ${improvement.trim()}`;
+        imageBase64 = await generateImage(finalPrompt);
+        console.log('âœ… Retry complete.');
+      } else {
+        console.log('âœ… Image approved by Critic.');
+      }
+
+    } catch (criticError) {
+      console.error('âš ï¸ Critic unavailable or failed, proceeding with first draft:', criticError.message);
+    }
+
+    // Final Processing
+    const imageUrl = `data:image/png;base64,${imageBase64}`;
+
+    console.log('ðŸ’¾ Saving masterpiece...');
+    const { data: savedImage, error: saveError } = await supabase
+      .from('images')
+      .insert({
+        user_id: user.id,
+        prompt: finalPrompt,
+        image_url: imageUrl,
+        business_info: promptInfo
+      })
+      .select()
+      .single();
+
+    if (saveError) throw saveError;
+

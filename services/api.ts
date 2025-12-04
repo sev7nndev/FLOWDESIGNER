@@ -2,440 +2,548 @@ import { GeneratedImage, BusinessInfo, LandingImage, QuotaCheckResponse, Editabl
 import { getSupabase } from "./supabaseClient";
 
 // URL do seu Backend Node.js local (ou deployado)
-const BACKEND_URL = "/api"; 
+const BACKEND_URL = "/api";
 
 export const api = {
-  generate: async (businessInfo: BusinessInfo, artStyle: ArtStyle): Promise<GeneratedImage> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Erro de conexão com o App.");
+    generate: async (businessInfo: BusinessInfo, artStyle: ArtStyle): Promise<GeneratedImage> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Erro de conexão com o App.");
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Faça login para gerar artes.");
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Faça login para gerar artes.");
 
-    try {
-      const response = await fetch(`${BACKEND_URL}/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}` 
-        },
-        body: JSON.stringify({
-          promptInfo: businessInfo,
-          artStyle: artStyle, // Send selected style to backend
-        })
-      });
-
-      if (!response.ok) {
         try {
-          const err = await response.json();
-          
-          // Handle Quota Blocked error specifically
-          if (err.quotaStatus === 'BLOCKED') {
-              const quotaError = new Error(err.error || "Limite de geração atingido.");
-              (quotaError as any).quotaStatus = 'BLOCKED';
-              (quotaError as any).usage = err.usage;
-              (quotaError as any).plan = err.plan;
-              throw quotaError;
-          }
-          
-          throw new Error(err.error || "Erro no servidor");
-        } catch (e) {
-          // Re-throw quota error if caught here
-          if ((e as any).quotaStatus === 'BLOCKED') throw e;
-          
-          console.error("Falha ao analisar a resposta de erro como JSON.", { status: response.status, statusText: response.statusText });
-          throw new Error(`O servidor retornou um erro inesperado (Status: ${response.status}). Verifique se o backend está rodando corretamente.`);
+            const response = await fetch(`${BACKEND_URL}/generate`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    promptInfo: businessInfo,
+                    artStyle: artStyle, // Send selected style to backend
+                })
+            });
+
+            if (!response.ok) {
+                try {
+                    const err = await response.json();
+
+                    // Handle Quota Blocked error specifically
+                    if (err.quotaStatus === 'BLOCKED') {
+                        const quotaError = new Error(err.error || "Limite de geração atingido.");
+                        (quotaError as any).quotaStatus = 'BLOCKED';
+                        (quotaError as any).usage = err.usage;
+                        (quotaError as any).plan = err.plan;
+                        throw quotaError;
+                    }
+
+                    throw new Error(err.error || "Erro no servidor");
+                } catch (e) {
+                    // Re-throw quota error if caught here
+                    if ((e as any).quotaStatus === 'BLOCKED') throw e;
+
+                    console.error("Falha ao analisar a resposta de erro como JSON.", { status: response.status, statusText: response.statusText });
+                    throw new Error(`O servidor retornou um erro inesperado (Status: ${response.status}). Verifique se o backend está rodando corretamente.`);
+                }
+            }
+
+            const data = await response.json();
+
+            // Get a secure, signed URL for the newly created image
+            const signedUrl = await api.getDownloadUrl(data.image.image_url);
+
+            return {
+                id: data.image.id,
+                url: signedUrl,
+                prompt: data.image.prompt,
+                businessInfo: data.image.business_info,
+                createdAt: new Date(data.image.created_at).getTime()
+            };
+
+        } catch (error) {
+            console.error("Erro ao gerar:", error);
+            throw error;
         }
-      }
+    },
 
-      const data = await response.json();
-      
-      // Get a secure, signed URL for the newly created image
-      const signedUrl = await api.getDownloadUrl(data.image.image_url);
+    deleteImage: async (id: string): Promise<void> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
 
-      return {
-        id: data.image.id,
-        url: signedUrl,
-        prompt: data.image.prompt,
-        businessInfo: data.image.business_info,
-        createdAt: new Date(data.image.created_at).getTime()
-      };
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Faça login para deletar imagens.");
 
-    } catch (error) {
-      console.error("Erro ao gerar:", error);
-      throw error;
-    }
-  },
-
-  getHistory: async (): Promise<GeneratedImage[]> => {
-    const supabase = getSupabase();
-    if (!supabase) return [];
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
-    const { data, error } = await supabase
-      .from('images')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error || !data) return [];
-
-    // Generate signed URLs for all images in parallel for performance
-    const historyWithUrls = await Promise.all(data.map(async (row: any) => {
         try {
-            const signedUrl = await api.getDownloadUrl(row.image_url);
+            const response = await fetch(`${BACKEND_URL}/images/${id}`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`
+                }
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || "Falha ao deletar imagem.");
+            }
+        } catch (error) {
+            console.error("Error deleting image:", error);
+            throw error;
+        }
+    },
+
+    getHistory: async (): Promise<GeneratedImage[]> => {
+        const supabase = getSupabase();
+        if (!supabase) return [];
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        // OPTIMIZATION: Pagination & Batch Signing
+        // 1. Fetch only recent images first (FILTERED BY USER ID FOR PRIVACY)
+        const { data, error } = await supabase
+            .from('images')
+            .select('*')
+            .eq('user_id', user.id) // 🔒 CRITICAL: Filter by user ID for privacy
+            .order('created_at', { ascending: false })
+            .limit(10); // Start with 10 for instant load
+
+        if (error || !data) return [];
+
+        // 2. Separate Storage Paths vs Legacy Base64
+        const pathsToSign: string[] = [];
+        const pathMap = new Map<string, string>(); // Helper to map row ID to signed URL
+
+        data.forEach((row: any) => {
+            const path = row.image_url;
+            if (path && !path.startsWith('data:') && !path.startsWith('http')) {
+                pathsToSign.push(path);
+            }
+        });
+
+        // 3. Batch Sign (1 Request instead of N)
+        if (pathsToSign.length > 0) {
+            const { data: signedData } = await supabase
+                .storage
+                .from('generated-images')
+                .createSignedUrls(pathsToSign, 3600);
+
+            if (signedData) {
+                signedData.forEach(item => {
+                    if (item.signedUrl) {
+                        pathMap.set(item.path || item.error || '', item.signedUrl);
+                    }
+                });
+            }
+        }
+
+        // 4. Construct Result
+        return data.map((row: any) => {
+            let finalUrl = row.image_url;
+
+            // If it's a Storage Path, get from map
+            if (!row.image_url.startsWith('data:') && !row.image_url.startsWith('http')) {
+                // Try exact match or match by filename
+                finalUrl = pathMap.get(row.image_url) || row.image_url;
+            }
+
             return {
                 id: row.id,
-                url: signedUrl,
+                url: finalUrl,
                 prompt: row.prompt,
                 businessInfo: row.business_info,
                 createdAt: new Date(row.created_at).getTime()
             };
-        } catch (e) {
-            console.warn(`Could not get signed URL for image ${row.id}. It might have been deleted.`);
-            return null;
-        }
-    }));
-
-    // Filter out any images that failed to get a URL
-    return historyWithUrls.filter((item): item is GeneratedImage => item !== null);
-  },
-  
-  // NEW: Fetch all plan settings (combined limits and details)
-  getPlanSettings: async (): Promise<EditablePlan[]> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Supabase not configured.");
-    
-    // Fetch limits/prices
-    const { data: settingsData, error: settingsError } = await supabase
-        .from('plan_settings')
-        .select('*');
-        
-    if (settingsError) {
-        console.error("Error fetching plan_settings:", settingsError);
-        throw new Error(settingsError.message);
-    }
-    
-    // Fetch marketing details
-    const { data: detailsData, error: detailsError } = await supabase
-        .from('plan_details')
-        .select('*');
-        
-    if (detailsError) {
-        console.error("Error fetching plan_details:", detailsError);
-        throw new Error(detailsError.message);
-    }
-    
-    // Ensure data is not null before proceeding
-    if (!settingsData || !detailsData) {
-        console.error("Plan data is null or empty. Check RLS policies and if tables are populated.");
-        throw new Error("Plan data could not be loaded. Tables might be empty or inaccessible.");
-    }
-    
-    const settingsMap = new Map(settingsData.map(s => [s.id, s]));
-    
-    // Combine data
-    const combinedPlans: EditablePlan[] = detailsData.map(detail => {
-        const setting = settingsMap.get(detail.id);
-        return {
-            id: detail.id as any,
-            display_name: detail.display_name,
-            description: detail.description,
-            features: detail.features,
-            price: setting?.price || 0,
-            max_images_per_month: setting?.max_images_per_month || 0,
-        };
-    });
-    
-    return combinedPlans;
-  },
-  
-  // NEW: Check user quota status
-  checkQuota: async (): Promise<QuotaCheckResponse> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Supabase not configured.");
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Usuário não autenticado.");
-
-    try {
-        const response = await fetch(`${BACKEND_URL}/check-quota`, {
-            headers: {
-                "Authorization": `Bearer ${session.access_token}` 
-            }
         });
-        
-        if (!response.ok) {
-            let errorMessage = "Falha ao verificar quota.";
-            let errorBody: any = {};
-            try {
-                errorBody = await response.json();
-                errorMessage = errorBody.error || errorMessage;
-            } catch (e) {
-                // Ignore if response body is not JSON
-            }
-            
-            // If the backend returns the full quota response structure even on error (e.g., BLOCKED)
-            if (errorBody.status) {
-                return errorBody as QuotaCheckResponse;
-            }
-            
-            throw new Error(errorMessage);
-        }
-        
-        const data = await response.json();
-        return data as QuotaCheckResponse;
-    } catch (error) {
-        console.error("Error checking quota:", error);
-        throw error;
-    }
-  },
-  
-  // NEW: Admin update plan settings (now handles both tables)
-  updatePlanSettings: async (plans: EditablePlan[]): Promise<void> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Supabase not configured.");
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Acesso negado.");
+    },
 
-    try {
-        // 1. Prepare updates for plan_settings (limits/price)
-        const settingsUpdates = plans.map(p => ({
-            id: p.id,
-            price: p.price,
-            max_images_per_month: p.max_images_per_month,
-            updated_by: session.user.id,
-            updated_at: new Date().toISOString()
-        }));
-        
-        // 2. Prepare updates for plan_details (marketing info)
-        const detailsUpdates = plans.map(p => ({
-            id: p.id,
-            display_name: p.display_name,
-            description: p.description,
-            features: p.features,
-            updated_at: new Date().toISOString()
-        }));
-        
-        // Execute updates in parallel
-        const [settingsResult, detailsResult] = await Promise.all([
-            supabase.from('plan_settings').upsert(settingsUpdates, { onConflict: 'id' }),
-            supabase.from('plan_details').upsert(detailsUpdates, { onConflict: 'id' })
-        ]);
-        
-        if (settingsResult.error) {
-            console.error("Error updating plan_settings:", settingsResult.error);
-            throw new Error(settingsResult.error.message);
-        }
-        
-        if (detailsResult.error) {
-            console.error("Error updating plan_details:", detailsResult.error);
-            throw new Error(detailsResult.error.message);
-        }
-        
-    } catch (error) {
-        console.error("Error updating plan settings via backend:", error);
-        throw error;
-    }
-  },
-  
-  // NEW: Initiate Mercado Pago subscription
-  initiateSubscription: async (planId: string): Promise<{ paymentUrl: string }> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Supabase not configured.");
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Faça login para assinar.");
+    // NEW: Fetch all plan settings (combined limits and details)
+    getPlanSettings: async (): Promise<EditablePlan[]> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
 
-    try {
-        const response = await fetch(`${BACKEND_URL}/subscribe`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${session.access_token}` 
-            },
-            body: JSON.stringify({ planId })
+        // Fetch limits/prices
+        const { data: settingsData, error: settingsError } = await supabase
+            .from('plan_settings')
+            .select('*');
+
+        if (settingsError) {
+            console.error("Error fetching plan_settings:", settingsError);
+            throw new Error(settingsError.message);
+        }
+
+        // Fetch marketing details
+        const { data: detailsData, error: detailsError } = await supabase
+            .from('plan_details')
+            .select('*');
+
+        if (detailsError) {
+            console.error("Error fetching plan_details:", detailsError);
+            throw new Error(detailsError.message);
+        }
+
+        // Ensure data is not null before proceeding
+        if (!settingsData || !detailsData) {
+            console.error("Plan data is null or empty. Check RLS policies and if tables are populated.");
+            throw new Error("Plan data could not be loaded. Tables might be empty or inaccessible.");
+        }
+
+        const settingsMap = new Map(settingsData.map(s => [s.id, s]));
+
+        // Combine data
+        const combinedPlans: EditablePlan[] = detailsData.map(detail => {
+            const setting = settingsMap.get(detail.id);
+            return {
+                id: detail.id as any,
+                display_name: detail.display_name,
+                description: detail.description,
+                features: detail.features,
+                price: setting?.price || 0,
+                max_images_per_month: setting?.max_images_per_month || 0,
+            };
         });
 
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || `Falha ao iniciar assinatura: Status ${response.status}`);
-        }
-        
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error("Error initiating subscription:", error);
-        throw error;
-    }
-  },
-  
-  // FIX 3: Call backend endpoint to get the full MP Connect URL
-  getMercadoPagoConnectUrl: async (): Promise<string> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Supabase not configured.");
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Acesso negado. Faça login como administrador.");
+        return combinedPlans;
+    },
 
-    try {
-        const response = await fetch(`${BACKEND_URL}/admin/mp-connect`, {
-            headers: {
-                "Authorization": `Bearer ${session.access_token}` 
-            }
-        });
+    // NEW: Check user quota status
+    checkQuota: async (): Promise<QuotaCheckResponse> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
 
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || `Falha ao obter URL de conexão MP: Status ${response.status}`);
-        }
-        
-        const data = await response.json();
-        return data.connectUrl;
-    } catch (error) {
-        console.error("Error fetching MP connect URL:", error);
-        throw error;
-    }
-  },
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Usuário não autenticado.");
 
-  getLandingImages: async (): Promise<LandingImage[]> => {
-    const supabase = getSupabase();
-    if (!supabase) return [];
-
-    const { data, error } = await supabase
-      .from('landing_carousel_images')
-      .select('id, image_url, sort_order')
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: false });
-
-    if (error || !data) {
-        console.error("Error fetching landing images:", error);
-        return [];
-    }
-
-    const imagesWithUrls: LandingImage[] = data.map(row => {
-        const { data: { publicUrl } } = supabase.storage
-            .from('landing-carousel')
-            .getPublicUrl(row.image_url);
-            
-        return {
-            id: row.id,
-            url: publicUrl,
-            sortOrder: row.sort_order
-        };
-    });
-
-    return imagesWithUrls;
-  },
-  
-  uploadLandingImage: async (file: File, userId: string): Promise<LandingImage> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Supabase not configured.");
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Faça login para fazer upload de imagens.");
-
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-            const fileBase64 = reader.result as string;
-            const fileName = file.name;
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/landing-images/upload`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${session.access_token}` 
-                    },
-                    body: JSON.stringify({ fileBase64, fileName, userId })
-                });
-
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || `Falha ao fazer upload da imagem da landing page: Status ${response.status}`);
+        try {
+            const response = await fetch(`${BACKEND_URL}/check-quota`, {
+                headers: {
+                    "Authorization": `Bearer ${session.access_token}`
                 }
-                const data = await response.json();
-                resolve(data.image); // Backend should return the full LandingImage object
-            } catch (error) {
-                console.error("Error uploading landing image via backend:", error);
-                reject(error);
+            });
+
+            if (!response.ok) {
+                let errorMessage = "Falha ao verificar quota.";
+                let errorBody: any = {};
+                try {
+                    errorBody = await response.json();
+                    errorMessage = errorBody.error || errorMessage;
+                } catch (e) {
+                    // Ignore if response body is not JSON
+                }
+
+                // If the backend returns the full quota response structure even on error (e.g., BLOCKED)
+                if (errorBody.status) {
+                    return errorBody as QuotaCheckResponse;
+                }
+
+                throw new Error(errorMessage);
             }
-        };
-        reader.onerror = (error) => reject(error);
-        reader.readAsDataURL(file);
-    });
-  },
-  
-  deleteLandingImage: async (id: string, imagePath: string): Promise<void> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Supabase not configured.");
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Faça login para deletar imagens.");
 
-    try {
-        const response = await fetch(`${BACKEND_URL}/admin/landing-images/${id}`, {
-            method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${session.access_token}` 
-            },
-            body: JSON.stringify({ imagePath }) // Pass the imagePath to the backend
-        });
+            const data = await response.json();
+            return data as QuotaCheckResponse;
+        } catch (error) {
+            console.error("Error checking quota:", error);
+            throw error;
+        }
+    },
 
-        if (!response.ok) {
-            // Try to read JSON error body, but fallback gracefully if it's empty
-            let errorMessage = `Falha ao deletar imagem da landing page: Status ${response.status}`;
-            try {
+    // NEW: Admin update plan settings (now handles both tables)
+    updatePlanSettings: async (plans: EditablePlan[]): Promise<void> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Acesso negado.");
+
+        try {
+            // 1. Prepare updates for plan_settings (limits/price)
+            const settingsUpdates = plans.map(p => ({
+                id: p.id,
+                price: p.price,
+                max_images_per_month: p.max_images_per_month,
+                updated_by: session.user.id,
+                updated_at: new Date().toISOString()
+            }));
+
+            // 2. Prepare updates for plan_details (marketing info)
+            const detailsUpdates = plans.map(p => ({
+                id: p.id,
+                display_name: p.display_name,
+                description: p.description,
+                features: p.features,
+                updated_at: new Date().toISOString()
+            }));
+
+            // Execute updates in parallel
+            const [settingsResult, detailsResult] = await Promise.all([
+                supabase.from('plan_settings').upsert(settingsUpdates, { onConflict: 'id' }),
+                supabase.from('plan_details').upsert(detailsUpdates, { onConflict: 'id' })
+            ]);
+
+            if (settingsResult.error) {
+                console.error("Error updating plan_settings:", settingsResult.error);
+                throw new Error(settingsResult.error.message);
+            }
+
+            if (detailsResult.error) {
+                console.error("Error updating plan_details:", detailsResult.error);
+                throw new Error(detailsResult.error.message);
+            }
+
+        } catch (error) {
+            console.error("Error updating plan settings via backend:", error);
+            throw error;
+        }
+    },
+
+    // NEW: Initiate Mercado Pago subscription
+    initiateSubscription: async (planId: string): Promise<{ paymentUrl: string }> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Faça login para assinar.");
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/subscribe`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ planId })
+            });
+
+            if (!response.ok) {
                 const err = await response.json();
-                errorMessage = err.error || errorMessage;
-            } catch (e) {
-                // If JSON parsing fails (e.g., empty body), use the default message
-                console.warn("Failed to parse JSON error response, assuming empty body.");
+                throw new Error(err.error || `Falha ao iniciar assinatura: Status ${response.status}`);
             }
-            throw new Error(errorMessage);
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error("Error initiating subscription:", error);
+            throw error;
         }
-    } catch (error) {
-        console.error("Error deleting landing image via backend:", error);
-        throw error;
-    }
-  },
+    },
 
-  getDownloadUrl: async (path: string): Promise<string> => {
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("Supabase not configured.");
+    // FIX 3: Call backend endpoint to get the full MP Connect URL
+    getMercadoPagoConnectUrl: async (): Promise<string> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Faça login para acessar arquivos.");
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Acesso negado. Faça login como administrador.");
 
-    // Use environment variable for Supabase Project ID (Issue 3 Fix)
-    const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-    const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/get-signed-url`;
+        try {
+            const response = await fetch(`${BACKEND_URL}/admin/mp-connect`, {
+                headers: {
+                    "Authorization": `Bearer ${session.access_token}`
+                }
+            });
 
-    try {
-        const response = await fetch(EDGE_FUNCTION_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${session.access_token}` 
-            },
-            body: JSON.stringify({ path })
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || `Falha ao obter URL de conexão MP: Status ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.connectUrl;
+        } catch (error) {
+            console.error("Error fetching MP connect URL:", error);
+            throw error;
+        }
+    },
+
+    // NEW: Exchange OAuth Code for Token
+    exchangeMpCode: async (code: string): Promise<void> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Acesso negado.");
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/admin/mp-exchange`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ code })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || "Falha na troca de token");
+            }
+        } catch (error) {
+            console.error("Error exchanging MP code:", error);
+            throw error;
+        }
+    },
+
+    getLandingImages: async (): Promise<LandingImage[]> => {
+        const supabase = getSupabase();
+        if (!supabase) return [];
+
+        const { data, error } = await supabase
+            .from('landing_carousel_images')
+            .select('id, image_url, sort_order')
+            .order('sort_order', { ascending: true })
+            .order('created_at', { ascending: false });
+
+        if (error || !data) {
+            console.error("Error fetching landing images:", error);
+            return [];
+        }
+
+        const imagesWithUrls: LandingImage[] = data.map(row => {
+            const { data: { publicUrl } } = supabase.storage
+                .from('landing-carousel')
+                .getPublicUrl(row.image_url);
+
+            return {
+                id: row.id,
+                url: publicUrl,
+                sortOrder: row.sort_order
+            };
         });
 
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || "Erro ao gerar URL segura.");
+        return imagesWithUrls;
+    },
+
+    uploadLandingImage: async (file: File, userId: string): Promise<LandingImage> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Faça login para fazer upload de imagens.");
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const fileBase64 = reader.result as string;
+                const fileName = file.name;
+
+                try {
+                    const response = await fetch(`${BACKEND_URL}/admin/landing-images/upload`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${session.access_token}`
+                        },
+                        body: JSON.stringify({ fileBase64, fileName, userId })
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || `Falha ao fazer upload da imagem da landing page: Status ${response.status}`);
+                    }
+                    const data = await response.json();
+                    resolve(data.image); // Backend should return the full LandingImage object
+                } catch (error) {
+                    console.error("Error uploading landing image via backend:", error);
+                    reject(error);
+                }
+            };
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+    },
+
+    deleteLandingImage: async (id: string, imagePath: string): Promise<void> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Faça login para deletar imagens.");
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/admin/landing-images/${id}`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ imagePath }) // Pass the imagePath to the backend
+            });
+
+            if (!response.ok) {
+                // Try to read JSON error body, but fallback gracefully if it's empty
+                let errorMessage = `Falha ao deletar imagem da landing page: Status ${response.status}`;
+                try {
+                    const err = await response.json();
+                    errorMessage = err.error || errorMessage;
+                } catch (e) {
+                    // If JSON parsing fails (e.g., empty body), use the default message
+                    console.warn("Failed to parse JSON error response, assuming empty body.");
+                }
+                throw new Error(errorMessage);
+            }
+        } catch (error) {
+            console.error("Error deleting landing image via backend:", error);
+            throw error;
+        }
+    },
+
+    getDownloadUrl: async (path: string): Promise<string> => {
+        // If the path is already a full URL (e.g., from Pollinations.ai) or a Data URL, return it directly
+        if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+            console.log('✓ URL is already public or data URI, returning directly:', path.substring(0, 50) + '...');
+            return path;
         }
 
-        const data = await response.json();
-        return data.signedUrl;
+        // Otherwise, it's a Supabase Storage path, get signed URL
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
 
-    } catch (error) {
-        console.error("Error generating signed URL via Edge Function:", error);
-        throw new Error("Falha ao gerar URL de download segura.");
+        // Direct Client Generation (No Edge Function needed)
+        try {
+            const { data, error } = await supabase
+                .storage
+                .from('generated-images')
+                .createSignedUrl(path, 3600); // 1 Hour Expiry
+
+            if (error) throw error;
+            if (!data?.signedUrl) throw new Error("URL não gerada.");
+
+            return data.signedUrl;
+
+        } catch (error) {
+            console.error("Error generating signed URL:", error);
+            // Fallback: If signing fails, return the path? No, that won't load.
+            throw new Error("Falha ao gerar URL de download segura.");
+        }
+    },
+
+    enhancePrompt: async (prompt: string): Promise<string> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Faça login para usar a IA.");
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/enhance-prompt`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ prompt })
+            });
+
+            if (!response.ok) {
+                throw new Error("Falha ao melhorar prompt.");
+            }
+
+            const data = await response.json();
+            return data.enhancedPrompt;
+        } catch (error) {
+            console.error("Error enhancing prompt:", error);
+            throw error;
+        }
     }
-  }
 };

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User, QuotaStatus, QuotaCheckResponse, ArtStyle } from '../types';
 import { api } from '../services/api';
 import { PLACEHOLDER_EXAMPLES } from '../constants';
@@ -17,7 +17,7 @@ const INITIAL_STATE: GenerationState = {
 };
 
 // Max Base64 length for logo (approx 30KB original file size)
-const MAX_LOGO_BASE64_LENGTH = 40000; 
+const MAX_LOGO_BASE64_LENGTH = 40000;
 const MAX_LOGO_KB = Math.round(MAX_LOGO_BASE64_LENGTH / 1.33 / 1024); // Approx 30KB
 
 export const useGeneration = (user: User | null, refreshUsage: () => void, openUpgradeModal: (quota: QuotaCheckResponse) => void) => {
@@ -30,19 +30,65 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
     }, []);
 
     const handleLogoUpload = useCallback((file: File) => {
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64String = reader.result as string;
+        if (!file) return;
+
+        // Smart Compression Logic
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Max dimensions to ensure small size (e.g., 300px width is enough for a logo on flyer)
+                const MAX_WIDTH = 300;
+                const MAX_HEIGHT = 300;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+
+                // Compress to JPEG with 0.7 quality to ensure it fits
+                // Using JPEG/PNG dynamically? PNG is better for logos (transparency), but heavier.
+                // Let's try PNG first, if too big, switch to JPEG? Or just resize aggressively.
+
+                // For safety and size, we'll output PNG but resized heavily.
+                // If the original file was < 50kb, keep it.
+
+                const base64String = canvas.toDataURL('image/png');
+
+                // Check size
                 if (base64String.length > MAX_LOGO_BASE64_LENGTH) {
-                    toast.error(`O logo é muito grande. O tamanho máximo permitido é de ${MAX_LOGO_KB}KB.`);
-                    setForm((prev: BusinessInfo) => ({ ...prev, logo: '' })); // Clear logo if too large
+                    // Try JPEG if PNG is still too big
+                    const jpegBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                    if (jpegBase64.length <= MAX_LOGO_BASE64_LENGTH) {
+                        setForm((prev: BusinessInfo) => ({ ...prev, logo: jpegBase64 }));
+                        toast.success("Logo otimizada automaticamente!");
+                        return;
+                    }
+                    toast.error(`A logo ainda é muito pesada mesmo comprimida. Tente uma imagem menor.`);
                 } else {
                     setForm((prev: BusinessInfo) => ({ ...prev, logo: base64String }));
+                    toast.success("Logo carregada!");
                 }
             };
-            reader.readAsDataURL(file);
-        }
+            img.src = event.target?.result as string;
+        };
+        reader.readAsDataURL(file);
     }, []);
 
     const loadExample = useCallback(() => {
@@ -50,35 +96,44 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
         setForm(example);
     }, []);
 
+    const historyLoadedRef = useRef(false);
+
     const loadHistory = useCallback(async () => {
-        if (!user) return;
+        if (!user || historyLoadedRef.current) return;
         try {
             const history = await api.getHistory();
             setState((prev: GenerationState) => ({ ...prev, history }));
+            historyLoadedRef.current = true;
         } catch (e) {
             console.error("Failed to load history", e);
         }
     }, [user]);
 
     const handleGenerate = useCallback(async () => {
+        // Guard against race conditions - prevent duplicate requests
+        if (state.status === GenerationStatus.THINKING || state.status === GenerationStatus.GENERATING) {
+            console.warn('Generation already in progress, ignoring duplicate request');
+            return;
+        }
+
         if (!form.companyName || !form.details) return;
 
         setState((prev: GenerationState) => ({ ...prev, status: GenerationStatus.THINKING, error: undefined }));
-        
+
         try {
             // 1. Check Quota before starting generation
             const quotaResponse = await api.checkQuota();
-            
+
             if (quotaResponse.status === QuotaStatus.BLOCKED) {
-                setState((prev: GenerationState) => ({ 
-                    ...prev, 
-                    status: GenerationStatus.IDLE, 
-                    error: quotaResponse.message || "Limite de geração atingido." 
+                setState((prev: GenerationState) => ({
+                    ...prev,
+                    status: GenerationStatus.IDLE,
+                    error: quotaResponse.message || "Limite de geração atingido."
                 }));
                 openUpgradeModal(quotaResponse);
                 return;
             }
-            
+
             if (quotaResponse.status === QuotaStatus.NEAR_LIMIT) {
                 toast.warning(quotaResponse.message || "Você está perto do limite de gerações do seu plano.", {
                     duration: 5000,
@@ -88,60 +143,101 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
                     },
                 });
             }
-            
-            setState((prev: GenerationState) => ({ ...prev, status: GenerationStatus.GENERATING }));
+
+            setState((prev: GenerationState) => ({
+                ...prev,
+                status: GenerationStatus.GENERATING,
+                currentImage: null // Clear old image to show skeleton
+            }));
 
             // 2. Proceed with generation, now including the selected style
             const newImage = await api.generate(form, selectedStyle);
-            
+
             setState((prev: GenerationState) => ({
                 status: GenerationStatus.SUCCESS,
                 currentImage: newImage,
                 history: [newImage, ...prev.history]
             }));
-            
+
             toast.success("Arte gerada com sucesso!");
-            
+
             // 3. Refresh usage data after successful generation
             refreshUsage();
 
         } catch (err: any) {
             console.error(err);
-            
+
             // Check for BLOCKED status returned from the /api/generate endpoint
             if (err.quotaStatus === QuotaStatus.BLOCKED) {
-                setState((prev: GenerationState) => ({ 
-                    ...prev, 
-                    status: GenerationStatus.IDLE, 
-                    error: err.message || "Limite de geração atingido." 
+                setState((prev: GenerationState) => ({
+                    ...prev,
+                    status: GenerationStatus.IDLE,
+                    error: err.message || "Limite de geração atingido."
                 }));
                 openUpgradeModal(err);
                 return;
             }
-            
-            setState((prev: GenerationState) => ({ 
-                ...prev, 
-                status: GenerationStatus.ERROR, 
-                error: err.message || "Erro ao gerar arte. Verifique se o Backend está rodando." 
+
+            setState((prev: GenerationState) => ({
+                ...prev,
+                status: GenerationStatus.ERROR,
+                error: err.message || "Erro ao gerar arte. Verifique se o Backend está rodando."
             }));
             toast.error(err.message || "Erro ao gerar arte.");
         }
-    }, [form, selectedStyle, refreshUsage, openUpgradeModal]);
+    }, [form, selectedStyle, refreshUsage, openUpgradeModal, state.status]);
 
     const downloadImage = useCallback((image: GeneratedImage) => {
         const link = document.createElement('a');
         link.href = image.url;
-        link.download = `flow-${image.id.slice(0,4)}.png`;
+        link.download = `flow-${image.id.slice(0, 4)}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     }, []);
 
+    const [isEnhancing, setIsEnhancing] = useState(false);
+
+    const handleEnhancePrompt = useCallback(async () => {
+        if (!form.details || form.details.length < 5) {
+            toast.error("Digite pelo menos algumas palavras para a IA melhorar.");
+            return;
+        }
+
+        setIsEnhancing(true);
+        try {
+            const enhanced = await api.enhancePrompt(form.details);
+            setForm(prev => ({ ...prev, details: enhanced }));
+            toast.success("Prompt melhorado com sucesso!");
+        } catch (error) {
+            toast.error("Erro ao melhorar prompt.");
+        } finally {
+            setIsEnhancing(false);
+        }
+    }, [form.details]);
+
+    // NEW: Delete from history
+    const deleteHistoryItem = useCallback(async (image: GeneratedImage) => {
+        try {
+            await api.deleteImage(image.id);
+            setState((prev: GenerationState) => ({
+                ...prev,
+                history: prev.history.filter(i => i.id !== image.id),
+                // If the deleted image was the current one, perhaps clear it? 
+                // Let's keep it visible for now unless user clears it presumably. 
+                // But usually history deletion doesn't affect current view if it's separate.
+            }));
+            toast.success("Imagem removida da galeria.");
+        } catch (e: any) {
+            toast.error(e.message || "Erro ao excluir imagem.");
+        }
+    }, []);
+
     return {
         form,
         state,
-        selectedStyle, // Export selected style
-        setSelectedStyle, // Export setter for style
+        selectedStyle,
+        setSelectedStyle,
         handleInputChange,
         handleLogoUpload,
         handleGenerate,
@@ -149,6 +245,9 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
         loadHistory,
         downloadImage,
         setForm,
-        setState
+        setState,
+        handleEnhancePrompt,
+        isEnhancing,
+        deleteHistoryItem // Exported
     };
 };
