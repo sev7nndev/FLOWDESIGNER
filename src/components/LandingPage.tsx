@@ -8,9 +8,7 @@ import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
 import { LandingImage, EditablePlan } from '@/types';
 import { HeroSection } from './Hero'; 
 import { api } from '@/services/api';
-import { motion } from 'framer-motion';
 import { FeatureCard } from './FeatureCard';
-import { BackgroundBeams } from './BackgroundBeams';
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -96,34 +94,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
   const handleGetStarted = onGetStarted;
 
-  const sectionVariants = {
-    hidden: { opacity: 0, y: 50 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
-  };
-
-  const staggerContainer = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-        delayChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariant = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut",
-      },
-    },
-  };
-
   const features = [
     { icon: <Zap size={24} />, title: "Prompt Engineering Automático", description: "Você descreve seu negócio e nossa I.A. cria um comando detalhado para gerar a melhor imagem possível, considerando iluminação, texturas e ângulos.", color: 'primary' as const },
     { icon: <ImageIcon size={24} />, title: "Imagens 4K", description: "Resolução de alta qualidade pronta para uso profissional na web ou em materiais impressos.", color: 'secondary' as const },
@@ -133,7 +103,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden">
-      <BackgroundBeams className="z-0" />
       
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'border-b border-white/10 bg-zinc-950/80 backdrop-blur-lg' : 'border-b border-transparent'} ${headerVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -152,12 +121,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       <main className="relative z-10">
         <HeroSection onGetStarted={handleGetStarted} />
 
-        <motion.section 
+        <section 
           className="py-10 border-y border-white/5 bg-black/30 overflow-hidden relative"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
         >
           <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
           <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
@@ -169,43 +134,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               {marqueeContent.map((item: FlyerMockupProps, idx: number) => (<FlyerMockup key={idx} bg={item.bg} title={item.title} />))}
             </div>
           )}
-        </motion.section>
+        </section>
 
-        <motion.section 
+        <section 
           className="py-24 px-6 relative"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
         >
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16">
               <span className="text-primary text-xs font-bold uppercase tracking-widest">Poder da I.A.</span>
               <h3 className="text-3xl md:text-5xl font-bold text-white mt-2">Design Profissional Simplificado</h3>
             </div>
-            <motion.div 
+            <div 
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-              variants={staggerContainer}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.2 }}
             >
               {features.map((feature, index) => (
-                <motion.div key={index} variants={itemVariant}>
+                <div key={index}>
                   <FeatureCard {...feature} />
-                </motion.div>
+                </div>
               ))}
-            </motion.div>
+            </div>
           </div>
-        </motion.section>
+        </section>
 
-        <motion.section 
+        <section 
           className="py-24 px-6 relative overflow-hidden bg-zinc-900/30" 
           id="precos"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
         >
            <div className="max-w-7xl mx-auto relative z-10">
             <div className="text-center mb-16">
@@ -223,14 +176,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 </div>
             )}
           </div>
-        </motion.section>
+        </section>
 
-        <motion.section 
+        <section 
           className="py-20 px-0 overflow-hidden bg-zinc-950 border-t border-white/5"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
         >
           <div className="max-w-5xl mx-auto px-6 mb-12 text-center"><h3 className="text-3xl font-bold text-white">Quem usa aprova</h3></div>
           <div className="relative w-full">
@@ -246,14 +195,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                ))}
             </div>
           </div>
-        </motion.section>
+        </section>
 
-        <motion.section 
+        <section 
           className="py-24 px-6 bg-zinc-950/50 border-t border-white/5"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
         >
             <div className="max-w-4xl mx-auto text-center p-10 rounded-3xl bg-gradient-to-br from-zinc-900 to-zinc-950 border border-primary/20 shadow-2xl shadow-primary/10">
                 <Sparkles size={48} className="text-primary mx-auto mb-4 animate-pulse-slow" />
@@ -261,24 +206,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">Comece a gerar artes de alta conversão em segundos com a inteligência artificial do Flow Designer.</p>
                 <Button onClick={onShowPlans} className="h-14 px-10 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20">Quero Minhas Artes Agora <ChevronRight className="ml-2" /></Button>
             </div>
-        </motion.section>
+        </section>
 
-        <motion.section 
+        <section 
           className="py-20 px-6 bg-zinc-900/30"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
         >
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-12"><h3 className="text-2xl font-bold text-white">Perguntas Frequentes</h3></div>
             <div className="space-y-4">
               <Accordion title="As imagens têm direitos autorais?">Sim, você pode usar todas as imagens geradas nos planos pagos para fins comerciais (Instagram, Facebook, Impressos) sem problemas.</Accordion>
               <Accordion title="Funciona no celular?">Perfeitamente. O Flow Designer foi criado pensando no mobile. Você cria a arte e baixa direto na galeria do seu telefone.</Accordion>
-              <Accordion title="Posso cancelar quando quiser?">Sim, não há contrato de fidelidade. Você pode cancelar a assinatura a qualquer momento no seu painel.</Accordion>
+              <Accordion title="Posso cancelar quando quiser?">Sim, não há contrato de fidelidade. Você pode cancelar a assinatura a qualquer momento no seu panel.</Accordion>
             </div>
           </div>
-        </motion.section>
+        </section>
 
         <footer className="border-t border-white/5 py-12 bg-zinc-950 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">

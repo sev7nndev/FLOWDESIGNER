@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from './Button';
 import { ChevronRight } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 interface HeroSectionProps {
   onGetStarted: () => void;
@@ -14,13 +13,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
       <div className="absolute top-0 z-0 h-64 w-[40rem] rounded-full bg-primary/40 blur-3xl animate-pulse-slow" />
 
       {/* Content */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="relative z-10 flex flex-col items-center text-center px-6"
+      <div 
+        className="relative z-10 flex flex-col items-center text-center px-6 animate-fade-in"
       >
-        <h1 className="font-heading bg-gradient-to-r from-white via-gray-300 to-white py-4 bg-clip-text text-5xl md:text-7xl font-black tracking-tighter text-transparent leading-tight bg-[length:200%_auto] animate-shimmer drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]">
+        <h1 className="font-heading bg-gradient-to-r from-white via-gray-300 to-white py-4 bg-clip-text text-5xl md:text-7xl font-black tracking-tighter text-transparent leading-tight drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]">
           Crie Artes Profissionais <br /> com Inteligência Artificial
         </h1>
         <p className="mt-4 text-lg md:text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
@@ -34,7 +30,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
             Começar Agora <ChevronRight className="ml-2" />
           </Button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

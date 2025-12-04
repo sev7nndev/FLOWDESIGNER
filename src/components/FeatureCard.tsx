@@ -1,5 +1,4 @@
 import React from 'react';
-import { GlowingEffect } from './GlowingEffect';
 
 interface FeatureCardProps {
   icon: React.ReactNode;
@@ -17,7 +16,6 @@ export const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, descripti
 
   return (
     <div className={`relative h-full rounded-3xl p-6 md:p-8 bg-zinc-950/50 border border-white/10 shadow-xl transition-all duration-500 group ${colorClasses.hoverBorder} ${colorClasses.shadow}`}>
-      <GlowingEffect disabled={false} proximity={40} spread={25} blur={12} />
       <div className="relative z-10 flex flex-col h-full">
         <div className={`${colorClasses.bg} w-fit p-3 rounded-xl mb-4 ${colorClasses.text}`}>{icon}</div>
         <h4 className="text-xl font-bold text-white mb-2">{title}</h4>
