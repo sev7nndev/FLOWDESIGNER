@@ -108,21 +108,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
         text: 'text-primary',
         hoverBorder: 'hover:border-primary/50',
         shadow: 'hover:shadow-primary/10',
-        gradient: 'from-primary/5 to-transparent'
       },
       secondary: {
         bg: 'bg-secondary/10',
         text: 'text-secondary',
         hoverBorder: 'hover:border-secondary/50',
         shadow: 'hover:shadow-secondary/10',
-        gradient: 'from-secondary/5 to-transparent'
       },
       accent: {
         bg: 'bg-accent/10',
         text: 'text-accent',
         hoverBorder: 'hover:border-accent/50',
         shadow: 'hover:shadow-accent/10',
-        gradient: 'from-accent/5 to-transparent'
       }
     }[color];
 
@@ -130,9 +127,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       <div 
         className={`relative overflow-hidden rounded-3xl p-6 md:p-8 bg-zinc-900/80 border border-white/10 shadow-xl transition-all duration-500 group ${colorClasses.hoverBorder} ${colorClasses.shadow}`}
       >
-        {/* Efeito de Borda Mágica/Gradiente */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${colorClasses.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-        
         <div className="relative z-10">
           <div className={`${colorClasses.bg} w-fit p-3 rounded-xl mb-4 ${colorClasses.text}`}>
             {icon}
@@ -146,8 +140,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden scroll-smooth">
-      {/* Background Gradients */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
       
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-zinc-950/95">
@@ -243,8 +235,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
         {/* Pricing Section (Still visible on landing page, but CTA redirects to PLANS view) */}
         <section className="py-24 px-6 relative overflow-hidden bg-zinc-900/30" id="precos">
-           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
-
            <div className="max-w-7xl mx-auto relative z-10">
             <div className="text-center mb-16">
               <span className="text-primary text-xs font-bold uppercase tracking-widest">Investimento</span>
