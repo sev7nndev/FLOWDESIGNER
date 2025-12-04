@@ -39,7 +39,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, saa
     try {
       if (isLogin) {
         // Pass rememberMe state to authService.login
-        await authService.login(formData.email, formData.password, rememberMe);
+        await authService.login(formData.email, formData.password);
         onSuccess(null); 
       } else {
         if (!formData.firstName) throw new Error("Primeiro nome é obrigatório");
