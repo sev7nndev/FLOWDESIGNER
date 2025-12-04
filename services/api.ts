@@ -117,7 +117,10 @@ export const api = {
     // NEW: Fetch all plan settings (combined limits and details)
     getPlanSettings: async (): Promise<EditablePlan[]> => {
         const supabase = getSupabase();
-        if (!supabase) throw new Error("Supabase not configured.");
+        if (!supabase) {
+            console.error("Supabase client is null in getPlanSettings.");
+            throw new Error("Supabase not configured.");
+        }
 
         try {
             // Fetch limits/prices
@@ -125,25 +128,35 @@ export const api = {
                 .from('plan_settings')
                 .select('*');
 
-            if (settingsError) throw new Error(settingsError.message);
+            if (settingsError) {
+                console.error("Error fetching plan_settings:", settingsError);
+                throw new Error(settingsError.message);
+            }
 
             // Fetch marketing details
             const { data: detailsData, error: detailsError } = await supabase
                 .from('plan_details')
                 .select('*');
 
-            if (detailsError) throw new Error(detailsError.message);
+            if (detailsError) {
+                console.error("Error fetching plan_details:", detailsError);
+                throw new Error(detailsError.message);
+            }
 
             const settingsMap = new Map(settingsData.map(s => [s.id, s]));
 
             // Combine data
             const combinedPlans: EditablePlan[] = detailsData.map(detail => {
                 const setting = settingsMap.get(detail.id);
+                
+                // Ensure features is an array (it's stored as JSONB, which should be an array of strings)
+                const featuresArray = Array.isArray(detail.features) ? detail.features : [];
+
                 return {
                     id: detail.id as any,
                     display_name: detail.display_name,
                     description: detail.description,
-                    features: detail.features,
+                    features: featuresArray,
                     price: setting?.price || 0,
                     max_images_per_month: setting?.max_images_per_month || 0,
                 };
@@ -152,8 +165,8 @@ export const api = {
             return combinedPlans;
         } catch (error) {
             console.error("Error fetching plan settings:", error);
-            // Return empty array instead of throwing, as this is used by the LandingPage too
-            return [];
+            // Re-throw the error to be caught by the calling hook (useUsage)
+            throw error;
         }
     },
 
@@ -221,7 +234,8 @@ export const api = {
                 id: p.id,
                 display_name: p.display_name,
                 description: p.description,
-                features: p.features,
+                // Ensure features is stored as JSONB array
+                features: p.features, 
                 updated_at: new Date().toISOString()
             }));
 
@@ -494,7 +508,8 @@ export const api = {
             }
             
             // The value is stored as JSONB, so we expect data.value to be the URL string
-            return data?.value || null;
+            // We must cast it to string if it's not null
+            return (data?.value as string) || null;
         } catch (error) {
             console.error("Error fetching saas logo URL:", error);
             return null;
