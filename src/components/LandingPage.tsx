@@ -9,6 +9,7 @@ import { LandingImage, EditablePlan } from '@/types';
 import { HeroSection } from './Hero'; 
 import { api } from '@/services/api';
 import { FeatureCard } from './FeatureCard';
+import { DotScreenShader } from './DotScreenShader'; // Import the new component
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -145,7 +146,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       </nav>
 
       <main className="relative z-10">
-        <HeroSection onGetStarted={handleGetStarted} />
+        
+        {/* Hero Section with Shader Background */}
+        <section className="relative w-full overflow-hidden h-[80vh] md:h-[90vh] flex items-center justify-center">
+            {/* Shader Background (Absolute positioning) */}
+            <div className="absolute inset-0 z-0">
+                <DotScreenShader />
+            </div>
+            
+            {/* Hero Content (Relative positioning, z-index 10) */}
+            <div className="relative z-10 h-full flex flex-col justify-center w-full">
+                <HeroSection onGetStarted={handleGetStarted} />
+            </div>
+        </section>
 
         <section 
           className="py-10 border-y border-white/5 bg-black/30 overflow-hidden relative"

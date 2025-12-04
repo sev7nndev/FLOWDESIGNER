@@ -15,7 +15,8 @@ import { PlansPage } from './src/pages/PlansPage';
 import { useUsage } from './hooks/useUsage'; 
 import { Toaster } from 'sonner'; 
 import { CheckoutPage } from './src/pages/CheckoutPage'; 
-import { SplashScreen } from './src/components/SplashScreen'; // Import SplashScreen
+import { SplashScreen } from './src/components/SplashScreen'; 
+import { DevPanelPage } from './src/pages/DevPanelPage'; // <-- Importação adicionada
 
 // Define a minimal structure for authenticated user before profile is loaded
 interface AuthUser {
@@ -26,7 +27,7 @@ interface AuthUser {
 
 export const App: React.FC = () => {
   // Auth State
-  const [isAuthLoading, setIsAuthLoading] = useState(true); // NEW: State for initial auth check
+  const [isAuthLoading, setIsAuthLoading] = useState(true); 
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'PLANS' | 'CHECKOUT'>('LANDING');
   const [showGallery, setShowGallery] = useState(false);
@@ -67,7 +68,7 @@ export const App: React.FC = () => {
   // Generation Logic Hook
   const { 
     form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage,
-    selectedStyle, setSelectedStyle // Add style state
+    selectedStyle, setSelectedStyle 
   } = useGeneration(user, refreshUsage, openUpgradeModal); 
   
   // Landing Images Hook (Used by LandingPage and DevPanel)
@@ -217,6 +218,19 @@ export const App: React.FC = () => {
                   planId={selectedPlanId} 
                   onBack={() => setView('PLANS')} 
                   plans={plans}
+              />
+          </div>
+      );
+  }
+  
+  if (view === 'DEV_PANEL') {
+      return (
+          <div className="app-container">
+              <Toaster position="top-right" richColors />
+              <DevPanelPage 
+                  user={user} 
+                  onBackToApp={() => setView('APP')} 
+                  onLogout={handleLogout} 
               />
           </div>
       );
