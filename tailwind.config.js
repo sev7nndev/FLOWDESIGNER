@@ -36,7 +36,7 @@ export default {
         'fade-in': 'fadeIn 0.8s ease-out forwards',
         'shimmer': 'shimmer 2s linear infinite',
         'scroll': 'scroll 60s linear infinite', // Carrossel de Flyers (60s)
-        'scroll-slow': 'scroll 80s linear infinite', // Carrossel de Depoimentos (80s)
+        'scroll-slow': 'scroll-slow 80s linear infinite', // Carrossel de Depoimentos (80s)
       },
       keyframes: {
         fadeIn: {
@@ -48,6 +48,10 @@ export default {
           '100%': { backgroundPosition: '-200% 0%' },
         },
         scroll: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        scroll-slow: { // NEW KEYFRAME
           '0%': { transform: 'translateX(0)' },
           '100%': { transform: 'translateX(-50%)' },
         }
