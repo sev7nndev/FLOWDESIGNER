@@ -1,7 +1,9 @@
 import React, { memo } from 'react';
-import { BusinessInfo, GenerationStatus, QuotaStatus, PlanSetting } from '@/types';
+import { BusinessInfo, GenerationStatus, QuotaStatus, PlanSetting, ArtStyle } from '@/types';
 import { Button } from './Button';
-import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2, AlertTriangle, Palette } from 'lucide-react';
+import { ART_STYLES } from '@/src/constants/artStyles';
+import { StyleCard } from './StyleCard';
 
 interface InputFieldProps {
   label: string;
@@ -38,7 +40,11 @@ interface GenerationFormProps {
     handleGenerate: () => void;
     loadExample: () => void;
     
-    // NEW Quota Props
+    // Style Props
+    selectedStyle: ArtStyle;
+    setSelectedStyle: (style: ArtStyle) => void;
+    
+    // Quota Props
     quotaStatus: QuotaStatus;
     currentUsage: number;
     maxImages: number;
@@ -48,6 +54,7 @@ interface GenerationFormProps {
 
 const GenerationFormComponent: React.FC<GenerationFormProps> = ({
     form, status, error, handleInputChange, handleLogoUpload, handleGenerate, loadExample,
+    selectedStyle, setSelectedStyle,
     quotaStatus, currentUsage, maxImages, currentPlan, openUpgradeModal
 }) => {
     const isGenerating = status === GenerationStatus.THINKING || status === GenerationStatus.GENERATING;
@@ -168,6 +175,29 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                 <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest">A I.A. vai ler isso</p>
                     <span className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded-full">{form.details.length}/1000</span>
+                </div>
+            </div>
+
+            {/* NEW Section 4: Art Style */}
+            <div className="bg-zinc-900/90 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
+                    <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20">
+                        <Palette size={18} />
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-white text-lg">4. Estilo Visual</h3>
+                        <p className="text-xs text-gray-500">Escolha a direção de arte</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {ART_STYLES.map(style => (
+                        <StyleCard 
+                            key={style.id}
+                            style={style}
+                            isSelected={selectedStyle.id === style.id}
+                            onClick={() => setSelectedStyle(style)}
+                        />
+                    ))}
                 </div>
             </div>
 

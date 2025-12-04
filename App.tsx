@@ -66,7 +66,8 @@ export const App: React.FC = () => {
 
   // Generation Logic Hook
   const { 
-    form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage
+    form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage,
+    selectedStyle, setSelectedStyle // Add style state
   } = useGeneration(user, refreshUsage, openUpgradeModal); 
   
   // Landing Images Hook (Used by LandingPage and DevPanel)
@@ -260,6 +261,8 @@ export const App: React.FC = () => {
                 handleLogoUpload={handleLogoUpload}
                 handleGenerate={handleGenerate}
                 loadExample={loadExample}
+                selectedStyle={selectedStyle}
+                setSelectedStyle={setSelectedStyle}
                 quotaStatus={quotaStatus} 
                 currentUsage={currentUsage}
                 maxImages={maxImages}

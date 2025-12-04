@@ -1,11 +1,11 @@
-import { GeneratedImage, BusinessInfo, LandingImage, QuotaCheckResponse, EditablePlan } from "../types";
+import { GeneratedImage, BusinessInfo, LandingImage, QuotaCheckResponse, EditablePlan, ArtStyle } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // URL do seu Backend Node.js local (ou deployado)
 const BACKEND_URL = "/api"; 
 
 export const api = {
-  generate: async (businessInfo: BusinessInfo): Promise<GeneratedImage> => {
+  generate: async (businessInfo: BusinessInfo, artStyle: ArtStyle): Promise<GeneratedImage> => {
     const supabase = getSupabase();
     if (!supabase) throw new Error("Erro de conexão com o App.");
 
@@ -21,6 +21,7 @@ export const api = {
         },
         body: JSON.stringify({
           promptInfo: businessInfo,
+          artStyle: artStyle, // Send selected style to backend
         })
       });
 

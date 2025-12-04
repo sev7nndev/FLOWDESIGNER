@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
-import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User, QuotaStatus, QuotaCheckResponse } from '../types';
+import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User, QuotaStatus, QuotaCheckResponse, ArtStyle } from '../types';
 import { api } from '../services/api';
 import { PLACEHOLDER_EXAMPLES } from '../constants';
+import { ART_STYLES } from '@/src/constants/artStyles'; // Import art styles
 import { toast } from 'sonner'; // Import toast
 
 const INITIAL_FORM: BusinessInfo = {
@@ -22,6 +23,7 @@ const MAX_LOGO_KB = Math.round(MAX_LOGO_BASE64_LENGTH / 1.33 / 1024); // Approx 
 export const useGeneration = (user: User | null, refreshUsage: () => void, openUpgradeModal: (quota: QuotaCheckResponse) => void) => {
     const [form, setForm] = useState<BusinessInfo>(INITIAL_FORM);
     const [state, setState] = useState<GenerationState>(INITIAL_STATE);
+    const [selectedStyle, setSelectedStyle] = useState<ArtStyle>(ART_STYLES[0]); // NEW: State for selected style
 
     const handleInputChange = useCallback((field: keyof BusinessInfo, value: string) => {
         setForm((prev: BusinessInfo) => ({ ...prev, [field]: value }));
@@ -89,8 +91,8 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
             
             setState((prev: GenerationState) => ({ ...prev, status: GenerationStatus.GENERATING }));
 
-            // 2. Proceed with generation
-            const newImage = await api.generate(form);
+            // 2. Proceed with generation, now including the selected style
+            const newImage = await api.generate(form, selectedStyle);
             
             setState((prev: GenerationState) => ({
                 status: GenerationStatus.SUCCESS,
@@ -124,7 +126,7 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
             }));
             toast.error(err.message || "Erro ao gerar arte.");
         }
-    }, [form, refreshUsage, openUpgradeModal]);
+    }, [form, selectedStyle, refreshUsage, openUpgradeModal]);
 
     const downloadImage = useCallback((image: GeneratedImage) => {
         const link = document.createElement('a');
@@ -138,6 +140,8 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
     return {
         form,
         state,
+        selectedStyle, // Export selected style
+        setSelectedStyle, // Export setter for style
         handleInputChange,
         handleLogoUpload,
         handleGenerate,

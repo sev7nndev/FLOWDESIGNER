@@ -56,6 +56,7 @@ export interface ArtStyle {
   name: string;
   iconName: string;
   previewColor: string;
+  description: string; // Added description for the AI prompt
 }
 
 // NEW: Landing Page Carousel Image Type
