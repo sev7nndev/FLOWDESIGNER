@@ -4,7 +4,6 @@ import { DollarSign, Users, Trash2, MessageSquare, Send, Loader2, AlertTriangle,
 import { Button } from './Button';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { useAdminChat } from '@/hooks/useAdminChat';
-import { toast } from 'sonner';
 
 // --- Subcomponentes ---
 
@@ -209,10 +208,8 @@ export const AdminChat: React.FC<{ user: User, adminUsers: AdminUser[] }> = ({ u
 
 // --- Componente Principal do Dashboard do Dono ---
 export const OwnerDashboard: React.FC<{ user: User, adminUsers: AdminUser[] }> = ({ user, adminUsers }) => {
-    const formatCurrency = (value: string) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(value));
-    };
-
+    // formatCurrency is not used here, removed to fix TS6133
+    
     return (
         <div className="space-y-12">
             <div className="space-y-4 bg-zinc-900/50 p-6 rounded-xl border border-white/10">

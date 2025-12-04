@@ -14,13 +14,13 @@ export const authService = {
       throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
     }
     
+    // Supabase JS v2.x expects options to be passed as the third argument to signInWithPassword
+    // The options object should contain the 'shouldRemember' property directly, not nested under 'options'.
     const { data, error } = await supabase.auth.signInWithPassword({ 
       email, 
       password,
       options: {
-        shouldRemember: shouldRemember, // Supabase handles session persistence based on this
-        // The actual session duration is often controlled by the Supabase project settings, 
-        // but passing shouldRemember is the correct client-side practice.
+        shouldRemember: shouldRemember,
       }
     });
     

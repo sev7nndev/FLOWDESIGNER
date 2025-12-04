@@ -651,7 +651,7 @@ const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
 
 
 // --- Componente Principal do Dashboard do Dono (NEW) ---
-const OwnerDashboard: React.FC<{ user: User, saasLogoUrl: string | null, refreshConfig: () => void }> = ({ user, saasLogoUrl, refreshConfig }) => {
+const OwnerDashboardPageContent: React.FC<{ user: User, saasLogoUrl: string | null, refreshConfig: () => void }> = ({ user, saasLogoUrl, refreshConfig }) => {
     const { metrics, isLoadingMetrics, errorMetrics } = useAdminMetrics(user.role);
     const { adminUsers } = useAdminUsers(user.role, user.id); // Fetch users for chat/management
     
@@ -770,7 +770,7 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
 
                 {/* Conteúdo do Painel */}
                 {isOwner ? (
-                    <OwnerDashboardComponent user={user} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
+                    <OwnerDashboardPageContent user={user} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
                 ) : (
                     <DeveloperPanel user={user} onBackToApp={onBackToApp} onLogout={onLogout} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
                 )}
