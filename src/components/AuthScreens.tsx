@@ -4,6 +4,7 @@ import { Sparkles, ArrowLeft, CheckCircle2, Zap, DollarSign, Eye, EyeOff } from 
 import { authService } from '@/services/authService';
 import { GoogleIcon } from './GoogleIcon';
 import { User, EditablePlan } from '@/types'; // Import User type and EditablePlan
+import { FlowDesignerIcon } from './FlowDesignerLogo'; // Import the specific icon component
 
 interface AuthScreensProps {
   onSuccess: (user: User | null) => void; 
@@ -126,7 +127,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
 
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-4">
-            <Sparkles size={24} />
+            <FlowDesignerIcon size={24} /> {/* Using the corrected icon here */}
           </div>
           <h2 className="text-2xl font-bold text-white">{isLogin ? 'Bem-vindo de volta' : 'Criar Conta'}</h2>
           <p className="text-gray-500 text-sm mt-2">
