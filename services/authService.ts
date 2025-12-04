@@ -7,7 +7,7 @@ import { getSupabase } from "./supabaseClient";
 export const authService = {
   init: () => {},
 
-  login: async (email: string, password: string, shouldRemember: boolean = true): Promise<User | null> => {
+  login: async (email: string, password: string): Promise<User | null> => {
     const supabase = getSupabase();
     
     if (!supabase) {

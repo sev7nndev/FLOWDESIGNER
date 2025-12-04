@@ -10,7 +10,7 @@ import { api } from '@/services/api';
 import { toast } from 'sonner';
 import { getSupabase } from '@/services/supabaseClient';
 import { FlowDesignerIcon } from '../components/FlowDesignerLogo';
-import { OwnerDashboard, MetricCard, UserManagement, AdminChat } from '../components/AdminDashboard'; // Importando OwnerDashboard e subcomponentes
+import { MetricCard, UserManagement, AdminChat } from '../components/AdminDashboard'; // Importando OwnerDashboard e subcomponentes
 
 interface DevPanelPageProps {
   user: User | null;
