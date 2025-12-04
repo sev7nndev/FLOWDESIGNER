@@ -152,6 +152,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <div className="relative z-10 h-full flex flex-col justify-center w-full">
                 <HeroSection onGetStarted={handleGetStarted} />
             </div>
+            
+            {/* Gradient Overlay for Smooth Transition */}
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-zinc-950 to-transparent z-20 pointer-events-none" />
         </section>
 
         <section 
