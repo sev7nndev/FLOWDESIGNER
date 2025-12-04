@@ -1,4 +1,4 @@
-import { GeneratedImage, BusinessInfo, LandingImage, QuotaCheckResponse, EditablePlan } from "../types";
+import { GeneratedImage, BusinessInfo, LandingImage, QuotaCheckResponse, EditablePlan, AdminMetrics, AdminUser, ChatMessage } from "../types";
 import { getSupabase } from "./supabaseClient";
 
 // URL do seu Backend Node.js local (ou deployado)
@@ -534,6 +534,144 @@ export const api = {
         } catch (error) {
             console.error("Error generating public URL:", error);
             throw new Error("Falha ao gerar URL de download segura.");
+        }
+    },
+    
+    // --- NEW ADMIN DASHBOARD API CALLS ---
+    
+    getAdminMetrics: async (): Promise<AdminMetrics> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Acesso negado.");
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/admin/metrics`, {
+                headers: {
+                    "Authorization": `Bearer ${session.access_token}`
+                }
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || `Falha ao buscar métricas: Status ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data as AdminMetrics;
+        } catch (error) {
+            console.error("Error fetching admin metrics:", error);
+            throw error;
+        }
+    },
+    
+    getAdminUsers: async (): Promise<AdminUser[]> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Acesso negado.");
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/admin/users`, {
+                headers: {
+                    "Authorization": `Bearer ${session.access_token}`
+                }
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || `Falha ao buscar usuários: Status ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.users as AdminUser[];
+        } catch (error) {
+            console.error("Error fetching admin users:", error);
+            throw error;
+        }
+    },
+    
+    deleteUserAccount: async (userId: string): Promise<void> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Acesso negado.");
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/admin/users/${userId}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${session.access_token}`
+                }
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || `Falha ao deletar conta: Status ${response.status}`);
+            }
+        } catch (error) {
+            console.error("Error deleting user account:", error);
+            throw error;
+        }
+    },
+    
+    getChatMessages: async (): Promise<ChatMessage[]> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Acesso negado.");
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/admin/chat/messages`, {
+                headers: {
+                    "Authorization": `Bearer ${session.access_token}`
+                }
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || `Falha ao buscar mensagens de chat: Status ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.messages as ChatMessage[];
+        } catch (error) {
+            console.error("Error fetching chat messages:", error);
+            throw error;
+        }
+    },
+    
+    sendChatMessage: async (recipientId: string, content: string): Promise<ChatMessage> => {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error("Supabase not configured.");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Acesso negado.");
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/admin/chat/send`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ recipientId, content })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || `Falha ao enviar mensagem: Status ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.message as ChatMessage;
+        } catch (error) {
+            console.error("Error sending chat message:", error);
+            throw error;
         }
     }
 };

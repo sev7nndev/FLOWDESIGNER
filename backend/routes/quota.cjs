@@ -36,6 +36,21 @@ router.get('/', verifyAuth, async (req, res) => {
             .eq('id', usageData.plan_id)
             .single();
             
+        // --- OWNER/ADMIN OVERRIDE ---
+        if (usageData.plan_id === 'owner' || usageData.plan_id === 'admin' || usageData.plan_id === 'dev') {
+            const unlimitedPlan = { id: usageData.plan_id, max_images_per_month: 99999, price: 0 };
+            
+            res.json({
+                status: 'ALLOWED',
+                usage: { ...usageData, current_usage: 0, plan_id: usageData.plan_id }, // Reset usage display for unlimited plans
+                plan: unlimitedPlan,
+                plans: [], // Will be fetched separately by frontend if needed, but we return minimal data here
+                message: "Acesso Ilimitado."
+            });
+            return;
+        }
+        // --- END OWNER/ADMIN OVERRIDE ---
+            
         if (planError || !planSettings) throw new Error(`Plan settings not found for plan ID: ${usageData.plan_id}`);
         
         const maxImages = planSettings.max_images_per_month;

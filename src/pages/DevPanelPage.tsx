@@ -1,23 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info, ImageUp } from 'lucide-react';
+import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info, ImageUp, MessageSquare, Send } from 'lucide-react';
 import { Button } from '../components/Button';
-import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '@/types';
+import { LandingImage, User, GeneratedImage, UserRole, EditablePlan, AdminMetrics, AdminUser, ChatMessage } from '@/types';
 import { useLandingImages } from '@/hooks/useLandingImages';
 import { useAdminGeneratedImages } from '@/hooks/useAdminGeneratedImages';
+import { useAdminMetrics } from '@/hooks/useAdminMetrics'; // NEW
+import { useAdminUsers } from '@/hooks/useAdminUsers'; // NEW
+import { useAdminChat } from '@/hooks/useAdminChat'; // NEW
 import { api } from '@/services/api';
 import { toast } from 'sonner';
 import { getSupabase } from '@/services/supabaseClient';
 import { FlowDesignerIcon } from '../components/FlowDesignerLogo';
+import { cn } from '@/lib/utils'; // Import cn utility
 
 interface DevPanelPageProps {
   user: User | null;
   onBackToApp: () => void;
   onLogout: () => void;
-  saasLogoUrl: string | null; // NEW
-  refreshConfig: () => void; // NEW
+  saasLogoUrl: string | null; 
+  refreshConfig: () => void; 
 }
 
-// --- Image Upload Component (Reused) ---
+// --- Subcomponentes (Mantidos aqui por enquanto) ---
+
+// Image Upload Component (Reused)
 interface ImageUploadProps {
     onUpload: (file: File) => Promise<void>;
     userId: string;
@@ -104,7 +110,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUpload }) => {
     );
 };
 
-// --- NEW: SaaS Logo Manager Component ---
+// SaaS Logo Manager Component
 interface SaasLogoManagerProps {
     user: User;
     saasLogoUrl: string | null;
@@ -190,7 +196,7 @@ const SaasLogoManager: React.FC<SaasLogoManagerProps> = ({ user, saasLogoUrl, re
 };
 
 
-// --- Componente de Gerenciamento de Imagens Geradas ---
+// Componente de Gerenciamento de Imagens Geradas
 const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole }) => {
     const { allImages, isLoadingAllImages, errorAllImages, deleteImage } = useAdminGeneratedImages(userRole);
     const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -305,7 +311,7 @@ const GeneratedImagesManager: React.FC<{ userRole: User['role'] }> = ({ userRole
     );
 };
 
-// --- Componente de Gerenciamento de Imagens da Landing Page ---
+// Componente de Gerenciamento de Imagens da Landing Page
 const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
     const { images, isLoading, error, uploadImage, deleteImage } = useLandingImages(user.role);
     const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -386,7 +392,7 @@ const LandingImagesManager: React.FC<{ user: User }> = ({ user }) => {
     );
 };
 
-// --- Componente de Gerenciamento de Planos (Apenas Dev) ---
+// Componente de Gerenciamento de Planos (Apenas Dev)
 const PlanSettingsManager: React.FC = () => {
     const [plans, setPlans] = useState<EditablePlan[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -532,7 +538,7 @@ const PlanSettingsManager: React.FC = () => {
     );
 };
 
-// --- Componente de Conexão Mercado Pago (Apenas Dono do SaaS) ---
+// Componente de Conexão Mercado Pago (Apenas Dono do SaaS)
 const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
     const [isConnected, setIsConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -644,6 +650,83 @@ const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
     );
 };
 
+// --- Componente Principal do Dashboard do Dono (NEW) ---
+const OwnerDashboard: React.FC<{ user: User, saasLogoUrl: string | null, refreshConfig: () => void }> = ({ user, saasLogoUrl, refreshConfig }) => {
+    const { metrics, isLoadingMetrics, errorMetrics } = useAdminMetrics(user.role);
+    const { adminUsers } = useAdminUsers(user.role, user.id); // Fetch users for chat/management
+    
+    const formatCurrency = (value: string) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(value));
+    };
+
+    return (
+        <div className="space-y-12">
+            <div className="space-y-4 bg-zinc-900/50 p-6 rounded-xl border border-white/10">
+                <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2 flex items-center gap-2">
+                    <DollarSign size={20} className="text-green-500" /> Dashboard de Métricas (Owner)
+                </h3>
+                
+                {isLoadingMetrics && <div className="text-center py-10"><Loader2 size={20} className="animate-spin text-green-500" /></div>}
+                {errorMetrics && <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{errorMetrics}</div>}
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <MetricCard 
+                        icon={<DollarSign size={20} />} 
+                        title="Faturamento Total (Mock)" 
+                        value={formatCurrency(metrics.totalRevenue)} 
+                        color="text-green-500" 
+                    />
+                    <MetricCard 
+                        icon={<Users size={20} />} 
+                        title="Total de Usuários" 
+                        value={metrics.totalUsers} 
+                        color="text-primary" 
+                    />
+                    <MetricCard 
+                        icon={<CheckCircle2 size={20} />} 
+                        title="Assinaturas Ativas" 
+                        value={metrics.activeSubscriptions} 
+                        color="text-cyan-500" 
+                    />
+                    <MetricCard 
+                        icon={<AlertTriangle size={20} />} 
+                        title="Assinaturas Inativas" 
+                        value={metrics.inactiveSubscriptions} 
+                        color="text-yellow-500" 
+                    />
+                </div>
+            </div>
+            
+            {/* Gerenciamento de Clientes */}
+            <UserManagement user={user} />
+            
+            {/* Chat de Suporte */}
+            <AdminChat user={user} adminUsers={adminUsers} />
+            
+            {/* Ferramentas de Desenvolvedor (Abaixo do Dashboard) */}
+            <h2 className="text-2xl font-bold text-white pt-8 border-t border-white/10">Ferramentas de Configuração</h2>
+            <SaasLogoManager user={user} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
+            <MercadoPagoManager user={user} />
+            <PlanSettingsManager />
+            <GeneratedImagesManager userRole={user.role} />
+            <LandingImagesManager user={user} />
+        </div>
+    );
+};
+
+// --- Componente Principal do Painel do Desenvolvedor (Original) ---
+const DeveloperPanel: React.FC<DevPanelPageProps & { user: User }> = ({ user, saasLogoUrl, refreshConfig }) => {
+    return (
+        <div className="space-y-12">
+            <SaasLogoManager user={user} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
+            <MercadoPagoManager user={user} />
+            <PlanSettingsManager />
+            <GeneratedImagesManager userRole={user.role} />
+            <LandingImagesManager user={user} />
+        </div>
+    );
+};
+
 
 // --- Main Dev Panel Page ---
 export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, onLogout, saasLogoUrl, refreshConfig }) => {
@@ -660,6 +743,9 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
             </div>
         );
     }
+    
+    const isOwner = user.role === 'owner';
+    const panelTitle = isOwner ? 'Painel do Dono (Owner)' : 'Painel do Desenvolvedor';
 
     return (
         <div className="app-container min-h-screen bg-zinc-950 text-gray-100 pt-20 pb-16 relative overflow-x-hidden">
@@ -670,7 +756,7 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
                 {/* Header da Página */}
                 <div className="flex items-center justify-between border-b border-primary/50 pb-4 mb-8">
                     <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-                        <Code size={28} className="text-primary" /> Painel do Desenvolvedor
+                        <Code size={28} className="text-primary" /> {panelTitle}
                     </h1>
                     <div className="flex items-center gap-4">
                         <Button variant="secondary" onClick={onBackToApp} icon={<ArrowLeft size={16} />}>
@@ -682,22 +768,12 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
                     </div>
                 </div>
 
-                <div className="space-y-12">
-                    {/* Seção 0.5: Gerenciamento do Logo */}
-                    <SaasLogoManager user={user} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
-                    
-                    {/* Seção 0: Gerenciamento de Pagamentos (Apenas Owner) */}
-                    {user && <MercadoPagoManager user={user} />}
-                    
-                    {/* Seção 1: Gerenciamento de Planos */}
-                    <PlanSettingsManager />
-
-                    {/* Seção 2: Gerenciamento de Artes Geradas por Usuários */}
-                    <GeneratedImagesManager userRole={user.role} />
-
-                    {/* Seção 3: Gerenciamento de Imagens da Landing Page */}
-                    <LandingImagesManager user={user} />
-                </div>
+                {/* Conteúdo do Painel */}
+                {isOwner ? (
+                    <OwnerDashboard user={user} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
+                ) : (
+                    <DeveloperPanel user={user} onBackToApp={onBackToApp} onLogout={onLogout} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
+                )}
             </div>
         </div>
     );

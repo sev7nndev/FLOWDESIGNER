@@ -167,8 +167,6 @@ router.get('/mp-connect', verifyAuth, authorizeAdmin, async (req, res) => {
     res.json({ connectUrl });
 });
 
-// --- NEW: Logo Management Routes ---
-
 // Rota Admin: Upload e substituição do Logo do SaaS
 router.post('/logo/upload', verifyAuth, authorizeAdmin, async (req, res) => {
     if (!supabaseServiceRole || !supabaseAnon) {
@@ -250,6 +248,165 @@ router.delete('/logo/delete', verifyAuth, authorizeAdmin, async (req, res) => {
     } catch (e) {
         console.error("Admin delete logo failed:", e);
         res.status(500).json({ error: 'Failed to delete SaaS logo configuration.' });
+    }
+});
+
+// --- NEW: Owner/Admin Metrics Dashboard ---
+router.get('/metrics', verifyAuth, authorizeAdmin, async (req, res) => {
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
+    }
+    
+    try {
+        // 1. Total Revenue (Mocked for now, as real MP integration is complex)
+        // In a real scenario, this would query the 'payments' table for approved payments.
+        const { data: payments, error: paymentsError } = await supabaseServiceRole
+            .from('payments')
+            .select('amount, status');
+            
+        if (paymentsError) throw paymentsError;
+        
+        const totalRevenue = payments
+            .filter(p => p.status === 'approved')
+            .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+            
+        // 2. Subscription Status
+        const { data: subscriptions, error: subsError } = await supabaseServiceRole
+            .from('subscriptions')
+            .select('status');
+            
+        if (subsError) throw subsError;
+        
+        const activeSubscriptions = subscriptions.filter(s => s.status === 'active').length;
+        const inactiveSubscriptions = subscriptions.length - activeSubscriptions;
+        
+        // 3. Total Users (from profiles table)
+        const { count: totalUsers, error: usersError } = await supabaseServiceRole
+            .from('profiles')
+            .select('*', { count: 'exact', head: true });
+            
+        if (usersError) throw usersError;
+        
+        res.json({
+            totalRevenue: totalRevenue.toFixed(2),
+            activeSubscriptions,
+            inactiveSubscriptions,
+            totalUsers,
+        });
+        
+    } catch (e) {
+        console.error("Admin metrics fetch failed:", e);
+        res.status(500).json({ error: e.message || 'Failed to fetch admin metrics.' });
+    }
+});
+
+// --- NEW: User Management ---
+router.get('/users', verifyAuth, authorizeAdmin, async (req, res) => {
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
+    }
+    
+    try {
+        // Using the profiles_with_email view for combined data
+        const { data: users, error } = await supabaseServiceRole
+            .from('profiles_with_email')
+            .select('id, email, first_name, last_name, role, created_at')
+            .order('created_at', { ascending: false });
+            
+        if (error) throw error;
+        
+        res.json({ users });
+    } catch (e) {
+        console.error("Admin fetch users failed:", e);
+        res.status(500).json({ error: e.message || 'Failed to fetch user list.' });
+    }
+});
+
+// Rota Admin: Deletar Conta de Cliente
+router.delete('/users/:userId', verifyAuth, authorizeAdmin, async (req, res) => {
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
+    }
+    
+    const { userId } = req.params;
+    
+    // Security check: Prevent admin from deleting their own account
+    if (userId === req.user.id) {
+        return res.status(403).json({ error: 'Você não pode deletar sua própria conta de administrador.' });
+    }
+    
+    try {
+        // Use the Admin API to delete the user from auth.users
+        const { error } = await supabaseServiceRole.auth.admin.deleteUser(userId);
+        
+        if (error) {
+            console.error("Supabase Auth Admin Delete Error:", error);
+            throw new Error(error.message);
+        }
+        
+        // Deleting from auth.users automatically cascades to 'profiles' and other tables via foreign keys.
+        
+        res.status(200).json({ message: 'User account deleted successfully.' });
+    } catch (e) {
+        console.error("Admin delete user failed:", e);
+        res.status(500).json({ error: e.message || 'Failed to delete user account.' });
+    }
+});
+
+// --- NEW: Chat Messages Routes ---
+
+// Rota Admin: Listar todas as mensagens (para o chat do admin)
+router.get('/chat/messages', verifyAuth, authorizeAdmin, async (req, res) => {
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
+    }
+    
+    try {
+        // Fetch all messages, ordered by creation time
+        const { data: messages, error } = await supabaseServiceRole
+            .from('chat_messages')
+            .select('*')
+            .order('created_at', { ascending: true });
+            
+        if (error) throw error;
+        
+        res.json({ messages });
+    } catch (e) {
+        console.error("Admin fetch chat messages failed:", e);
+        res.status(500).json({ error: e.message || 'Failed to fetch chat messages.' });
+    }
+});
+
+// Rota Admin: Enviar mensagem (do admin para o cliente)
+router.post('/chat/send', verifyAuth, authorizeAdmin, async (req, res) => {
+    if (!supabaseServiceRole) {
+        return res.status(500).json({ error: 'Erro de configuração: Supabase Service Role Client ausente.' });
+    }
+    
+    const { recipientId, content } = req.body;
+    
+    if (!recipientId || !content) {
+        return res.status(400).json({ error: "Recipient ID and content are required." });
+    }
+    
+    try {
+        const { data: message, error } = await supabaseServiceRole
+            .from('chat_messages')
+            .insert({
+                sender_id: req.user.id,
+                recipient_id: recipientId,
+                content: content,
+                is_admin_message: true,
+            })
+            .select('*')
+            .single();
+            
+        if (error) throw error;
+        
+        res.json({ message });
+    } catch (e) {
+        console.error("Admin send chat message failed:", e);
+        res.status(500).json({ error: e.message || 'Failed to send chat message.' });
     }
 });
 
