@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from './Button';
 import { ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface HeroSectionProps {
   onGetStarted: () => void;
@@ -13,7 +14,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
       <div className="absolute top-0 z-0 h-64 w-[40rem] rounded-full bg-primary/40 blur-3xl" />
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center text-center px-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="relative z-10 flex flex-col items-center text-center px-6"
+      >
         <h1 className="bg-gradient-to-br from-white to-gray-400 py-4 bg-clip-text text-5xl md:text-7xl font-bold tracking-tighter text-transparent leading-tight">
           Crie Artes Profissionais <br /> com Inteligência Artificial
         </h1>
@@ -28,7 +34,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
             Começar Agora <ChevronRight className="ml-2" />
           </Button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
