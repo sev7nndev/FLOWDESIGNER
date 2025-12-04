@@ -174,26 +174,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
           <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
           <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
           
-          {isLandingImagesLoading ? (
-            <div className="flex items-center justify-center h-40 text-gray-500">
-                <Loader2 size={24} className="animate-spin mr-2" /> Carregando carrossel...
-            </div>
-          ) : (
-            <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-4 p-4">
-              {marqueeContent.map((item: FlyerData, idx: number) => (
-                <FlyerMockup 
-                  key={idx} 
-                  bg={item.bg} 
-                  title={item.title} 
-                  subtitle={item.subtitle} 
-                  phone={item.phone} 
-                  theme={item.theme} 
-                  badge={item.badge} 
-                  price={item.price} 
-                />
-              ))}
-            </div>
-          )}
+          <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-4 p-4">
+            {marqueeContent.map((item: FlyerData, idx: number) => (
+              <FlyerMockup 
+                key={idx} 
+                bg={item.bg} 
+                title={item.title} 
+                subtitle={item.subtitle} 
+                phone={item.phone} 
+                theme={item.theme} 
+                badge={item.badge} 
+                price={item.price} 
+              />
+            ))}
+          </div>
         </section>
 
         {/* Bento Grid Features */}
@@ -329,7 +323,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                         role="Esteticista" 
                         text="Minha clínica precisava de uma identidade mais premium. O Flow Designer capturou exatamente o estilo 'clean' que eu queria. Recomendo!" 
                         stars={5}
-                        image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto-format&fit=crop"
+                        image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop"
                       />
                     </div>
                     <div className="w-[300px] md:w-[400px] flex-shrink-0">
@@ -338,7 +332,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                         role="Lojista de Moda" 
                         text="As vendas da minha loja aumentaram muito depois que comecei a usar os templates de oferta. É muito rápido e profissional." 
                         stars={5}
-                        image="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto-format&fit=crop"
+                        image="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop"
                       />
                     </div>
                  </React.Fragment>
