@@ -20,22 +20,22 @@ interface LandingPageProps {
   isLandingImagesLoading: boolean;
 }
 
-// Hardcoded fallback data (used if DB is empty or loading fails)
+// Hardcoded fallback data (used if DB is empty or loading fails) - NOW OPTIMIZED
 const FALLBACK_FLYERS: FlyerMockupProps[] = [
     {
-      bg: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=1000&auto=format&fit=crop",
+      bg: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=800&auto=format&fit=crop",
       title: "Exemplo de Arte para Oficina Mecânica",
     },
     {
-      bg: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1000&auto-format&fit=crop",
+      bg: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=800&auto=format&fit=crop",
       title: "Exemplo de Arte para Hamburgueria",
     },
     {
-      bg: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1000&auto-format&fit=crop",
+      bg: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=800&auto=format&fit=crop",
       title: "Exemplo de Arte para Advocacia",
     },
     {
-      bg: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=1000&auto-format&fit=crop",
+      bg: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=800&auto=format&fit=crop",
       title: "Exemplo de Arte para Loja de Eletrônicos",
     },
 ];
@@ -52,15 +52,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       
-      // Lógica para o fundo do header
       setScrolled(currentScrollY > 10);
 
-      // Lógica para esconder/mostrar o header
       if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
-        // Rolando para baixo
         setHeaderVisible(false);
       } else {
-        // Rolando para cima
         setHeaderVisible(true);
       }
       
@@ -277,7 +273,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <div className="space-y-4">
               <Accordion title="As imagens têm direitos autorais?">Sim, você pode usar todas as imagens geradas nos planos pagos para fins comerciais (Instagram, Facebook, Impressos) sem problemas.</Accordion>
               <Accordion title="Funciona no celular?">Perfeitamente. O Flow Designer foi criado pensando no mobile. Você cria a arte e baixa direto na galeria do seu telefone.</Accordion>
-              <Accordion title="Posso cancelar quando quiser?">Sim, não há contrato de fidelidade. Você pode cancelar a assinatura a qualquer momento no seu painel.</Accordion>
+              <Accordion title="Posso cancelar quando quiser?">Sim, não há contrato de fidelidade. Você pode cancelar a assinatura a qualquer momento no seu panel.</Accordion>
             </div>
           </div>
         </motion.section>
