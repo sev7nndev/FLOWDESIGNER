@@ -17,7 +17,7 @@ import { useUsage } from './hooks/useUsage';
 import { Toaster } from 'sonner';
 import { CheckoutPage } from './src/pages/CheckoutPage';
 import { DevPanelPage } from './src/pages/DevPanelPage';
-import { useAppConfig } from '../hooks/useAppConfig'; // Import new hook
+import { useAppConfig } from './hooks/useAppConfig'; // Corrigido: de '../hooks/useAppConfig' para './hooks/useAppConfig'
 
 // Define a minimal structure for authenticated user before profile is loaded
 interface AuthUser {
