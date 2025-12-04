@@ -9,6 +9,7 @@ import { LandingImage, EditablePlan } from '@/types';
 import { HeroSection } from './Hero'; 
 import { api } from '@/services/api';
 import { motion } from 'framer-motion';
+import { FeatureCard } from './FeatureCard';
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -110,29 +111,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   };
 
   const features = [
-    { icon: <Zap size={24} />, title: "Prompt Engineering Automático", description: "Você digita 'Oficina Mecânica' e nossa I.A. escreve um comando de 500 palavras detalhando iluminação, texturas e ângulos para a melhor foto possível.", color: 'primary' as const },
-    { icon: <ImageIcon size={24} />, title: "Imagens 8K", description: "Resolução ultra-alta pronta para impressão ou web.", color: 'secondary' as const },
-    { icon: <ShieldCheck size={24} />, title: "Uso Comercial", description: "Artes livres de direitos autorais para você vender.", color: 'accent' as const },
-    { icon: <CreditCard size={24} />, title: "Custo Zero por Arte", description: "Diferente de designers que cobram por peça, aqui você tem geração ilimitada no plano Pro.", color: 'primary' as const }
+    { icon: <Zap size={24} />, title: "Prompt Engineering Automático", description: "Você descreve seu negócio e nossa I.A. cria um comando detalhado para gerar a melhor imagem possível, considerando iluminação, texturas e ângulos.", color: 'primary' as const },
+    { icon: <ImageIcon size={24} />, title: "Imagens 4K", description: "Resolução de alta qualidade pronta para uso profissional na web ou em materiais impressos.", color: 'secondary' as const },
+    { icon: <ShieldCheck size={24} />, title: "Uso Livre para seu Negócio", description: "Artes com direitos autorais livres para você usar na sua empresa, loja ou negócio.", color: 'accent' as const },
+    { icon: <CreditCard size={24} />, title: "Custo Fixo por Mês", description: "Pague um valor fixo por mês e gere artes conforme os limites do seu plano, sem surpresas.", color: 'primary' as const }
   ];
-
-  const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string, color: 'primary' | 'secondary' | 'accent' }> = ({ icon, title, description, color }) => {
-    const colorClasses = {
-      primary: { bg: 'bg-primary/10', text: 'text-primary', hoverBorder: 'hover:border-primary/50', shadow: 'hover:shadow-primary/10' },
-      secondary: { bg: 'bg-secondary/10', text: 'text-secondary', hoverBorder: 'hover:border-secondary/50', shadow: 'hover:shadow-secondary/10' },
-      accent: { bg: 'bg-accent/10', text: 'text-accent', hoverBorder: 'hover:border-accent/50', shadow: 'hover:shadow-accent/10' }
-    }[color];
-
-    return (
-      <div className={`relative overflow-hidden rounded-3xl p-6 md:p-8 bg-zinc-900/80 border border-white/10 shadow-xl transition-all duration-500 group ${colorClasses.hoverBorder} ${colorClasses.shadow}`}>
-        <div className="relative z-10">
-          <div className={`${colorClasses.bg} w-fit p-3 rounded-xl mb-4 ${colorClasses.text}`}>{icon}</div>
-          <h4 className="text-xl font-bold text-white mb-2">{title}</h4>
-          <p className="text-gray-400 text-sm">{description}</p>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden">
@@ -186,7 +169,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               <h3 className="text-3xl md:text-5xl font-bold text-white mt-2">Design Profissional Simplificado</h3>
             </div>
             <motion.div 
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[250px]"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
               variants={staggerContainer}
               initial="hidden"
               whileInView="visible"
