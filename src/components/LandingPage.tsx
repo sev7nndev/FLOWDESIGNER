@@ -146,8 +146,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
       <main className="relative z-10">
         
-        {/* Hero Section with Shader Background */}
-        <section className="relative w-full overflow-hidden h-[80vh] md:h-[90vh] flex items-center justify-center bg-zinc-950">
+        {/* Hero Section with Shader Background - Reduced Height */}
+        <section className="relative w-full overflow-hidden h-[60vh] md:h-[70vh] flex items-center justify-center bg-zinc-950">
             {/* Hero Content (Relative positioning, z-index 10) */}
             <div className="relative z-10 h-full flex flex-col justify-center w-full">
                 <HeroSection onGetStarted={handleGetStarted} />
