@@ -9,30 +9,31 @@ const generateDetailedPrompt = (promptInfo) => {
   const address = [addressStreet, addressNumber, addressNeighborhood, addressCity].filter(Boolean).join(', ');
   const servicesList = details.split(/[.;]/).map(s => s.trim()).filter(s => s.length > 5).join(', ');
 
-  return `Create a high-conversion, professional, modern VERTICAL FLYER design (9:16 aspect ratio) for social media and printing. The style must be hyper-detailed, cinematic, and visually striking, suitable for a premium marketing campaign.
+  return `Crie um design de FLYER VERTICAL (proporção 9:16) de alta conversão, profissional e moderno, para mídias sociais e impressão. O estilo deve ser hiper-detalhado, cinematográfico e visualmente impactante, adequado para uma campanha de marketing premium.
 
-CRITICAL REQUIREMENTS:
-- The flyer must fill the ENTIRE image area - NO backgrounds, frames, shadows, or mockups around it. The image IS the final design.
-- Use high-contrast lighting, deep shadows, and vibrant colors.
-- Focus on a single, powerful visual element (product, service, or concept).
-- The final output must be a complete, ready-to-use flyer with no additional backgrounds or frames.
+REQUISITOS CRÍTICOS:
+- O flyer deve preencher TODA a área da imagem - SEM bordas, molduras, sombras ou mockups ao redor. A imagem É o design final.
+- Use iluminação de alto contraste, sombras profundas e cores vibrantes.
+- Concentre-se em um único elemento visual poderoso (produto, serviço ou conceito).
+- O resultado final deve ser um flyer completo, pronto para uso, sem fundos adicionais.
+- **IMPORTANTE: NÃO GERE TEXTO GENÉRICO, INCOMPLETO OU INCORRETO. USE APENAS AS INFORMAÇÕES FORNECIDAS ABAIXO.**
 
-BUSINESS INFORMATION:
-Company: ${companyName}
-Services/Products: ${servicesList}
-Phone/WhatsApp: ${phone}
-Address: ${address}
+INFORMAÇÕES DO NEGÓCIO:
+Empresa: ${companyName}
+Serviços/Produtos/Oferta: ${servicesList}
+Telefone/WhatsApp: ${phone}
+Endereço: ${address}
 
-DESIGN SPECIFICATIONS:
-1. LAYOUT: Dynamic, professional vertical layout. Clear separation between visual and text areas.
-2. TYPOGRAPHY: Use bold, modern, sans-serif fonts for headlines. Text must be highly readable and integrated into the design.
-3. COLORS: Select a color palette that strongly contrasts with the background for maximum impact.
-4. COMPOSITION: 
-   - Company name/logo prominently displayed.
-   - Main offer/CTA (Call to Action) in large, attention-grabbing text.
-   - Contact information (phone/WhatsApp) clearly visible at the bottom or center-right.
-   - Address included if space permits
-5. STYLE: High-end advertising, digital art, cinematic lighting, 8K resolution, ultra-detailed, high-conversion marketing design.`;
+ESPECIFICAÇÕES DE DESIGN:
+1. LAYOUT: Layout vertical dinâmico e profissional. Separação clara entre áreas visuais e de texto.
+2. TIPOGRAFIA: Use fontes sans-serif ousadas e modernas para manchetes. O texto deve ser altamente legível e integrado ao design.
+3. CORES: Selecione uma paleta de cores que contraste fortemente com o fundo para máximo impacto.
+4. COMPOSIÇÃO: 
+   - Nome da empresa/logo em destaque.
+   - Oferta principal/CTA (Call to Action) em texto grande e chamativo.
+   - Informações de contato (telefone/WhatsApp) claramente visíveis na parte inferior ou centro-direita.
+   - **Se for necessário incluir preço, use o formato brasileiro (Ex: R$ 99,90).**
+5. ESTILO: Publicidade de alto nível, arte digital, iluminação cinematográfica, resolução 8K, ultra-detalhado, design de marketing de alta conversão.`;
 };
 
 // Geração de imagem com Imagen 4

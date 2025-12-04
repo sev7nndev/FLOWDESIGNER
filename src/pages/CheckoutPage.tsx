@@ -52,7 +52,14 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, planId, plans,
         }
     };
 
-    const formatPrice = (price: number) => `R$ ${price.toFixed(2).replace('.', ',')}`;
+    // Função de formatação de preço para o padrão brasileiro
+    const formatPrice = (price: number) => {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2,
+        }).format(price);
+    };
 
     return (
         <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center pt-16 pb-10 px-4">
