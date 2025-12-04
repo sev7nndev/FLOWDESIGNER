@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from './Button';
-import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2 } from 'lucide-react';
+import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2, ClipboardList, Palette, Download } from 'lucide-react';
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
@@ -101,6 +101,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
     { icon: <CreditCard size={24} />, title: "Custo Fixo por Mês", description: "Pague um valor fixo por mês e gere artes conforme os limites do seu plano, sem surpresas.", color: 'primary' as const }
   ];
 
+  const howItWorksSteps = [
+    {
+      icon: <ClipboardList size={28} className="text-primary" />,
+      title: "1. Preencha os Dados",
+      description: "Informe o nome da sua empresa, contato e detalhes sobre o que você faz. Quanto mais detalhes, melhor o resultado."
+    },
+    {
+      icon: <Palette size={28} className="text-secondary" />,
+      title: "2. Escolha o Estilo",
+      description: "Selecione um estilo visual como Moderno, Vintage ou Neon para dar a direção de arte que sua marca precisa."
+    },
+    {
+      icon: <Sparkles size={28} className="text-accent" />,
+      title: "3. Deixe a I.A. Criar",
+      description: "Nossa inteligência artificial vai analisar suas informações e gerar uma arte única e profissional em segundos."
+    },
+    {
+      icon: <Download size={28} className="text-green-500" />,
+      title: "4. Baixe e Use",
+      description: "Receba sua arte em alta resolução, pronta para ser usada no Instagram, Facebook ou onde mais você precisar."
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden">
       
@@ -156,8 +179,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
           </div>
         </section>
 
+        {/* How It Works Section */}
+        <section className="py-24 px-6 bg-zinc-900/30 border-y border-white/5">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+              <span className="text-secondary text-xs font-bold uppercase tracking-widest">Processo</span>
+              <h3 className="text-3xl md:text-5xl font-bold text-white mt-2">Crie sua Arte em 4 Passos</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {howItWorksSteps.map((step, index) => (
+                <div key={index} className="text-center p-6 bg-zinc-950/50 rounded-2xl border border-white/10 transition-all hover:border-white/20 hover:-translate-y-1">
+                  <div className="flex items-center justify-center h-16 w-16 rounded-full bg-zinc-800 mb-6 mx-auto border border-white/10">
+                    {step.icon}
+                  </div>
+                  <h4 className="text-xl font-bold text-white mb-2">{step.title}</h4>
+                  <p className="text-gray-400 text-sm">{step.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section 
-          className="py-24 px-6 relative overflow-hidden bg-zinc-900/30" 
+          className="py-24 px-6 relative overflow-hidden" 
           id="precos"
         >
            <div className="max-w-7xl mx-auto relative z-10">
