@@ -119,8 +119,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   // Duplicate items for infinite scroll effect
   const marqueeContent = [...carouselItems, ...carouselItems];
   
-  // Duplicate testimonial content for infinite scroll effect
-  const testimonialContent = [...TESTIMONIAL_DATA, ...TESTIMONIAL_DATA];
+  // Duplicate testimonial content three times for a safer loop
+  const testimonialContentTriple = [...TESTIMONIAL_DATA, ...TESTIMONIAL_DATA, ...TESTIMONIAL_DATA];
   
   const freePlan = plans.find(p => p.id === 'free');
   const starterPlan = plans.find(p => p.id === 'starter');
@@ -332,9 +332,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <div className="absolute inset-y-0 left-0 w-12 md:w-32 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
             <div className="absolute inset-y-0 right-0 w-12 md:w-32 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
             
-            <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-6 px-6">
-               {/* Duplicating content for infinite scroll effect */}
-               {testimonialContent.map((item, i) => (
+            <div className="flex w-max animate-scroll-slow hover:[animation-play-state:paused] gap-6 px-6">
+               {/* Usando o conteúdo triplicado para garantir o loop */}
+               {testimonialContentTriple.map((item, i) => (
                  <div key={i} className="w-[300px] md:w-[400px] flex-shrink-0">
                       <TestimonialCard 
                         name={item.name} 
