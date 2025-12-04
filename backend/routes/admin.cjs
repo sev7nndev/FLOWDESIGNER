@@ -310,8 +310,8 @@ router.get('/users', verifyAuth, authorizeAdmin, async (req, res) => {
         // Using the profiles_with_email view for combined data
         const { data: users, error } = await supabaseServiceRole
             .from('profiles_with_email')
-            .select('id, email, first_name, last_name, role, created_at')
-            .order('created_at', { ascending: false });
+            .select('id, email, first_name, last_name, role, created_at:updated_at')
+            .order('updated_at', { ascending: false });
             
         if (error) throw error;
         
