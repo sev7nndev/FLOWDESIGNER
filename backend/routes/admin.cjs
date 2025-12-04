@@ -280,10 +280,11 @@ router.get('/metrics', verifyAuth, authorizeAdmin, async (req, res) => {
         const activeSubscriptions = subscriptions.filter(s => s.status === 'active').length;
         const inactiveSubscriptions = subscriptions.length - activeSubscriptions;
         
-        // 3. Total Users (from profiles table)
+        // 3. Total Users (from profiles table) - MODIFIED
         const { count: totalUsers, error: usersError } = await supabaseServiceRole
             .from('profiles')
-            .select('*', { count: 'exact', head: true });
+            .select('*', { count: 'exact', head: true })
+            .in('role', ['client', 'free', 'pro', 'starter']); // Count only client roles
             
         if (usersError) throw usersError;
         
