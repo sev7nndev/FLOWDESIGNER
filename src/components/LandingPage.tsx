@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from './Button';
 import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCard, Loader2 } from 'lucide-react';
 import { PricingCard } from './PricingCard';
@@ -45,12 +45,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   const [plans, setPlans] = useState<EditablePlan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const lastScrollY = useRef(0);
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
+      const currentScrollY = window.scrollY;
+      
+      // Lógica para o fundo do header
+      setScrolled(currentScrollY > 10);
+
+      // Lógica para esconder/mostrar o header
+      if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+        // Rolando para baixo
+        setHeaderVisible(false);
+      } else {
+        // Rolando para cima
+        setHeaderVisible(true);
+      }
+      
+      lastScrollY.current = currentScrollY;
     };
-    window.addEventListener('scroll', handleScroll);
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
@@ -120,7 +137,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col relative overflow-x-hidden">
       
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'border-b border-white/10 bg-zinc-950/80 backdrop-blur-lg' : 'border-b border-transparent'}`}>
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'border-b border-white/10 bg-zinc-950/80 backdrop-blur-lg' : 'border-b border-transparent'} ${headerVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="bg-primary/20 p-1.5 rounded-lg border border-primary/20"><Sparkles size={16} className="text-primary" /></div>
