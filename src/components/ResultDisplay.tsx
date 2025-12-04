@@ -2,8 +2,9 @@ import React, { useRef, useEffect, memo } from 'react';
 import { GeneratedImage, GenerationState, GenerationStatus } from '@/types';
 import { ImageResult } from './ImageResult';
 import { GalleryModal } from './Modals';
-import { History, Sparkles, Loader2 } from 'lucide-react';
+import { History, Sparkles } from 'lucide-react';
 import { Button } from './Button';
+import { ImageResultSkeleton } from './ImageResultSkeleton';
 
 interface ResultDisplayProps {
     state: GenerationState;
@@ -25,13 +26,7 @@ const ResultDisplayComponent: React.FC<ResultDisplayProps> = ({ state, downloadI
 
     const renderContent = () => {
         if (state.status === GenerationStatus.GENERATING) {
-            return (
-                <div className="flex flex-col items-center justify-center h-96 bg-zinc-900/50 rounded-3xl border border-white/10 p-8 shadow-xl">
-                    <Loader2 size={40} className="animate-spin text-primary mb-4" />
-                    <p className="text-white font-medium text-lg">Gerando arte profissional...</p>
-                    <p className="text-gray-500 text-sm mt-1">Isso pode levar até 30 segundos.</p>
-                </div>
-            );
+            return <ImageResultSkeleton />;
         }
 
         if (state.currentImage) {
