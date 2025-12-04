@@ -18,43 +18,23 @@ interface LandingPageProps {
   isLandingImagesLoading: boolean;
 }
 
-// Definindo o tipo localmente para garantir a compatibilidade
-type FlyerData = Omit<FlyerMockupProps, 'theme'> & { theme: 'mechanic' | 'food' | 'law' | 'tech' };
-
 // Hardcoded fallback data (used if DB is empty or loading fails)
-const FALLBACK_FLYERS: FlyerData[] = [
+const FALLBACK_FLYERS: FlyerMockupProps[] = [
     {
       bg: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=1000&auto=format&fit=crop",
-      title: "AUTO CENTER",
-      subtitle: "REVISÃO • FREIOS • SUSPENSÃO",
-      phone: "(11) 9998-2020",
-      theme: "mechanic",
-      badge: "PROMOÇÃO"
+      title: "Exemplo de Arte para Oficina Mecânica",
     },
     {
       bg: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1000&auto-format&fit=crop",
-      title: "RITA SALGADOS",
-      subtitle: "Cento de Salgados fritos na hora. Coxinha & Kibe.",
-      phone: "(21) 9888-7777",
-      theme: "food",
-      badge: "Oferta",
-      price: "R$49"
+      title: "Exemplo de Arte para Hamburgueria",
     },
     {
       bg: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1000&auto-format&fit=crop",
-      title: "SILVA ADVOCACIA",
-      subtitle: "Direito Trabalhista e Previdenciário.",
-      phone: "(11) 3030-4040",
-      theme: "law",
-      badge: "Consultoria"
+      title: "Exemplo de Arte para Advocacia",
     },
     {
       bg: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=1000&auto-format&fit=crop",
-      title: "SMART AUDIO",
-      subtitle: "Fone Bluetooth Pro com cancelamento de ruído.",
-      phone: "www.site.com",
-      theme: "tech",
-      badge: "50% OFF"
+      title: "Exemplo de Arte para Loja de Eletrônicos",
     },
 ];
 
@@ -79,14 +59,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   }, []);
   
   // Use dynamic images if available, otherwise use fallback
-  const carouselItems: FlyerData[] = landingImages.length > 0 ? landingImages.map((img: LandingImage) => ({
+  const carouselItems: FlyerMockupProps[] = landingImages.length > 0 ? landingImages.map((img: LandingImage) => ({
     bg: img.url,
-    title: "Design IA",
-    subtitle: "Gerado por Inteligência Artificial",
-    phone: "Flow Designer",
-    theme: (['mechanic', 'food', 'law', 'tech'] as const)[Math.floor(Math.random() * 4)], // Random theme for mockup style
-    badge: "NOVO",
-    price: undefined // Explicitly set price as undefined to match FlyerData type
+    title: "Arte Gerada por IA",
   })) : FALLBACK_FLYERS;
   
   // Duplicate items for infinite scroll effect
@@ -175,16 +150,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             </div>
           ) : (
             <div className="flex w-max animate-scroll hover:[animation-play-state:paused] gap-4 p-4">
-              {marqueeContent.map((item: FlyerData, idx: number) => (
+              {marqueeContent.map((item: FlyerMockupProps, idx: number) => (
                 <FlyerMockup 
                   key={idx} 
                   bg={item.bg} 
                   title={item.title} 
-                  subtitle={item.subtitle} 
-                  phone={item.phone} 
-                  theme={item.theme} 
-                  badge={item.badge} 
-                  price={item.price} 
                 />
               ))}
             </div>
