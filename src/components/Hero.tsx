@@ -11,7 +11,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
   return (
     <div className="relative w-full flex flex-col items-center justify-center pt-24 pb-20 md:pt-32 md:pb-28 overflow-hidden">
       {/* Background Effects - Simplified for performance */}
-      <div className="absolute top-0 z-0 h-64 w-[40rem] rounded-full bg-primary/40 blur-3xl" />
+      <div className="absolute top-0 z-0 h-64 w-[40rem] rounded-full bg-primary/40 blur-3xl animate-pulse-slow" />
 
       {/* Content */}
       <motion.div 
