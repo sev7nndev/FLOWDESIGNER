@@ -1,34 +1,80 @@
-import React from 'react';
-import { Button } from './Button';
-import { ChevronRight } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { MoveRight, PhoneCall } from "lucide-react";
+import { Button } from "./Button";
 
 interface HeroSectionProps {
   onGetStarted: () => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
-  return (
-    <div className="relative w-full flex flex-col items-center justify-center pt-24 pb-20 md:pt-32 md:pb-28 overflow-hidden">
-      {/* Background Effects - Simplified for performance */}
-      <div className="absolute top-0 z-0 h-64 w-[40rem] rounded-full bg-primary/40 blur-3xl animate-pulse-slow" />
+  const [titleNumber, setTitleNumber] = useState(0);
+  const titles = useMemo(
+    () => ["incríveis", "novas", "maravilhosas", "lindas", "inteligentes"],
+    []
+  );
 
-      {/* Content */}
-      <div 
-        className="relative z-10 flex flex-col items-center text-center px-6 animate-fade-in"
-      >
-        <h1 className="font-heading bg-gradient-to-r from-white via-gray-300 to-white py-4 bg-clip-text text-5xl md:text-7xl font-black tracking-tighter text-transparent leading-tight drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]">
-          Crie Artes Profissionais <br /> com Inteligência Artificial
-        </h1>
-        <p className="mt-4 text-lg md:text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
-          Sua agência de design particular. Gere flyers, posts e banners de nível de estúdio em segundos, sem precisar de um designer.
-        </p>
-        <div className="mt-8">
-          <Button 
-            onClick={onGetStarted} 
-            className="h-14 px-8 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20"
-          >
-            Começar Agora <ChevronRight className="ml-2" />
-          </Button>
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (titleNumber === titles.length - 1) {
+        setTitleNumber(0);
+      } else {
+        setTitleNumber(titleNumber + 1);
+      }
+    }, 2000);
+    return () => clearTimeout(timeoutId);
+  }, [titleNumber, titles]);
+
+  return (
+    <div className="w-full">
+      <div className="container mx-auto">
+        <div className="flex gap-8 py-20 lg:py-40 items-center justify-center flex-col text-center">
+          <div>
+            <Button variant="secondary" className="gap-4 text-sm px-4 py-2 h-auto rounded-full">
+              Leia nosso artigo de lançamento <MoveRight className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="flex gap-4 flex-col">
+            <h1 className="text-5xl md:text-7xl max-w-3xl tracking-tighter font-regular">
+              <span className="text-white">Crie artes</span>
+              <span className="relative flex w-full justify-center overflow-hidden md:pb-4 md:pt-1 h-16 md:h-24">
+                &nbsp;
+                {titles.map((title, index) => (
+                  <motion.span
+                    key={index}
+                    className="absolute font-semibold text-primary"
+                    initial={{ opacity: 0, y: "-100" }}
+                    transition={{ type: "spring", stiffness: 50 }}
+                    animate={
+                      titleNumber === index
+                        ? {
+                            y: 0,
+                            opacity: 1,
+                          }
+                        : {
+                            y: titleNumber > index ? -150 : 150,
+                            opacity: 0,
+                          }
+                    }
+                  >
+                    {title}
+                  </motion.span>
+                ))}
+              </span>
+            </h1>
+
+            <p className="text-lg md:text-xl leading-relaxed tracking-tight text-gray-400 max-w-2xl mx-auto">
+              Gerenciar um pequeno negócio já é difícil. Evite mais complicações e abandone métodos ultrapassados. Nosso objetivo é otimizar a criação de artes para PMEs, tornando tudo mais fácil e rápido do que nunca.
+            </p>
+          </div>
+          <div className="flex flex-row gap-3">
+            <Button variant="secondary" className="gap-4 h-14 px-8 text-lg">
+              Agendar uma chamada <PhoneCall className="w-4 h-4" />
+            </Button>
+            <Button onClick={onGetStarted} className="gap-4 h-14 px-8 text-lg">
+              Começar Agora <MoveRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
