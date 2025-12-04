@@ -158,7 +158,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
         </section>
 
         <section 
-          className="py-10 border-y border-white/5 bg-black/30 overflow-hidden relative"
+          className="py-10 bg-zinc-950 overflow-hidden relative" // Alterado: Removido border-y e bg-black/30, usando bg-zinc-950
         >
           <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
           <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
