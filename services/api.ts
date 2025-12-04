@@ -107,42 +107,48 @@ export const api = {
     const supabase = getSupabase();
     if (!supabase) throw new Error("Supabase not configured.");
     
-    try {
-        // Fetch limits/prices
-        const { data: settingsData, error: settingsError } = await supabase
-            .from('plan_settings')
-            .select('*');
-            
-        if (settingsError) throw new Error(settingsError.message);
+    // Fetch limits/prices
+    const { data: settingsData, error: settingsError } = await supabase
+        .from('plan_settings')
+        .select('*');
         
-        // Fetch marketing details
-        const { data: detailsData, error: detailsError } = await supabase
-            .from('plan_details')
-            .select('*');
-            
-        if (detailsError) throw new Error(detailsError.message);
-        
-        const settingsMap = new Map(settingsData.map(s => [s.id, s]));
-        
-        // Combine data
-        const combinedPlans: EditablePlan[] = detailsData.map(detail => {
-            const setting = settingsMap.get(detail.id);
-            return {
-                id: detail.id as any,
-                display_name: detail.display_name,
-                description: detail.description,
-                features: detail.features,
-                price: setting?.price || 0,
-                max_images_per_month: setting?.max_images_per_month || 0,
-            };
-        });
-        
-        return combinedPlans;
-    } catch (error) {
-        console.error("Error fetching plan settings:", error);
-        // Return empty array instead of throwing, as this is used by the LandingPage too
-        return [];
+    if (settingsError) {
+        console.error("Error fetching plan_settings:", settingsError);
+        throw new Error(settingsError.message);
     }
+    
+    // Fetch marketing details
+    const { data: detailsData, error: detailsError } = await supabase
+        .from('plan_details')
+        .select('*');
+        
+    if (detailsError) {
+        console.error("Error fetching plan_details:", detailsError);
+        throw new Error(detailsError.message);
+    }
+    
+    // Ensure data is not null before proceeding
+    if (!settingsData || !detailsData) {
+        console.error("Plan data is null or empty. Check RLS policies and if tables are populated.");
+        throw new Error("Plan data could not be loaded. Tables might be empty or inaccessible.");
+    }
+    
+    const settingsMap = new Map(settingsData.map(s => [s.id, s]));
+    
+    // Combine data
+    const combinedPlans: EditablePlan[] = detailsData.map(detail => {
+        const setting = settingsMap.get(detail.id);
+        return {
+            id: detail.id as any,
+            display_name: detail.display_name,
+            description: detail.description,
+            features: detail.features,
+            price: setting?.price || 0,
+            max_images_per_month: setting?.max_images_per_month || 0,
+        };
+    });
+    
+    return combinedPlans;
   },
   
   // NEW: Check user quota status
