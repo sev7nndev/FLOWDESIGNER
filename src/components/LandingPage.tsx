@@ -153,8 +153,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 <HeroSection onGetStarted={handleGetStarted} />
             </div>
             
-            {/* Gradient Overlay for Smooth Transition */}
-            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-zinc-950 to-transparent z-20 pointer-events-none" />
+            {/* Gradient Overlay for Smooth Transition (Digital Blush Effect) */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-primary/10 z-20 pointer-events-none" />
         </section>
 
         <section 
