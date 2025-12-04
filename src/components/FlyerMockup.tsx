@@ -7,7 +7,7 @@ export interface FlyerMockupProps {
 
 export const FlyerMockup: React.FC<FlyerMockupProps> = ({ bg, title }) => {
   return (
-    <div className="w-56 md:w-64 aspect-[3/4] rounded-xl overflow-hidden relative group flex-shrink-0 shadow-2xl border border-zinc-800">
+    <div className="w-56 md:w-64 aspect-[3/4] rounded-xl overflow-hidden relative group flex-shrink-0 shadow-2xl border border-zinc-800 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-primary/50 transform-gpu hover:rotate-1 hover:scale-[1.02]">
       <img 
         src={bg} 
         loading="lazy" 
