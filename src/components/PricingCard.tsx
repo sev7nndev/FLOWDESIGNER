@@ -25,7 +25,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
         : 'bg-zinc-900/40 border border-white/10 hover:border-white/20 hover:-translate-y-1'
     }`}>
       {highlight && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-primary to-secondary text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-xl shadow-primary/50">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-primary to-secondary text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-xl shadow-primary/50 animate-badge-pulse">
           {badge}
         </div>
       )}

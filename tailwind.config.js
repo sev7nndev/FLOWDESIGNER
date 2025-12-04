@@ -37,6 +37,7 @@ export default {
         'fade-in': 'fadeIn 0.8s ease-out forwards',
         'shimmer': 'shimmer 4s linear infinite',
         'scroll': 'scroll 80s linear infinite',
+        'badge-pulse': 'badgePulse 2.5s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -50,6 +51,10 @@ export default {
         scroll: {
           '0%': { transform: 'translateX(0)' },
           '100%': { transform: 'translateX(-50%)' },
+        },
+        badgePulse: {
+          '0%, 100%': { transform: 'scale(1)', filter: 'brightness(1)' },
+          '50%': { transform: 'scale(1.05)', filter: 'brightness(1.2)' },
         },
       }
     },

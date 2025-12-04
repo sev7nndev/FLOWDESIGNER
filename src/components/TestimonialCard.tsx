@@ -10,7 +10,7 @@ interface TestimonialCardProps {
 }
 
 export const TestimonialCard: React.FC<TestimonialCardProps> = ({ name, role, text, stars, image }) => (
-  <div className="bg-zinc-900/50 border border-white/5 p-6 rounded-2xl">
+  <div className="bg-zinc-900/50 border border-white/5 p-6 rounded-2xl transition-all duration-300 hover:border-primary/30 hover:bg-zinc-900">
     <div className="flex gap-1 mb-4">
       {[...Array(stars)].map((_: undefined, i: number) => <Star key={i} size={14} className="fill-yellow-400 text-yellow-400" />)}
     </div>

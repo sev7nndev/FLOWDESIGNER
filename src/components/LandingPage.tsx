@@ -86,6 +86,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
     visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
   };
 
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+        delayChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariant = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.6,
+        ease: "easeOut",
+      },
+    },
+  };
+
+  const features = [
+    { icon: <Zap size={24} />, title: "Prompt Engineering Automático", description: "Você digita 'Oficina Mecânica' e nossa I.A. escreve um comando de 500 palavras detalhando iluminação, texturas e ângulos para a melhor foto possível.", color: 'primary' as const },
+    { icon: <ImageIcon size={24} />, title: "Imagens 8K", description: "Resolução ultra-alta pronta para impressão ou web.", color: 'secondary' as const },
+    { icon: <ShieldCheck size={24} />, title: "Uso Comercial", description: "Artes livres de direitos autorais para você vender.", color: 'accent' as const },
+    { icon: <CreditCard size={24} />, title: "Custo Zero por Arte", description: "Diferente de designers que cobram por peça, aqui você tem geração ilimitada no plano Pro.", color: 'primary' as const }
+  ];
+
   const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string, color: 'primary' | 'secondary' | 'accent' }> = ({ icon, title, description, color }) => {
     const colorClasses = {
       primary: { bg: 'bg-primary/10', text: 'text-primary', hoverBorder: 'hover:border-primary/50', shadow: 'hover:shadow-primary/10' },
@@ -155,12 +185,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               <span className="text-primary text-xs font-bold uppercase tracking-widest">Poder da I.A.</span>
               <h3 className="text-3xl md:text-5xl font-bold text-white mt-2">Design Profissional Simplificado</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[250px]">
-              <FeatureCard icon={<Zap size={24} />} title="Prompt Engineering Automático" description="Você digita 'Oficina Mecânica' e nossa I.A. escreve um comando de 500 palavras detalhando iluminação, texturas e ângulos para a melhor foto possível." color="primary" />
-              <FeatureCard icon={<ImageIcon size={24} />} title="Imagens 8K" description="Resolução ultra-alta pronta para impressão ou web." color="secondary" />
-              <FeatureCard icon={<ShieldCheck size={24} />} title="Uso Comercial" description="Artes livres de direitos autorais para você vender." color="accent" />
-              <FeatureCard icon={<CreditCard size={24} />} title="Custo Zero por Arte" description="Diferente de designers que cobram por peça, aqui você tem geração ilimitada no plano Pro." color="primary" />
-            </div>
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[250px]"
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+            >
+              {features.map((feature, index) => (
+                <motion.div key={index} variants={itemVariant}>
+                  <FeatureCard {...feature} />
+                </motion.div>
+              ))}
+            </motion.div>
           </div>
         </motion.section>
 
