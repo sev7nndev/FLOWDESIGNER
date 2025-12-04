@@ -4,7 +4,6 @@ import { getSupabase } from './services/supabaseClient';
 import { AppTitleHeader } from './src/components/AppTitleHeader';
 import { LandingPage } from './src/components/LandingPage';
 import { AuthScreens } from './src/components/AuthScreens';
-import { Sparkles } from 'lucide-react';
 import { useGeneration } from './hooks/useGeneration';
 import { ResultDisplay } from './src/components/ResultDisplay';
 import { SettingsModal, UpgradeModal } from './src/components/Modals'; 
@@ -16,6 +15,7 @@ import { PlansPage } from './src/pages/PlansPage';
 import { useUsage } from './hooks/useUsage'; 
 import { Toaster } from 'sonner'; 
 import { CheckoutPage } from './src/pages/CheckoutPage'; 
+import { SplashScreen } from './src/components/SplashScreen'; // Import SplashScreen
 
 // Define a minimal structure for authenticated user before profile is loaded
 interface AuthUser {
@@ -26,6 +26,7 @@ interface AuthUser {
 
 export const App: React.FC = () => {
   // Auth State
+  const [isAuthLoading, setIsAuthLoading] = useState(true); // NEW: State for initial auth check
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'PLANS' | 'CHECKOUT'>('LANDING');
   const [showGallery, setShowGallery] = useState(false);
@@ -36,9 +37,6 @@ export const App: React.FC = () => {
   // Profile Hook
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile(authUser?.id);
 
-  // Combined User State (passed to hooks/components)
-  const profileRole = (profile?.role || 'free') as UserRole;
-  
   // Usage Hook
   const { 
     quota, 
@@ -49,7 +47,7 @@ export const App: React.FC = () => {
     maxImages,
     currentPlan,
     plans 
-  } = useUsage(authUser?.id, profileRole); 
+  } = useUsage(authUser?.id, (profile?.role || 'free') as UserRole); 
 
   // Combined User State (passed to hooks/components)
   const user: User | null = authUser && profile ? {
@@ -58,7 +56,7 @@ export const App: React.FC = () => {
     firstName: profile.firstName,
     lastName: profile.lastName,
     createdAt: authUser.createdAt,
-    role: profileRole, 
+    role: (profile.role || 'free') as UserRole, 
   } : null;
   
   // Helper function to open upgrade modal
@@ -72,7 +70,7 @@ export const App: React.FC = () => {
   } = useGeneration(user, refreshUsage, openUpgradeModal); 
   
   // Landing Images Hook (Used by LandingPage and DevPanel)
-  const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages(profileRole);
+  const { images: landingImages, isLoading: isLandingImagesLoading } = useLandingImages((user?.role || 'free') as UserRole);
 
   // Handle plan selection from Landing Page or Plans Page
   const handleSelectPlan = useCallback((planId: string) => {
@@ -113,13 +111,15 @@ export const App: React.FC = () => {
   useEffect(() => {
     const supabase = getSupabase();
     if (supabase) {
-      // Check Session
+      // Check Session on initial load
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
           fetchAuthUser(session.user);
         } else {
           setView('LANDING');
         }
+      }).finally(() => {
+        setIsAuthLoading(false); // Mark auth check as complete
       });
 
       // Listen for Auth Changes
@@ -133,6 +133,8 @@ export const App: React.FC = () => {
       });
 
       return () => subscription.unsubscribe();
+    } else {
+      setIsAuthLoading(false); // Ensure loading stops if Supabase isn't configured
     }
   }, []);
 
@@ -149,16 +151,12 @@ export const App: React.FC = () => {
     setView('LANDING');
   };
 
-  // Show loading state while profile/usage is being fetched after successful authentication
-  if (view === 'APP' && !user && authUser && (isProfileLoading || isUsageLoading)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
-        <Sparkles size={32} className="animate-spin text-primary" />
-      </div>
-    );
-  }
-  
   // --- RENDER VIEWS ---
+
+  // Show SplashScreen during the very initial auth check
+  if (isAuthLoading) {
+    return <SplashScreen />;
+  }
 
   if (view === 'LANDING') {
     return (
@@ -225,7 +223,8 @@ export const App: React.FC = () => {
   
   // MAIN APP UI (Protected)
   if (!user) {
-      return <div className="app-container min-h-screen bg-zinc-950" />;
+      // This case handles the brief moment after logout or if auth fails silently
+      return <SplashScreen />;
   }
   
   return (
@@ -235,7 +234,7 @@ export const App: React.FC = () => {
       
       <AppHeader 
         user={user} 
-        profileRole={profileRole} 
+        profileRole={user.role} 
         onLogout={handleLogout} 
         onShowSettings={() => setShowSettings(true)} 
         onShowDevPanel={() => setView('DEV_PANEL')}
@@ -280,7 +279,7 @@ export const App: React.FC = () => {
         </div>
       </main>
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={profileRole} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} user={user} updateProfile={updateProfile} profileRole={user.role} />}
       {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(null)} quotaResponse={showUpgradeModal} />}
     </div>
   );
