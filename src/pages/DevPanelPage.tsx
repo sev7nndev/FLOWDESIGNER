@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info, ImageUp } from 'lucide-react';
+import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info, ImageUp } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '@/types';
 import { useLandingImages } from '@/hooks/useLandingImages';
@@ -10,7 +10,7 @@ import { api } from '@/services/api';
 import { toast } from 'sonner';
 import { getSupabase } from '@/services/supabaseClient';
 import { FlowDesignerIcon } from '../components/FlowDesignerLogo';
-import { OwnerDashboard } from '../components/AdminDashboard';
+import { OwnerDashboard as OwnerDashboardComponent, MetricCard, UserManagement, AdminChat } from '../components/AdminDashboard'; // Importando OwnerDashboard e subcomponentes
 
 interface DevPanelPageProps {
   user: User | null;
@@ -770,7 +770,7 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
 
                 {/* Conteúdo do Painel */}
                 {isOwner ? (
-                    <OwnerDashboard user={user} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
+                    <OwnerDashboardComponent user={user} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
                 ) : (
                     <DeveloperPanel user={user} onBackToApp={onBackToApp} onLogout={onLogout} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
                 )}

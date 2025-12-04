@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { User, EditablePlan } from '@/types'; // Import User type and EditablePlan
 import { FlowDesignerIcon } from './FlowDesignerLogo'; // Import the specific icon component
+import { GoogleIcon } from './GoogleIcon'; // NEW: Import GoogleIcon
 
 interface AuthScreensProps {
   onSuccess: (user: User | null) => void; 
@@ -13,7 +14,7 @@ interface AuthScreensProps {
   saasLogoUrl: string | null; 
 }
 
-export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, selectedPlanId, plans, saasLogoUrl }) => {
+export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, saasLogoUrl }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);

@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 // --- Subcomponentes ---
 
 // 1. Card de Métrica
-const MetricCard: React.FC<{ icon: React.ReactNode, title: string, value: string | number, color: string }> = ({ icon, title, value, color }) => (
+export const MetricCard: React.FC<{ icon: React.ReactNode, title: string, value: string | number, color: string }> = ({ icon, title, value, color }) => (
     <div className={`p-6 rounded-xl border border-white/10 shadow-lg ${color}/10 bg-zinc-900/50`}>
         <div className={`p-3 w-fit rounded-full ${color}/20 ${color}`}>
             {icon}
@@ -20,7 +20,7 @@ const MetricCard: React.FC<{ icon: React.ReactNode, title: string, value: string
 );
 
 // 2. Gerenciamento de Clientes
-const UserManagement: React.FC<{ user: User }> = ({ user }) => {
+export const UserManagement: React.FC<{ user: User }> = ({ user }) => {
     const { adminUsers, isLoadingAdminUsers, errorAdminUsers, deleteUser } = useAdminUsers(user.role, user.id);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     
@@ -81,7 +81,7 @@ const UserManagement: React.FC<{ user: User }> = ({ user }) => {
 };
 
 // 3. Chat de Suporte
-const AdminChat: React.FC<{ user: User, adminUsers: AdminUser[] }> = ({ user, adminUsers }) => {
+export const AdminChat: React.FC<{ user: User, adminUsers: AdminUser[] }> = ({ user, adminUsers }) => {
     const { chatMessages, isLoadingChat, errorChat, sendMessage } = useAdminChat(user.role, user.id);
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [messageContent, setMessageContent] = useState('');
@@ -173,8 +173,8 @@ const AdminChat: React.FC<{ user: User, adminUsers: AdminUser[] }> = ({ user, ad
                                 {currentConversation.map(msg => {
                                     const isMe = msg.sender_id === user.id;
                                     return (
-                                        <div key={msg.id} className="flex justify-end">
-                                            <div className="max-w-[70%] p-3 rounded-xl bg-primary/80 text-white rounded-br-none">
+                                        <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[70%] p-3 rounded-xl ${isMe ? 'bg-primary/80 text-white rounded-br-none' : 'bg-zinc-700 text-white rounded-tl-none'}`}>
                                                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                                                 <span className="text-[10px] mt-1 block text-right opacity-70">{formatTime(msg.created_at)}</span>
                                             </div>
