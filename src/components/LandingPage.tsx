@@ -330,7 +330,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 </h3>
                 <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
                     Comece a gerar artes de alta conversão em segundos com a inteligência artificial do Flow Designer.
-                p>
+                </p>
                 <Button onClick={onShowPlans} className="h-14 px-10 text-lg rounded-full shadow-[0_0_50px_-10px_rgba(139,92,246,0.6)] border border-white/20">
                     Quero Minhas Artes Agora <ChevronRight className="ml-2" />
                 </Button>
