@@ -1,16 +1,10 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { AdminMetrics, AdminUser, ChatMessage, User } from '@/types';
-import { DollarSign, Users, Zap, Clock, Trash2, Mail, MessageSquare, Send, Loader2, AlertTriangle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { AdminUser, ChatMessage, User } from '@/types';
+import { DollarSign, Users, Trash2, MessageSquare, Send, Loader2, AlertTriangle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { Button } from './Button';
-import { useAdminMetrics } from '@/hooks/useAdminMetrics';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { useAdminChat } from '@/hooks/useAdminChat';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-
-interface AdminDashboardProps {
-    user: User;
-}
 
 // --- Subcomponentes ---
 
@@ -27,7 +21,7 @@ const MetricCard: React.FC<{ icon: React.ReactNode, title: string, value: string
 
 // 2. Gerenciamento de Clientes
 const UserManagement: React.FC<{ user: User }> = ({ user }) => {
-    const { adminUsers, isLoadingAdminUsers, errorAdminUsers, deleteUser, fetchUsers } = useAdminUsers(user.role, user.id);
+    const { adminUsers, isLoadingAdminUsers, errorAdminUsers, deleteUser } = useAdminUsers(user.role, user.id);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     
     const handleDelete = useCallback(async (userId: string) => {
@@ -139,7 +133,7 @@ const AdminChat: React.FC<{ user: User, adminUsers: AdminUser[] }> = ({ user, ad
 
             <div className="flex h-[500px] border border-white/10 rounded-lg overflow-hidden">
                 {/* Lista de Clientes */}
-                <div className={cn("w-full md:w-1/3 bg-zinc-800/50 overflow-y-auto custom-scrollbar", selectedUserId && "hidden md:block")}>
+                <div className="w-full md:w-1/3 bg-zinc-800/50 overflow-y-auto custom-scrollbar">
                     <div className="p-3 border-b border-white/10 sticky top-0 bg-zinc-800/80 backdrop-blur-sm">
                         <p className="text-sm font-semibold text-white">Clientes ({clients.length})</p>
                     </div>
@@ -147,7 +141,7 @@ const AdminChat: React.FC<{ user: User, adminUsers: AdminUser[] }> = ({ user, ad
                         <div 
                             key={client.id} 
                             onClick={() => setSelectedUserId(client.id)}
-                            className={cn("p-3 border-b border-white/5 cursor-pointer hover:bg-white/10 transition-colors", selectedUserId === client.id ? 'bg-primary/20 border-primary/50' : '')}
+                            className="p-3 border-b border-white/5 cursor-pointer hover:bg-white/10 transition-colors"
                         >
                             <p className="text-sm font-medium text-white truncate">{client.first_name || client.email}</p>
                             <p className="text-xs text-gray-400">{client.role}</p>
@@ -156,9 +150,9 @@ const AdminChat: React.FC<{ user: User, adminUsers: AdminUser[] }> = ({ user, ad
                 </div>
                 
                 {/* Área de Conversa */}
-                <div className={cn("w-full md:w-2/3 flex flex-col bg-zinc-900", !selectedUserId && "flex items-center justify-center text-gray-500")}>
+                <div className="w-full md:w-2/3 flex flex-col bg-zinc-900">
                     {!selectedUserId ? (
-                        <p>Selecione um cliente para iniciar o chat.</p>
+                        <p className="flex items-center justify-center text-gray-500 h-full">Selecione um cliente para iniciar o chat.</p>
                     ) : (
                         <>
                             {/* Header da Conversa */}
@@ -169,7 +163,7 @@ const AdminChat: React.FC<{ user: User, adminUsers: AdminUser[] }> = ({ user, ad
                                     </Button>
                                     <p className="font-semibold text-white">{selectedClient?.first_name || selectedClient?.email}</p>
                                 </div>
-                                <span className={`text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-primary`}>
+                                <span className="text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-primary">
                                     {selectedClient?.role}
                                 </span>
                             </div>
@@ -179,8 +173,8 @@ const AdminChat: React.FC<{ user: User, adminUsers: AdminUser[] }> = ({ user, ad
                                 {currentConversation.map(msg => {
                                     const isMe = msg.sender_id === user.id;
                                     return (
-                                        <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
-                                            <div className={cn("max-w-[70%] p-3 rounded-xl", isMe ? "bg-primary/80 text-white rounded-br-none" : "bg-zinc-700 text-white rounded-tl-none")}>
+                                        <div key={msg.id} className="flex justify-end">
+                                            <div className="max-w-[70%] p-3 rounded-xl bg-primary/80 text-white rounded-br-none">
                                                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                                                 <span className="text-[10px] mt-1 block text-right opacity-70">{formatTime(msg.created_at)}</span>
                                             </div>
@@ -214,9 +208,7 @@ const AdminChat: React.FC<{ user: User, adminUsers: AdminUser[] }> = ({ user, ad
 
 
 // --- Componente Principal do Dashboard do Dono ---
-export const OwnerDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
-    const { metrics, isLoadingMetrics, errorMetrics } = useAdminMetrics(user.role);
-    
+export const OwnerDashboard: React.FC<{ user: User, adminUsers: AdminUser[] }> = ({ user, adminUsers }) => {
     const formatCurrency = (value: string) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(value));
     };
@@ -228,32 +220,29 @@ export const OwnerDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                     <DollarSign size={20} className="text-green-500" /> Dashboard de Métricas (Owner)
                 </h3>
                 
-                {isLoadingMetrics && <div className="text-center py-10"><Loader2 size={20} className="animate-spin text-green-500" /></div>}
-                {errorMetrics && <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{errorMetrics}</div>}
-
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <MetricCard 
                         icon={<DollarSign size={20} />} 
                         title="Faturamento Total (Mock)" 
-                        value={formatCurrency(metrics.totalRevenue)} 
+                        value="R$ 0,00" 
                         color="text-green-500" 
                     />
                     <MetricCard 
                         icon={<Users size={20} />} 
                         title="Total de Usuários" 
-                        value={metrics.totalUsers} 
+                        value={adminUsers.length} 
                         color="text-primary" 
                     />
                     <MetricCard 
                         icon={<CheckCircle2 size={20} />} 
                         title="Assinaturas Ativas" 
-                        value={metrics.activeSubscriptions} 
+                        value={0} 
                         color="text-cyan-500" 
                     />
                     <MetricCard 
                         icon={<AlertTriangle size={20} />} 
                         title="Assinaturas Inativas" 
-                        value={metrics.inactiveSubscriptions} 
+                        value={0} 
                         color="text-yellow-500" 
                     />
                 </div>
@@ -267,58 +256,3 @@ export const OwnerDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         </div>
     );
 };
-
-// --- Componente Principal do Painel do Desenvolvedor (Original) ---
-export const DeveloperPanel: React.FC<AdminDashboardProps & { saasLogoUrl: string | null, refreshConfig: () => void }> = ({ user, saasLogoUrl, refreshConfig }) => {
-    return (
-        <div className="space-y-12">
-            {/* Seção 0.5: Gerenciamento do Logo */}
-            <SaasLogoManager user={user} saasLogoUrl={saasLogoUrl} refreshConfig={refreshConfig} />
-            
-            {/* Seção 0: Gerenciamento de Pagamentos (Apenas Owner) */}
-            {user.role === 'owner' && <MercadoPagoManager user={user} />}
-            
-            {/* Seção 1: Gerenciamento de Planos */}
-            <PlanSettingsManager />
-
-            {/* Seção 2: Gerenciamento de Artes Geradas por Usuários */}
-            <GeneratedImagesManager userRole={user.role} />
-
-            {/* Seção 3: Gerenciamento de Imagens da Landing Page */}
-            <LandingImagesManager user={user} />
-        </div>
-    );
-};
-
-
-// --- Componente Principal do Painel do Desenvolvedor (Original) ---
-// NOTE: The original DevPanelPage component is too large, I will move the subcomponents 
-// (SaasLogoManager, PlanSettingsManager, GeneratedImagesManager, LandingImagesManager, MercadoPagoManager)
-// into the DevPanelPage file itself, and use the new OwnerDashboard component for the Owner view.
-
-// To avoid circular dependencies, I will keep the original DevPanelPage structure but use the new components.
-// I need to import the necessary hooks and components into DevPanelPage.tsx.
-// Since I cannot write the entire DevPanelPage.tsx here due to size, I will update it in the next step.
-// For now, I will define the necessary components here to be imported.
-
-// NOTE: The components SaasLogoManager, PlanSettingsManager, GeneratedImagesManager, LandingImagesManager, MercadoPagoManager
-// are currently defined inside src/pages/DevPanelPage.tsx. I will move them to a new file src/components/AdminTools.tsx
-// to clean up DevPanelPage.tsx and allow for better organization.
-
-// Since I cannot move files in this step, I will update DevPanelPage.tsx to use the new OwnerDashboard structure
-// and ensure the necessary hooks are imported.
-
-// I will define the components that were previously inside DevPanelPage.tsx here, 
-// but since they are already in DevPanelPage.tsx, I will skip defining them here 
-// and proceed to update DevPanelPage.tsx to integrate the new OwnerDashboard.
-
-// I need to ensure the hooks useAdminUsers and useAdminMetrics are available in DevPanelPage.tsx.
-// I will update DevPanelPage.tsx to import the new hooks and conditionally render the OwnerDashboard.
-
-// NOTE: The components SaasLogoManager, PlanSettingsManager, GeneratedImagesManager, LandingImagesManager, MercadoPagoManager
-// are currently defined inside src/pages/DevPanelPage.tsx. I will keep them there for now and update the main render logic.
-
-// I need to ensure the useAdminUsers hook is available for the OwnerDashboard component, which I will define inside DevPanelPage.tsx.
-// Since I cannot define OwnerDashboard outside and import it without creating a new file, I will define the logic inside DevPanelPage.tsx.
-
-// I will update DevPanelPage.tsx to import the new hooks and conditionally render the OwnerDashboard or the DeveloperPanel.

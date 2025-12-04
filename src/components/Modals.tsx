@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GeneratedImage, User, UserRole, QuotaCheckResponse, QuotaStatus, EditablePlan } from '@/types';
-import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download, Zap, ArrowLeft, Maximize } from 'lucide-react';
+import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download, Zap, ArrowLeft } from 'lucide-react';
 import { Button } from './Button';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
@@ -174,7 +174,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
             
             <div className="flex justify-between items-center">
                 <span className="text-gray-400 text-sm flex items-center gap-2"><UserIcon size={16} className="text-primary" /> Plano:</span>
-                <span className={`text-white text-xs font-bold uppercase px-3 py-1 rounded-full ${currentRole.color}`}>
+                <span className="text-white text-xs font-bold uppercase px-3 py-1 rounded-full ${currentRole.color}">
                     {currentRole.name}
                 </span>
             </div>

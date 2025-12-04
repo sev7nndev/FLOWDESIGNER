@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../components/Button';
-import { Sparkles, ArrowLeft, CheckCircle2, Zap, DollarSign, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { authService } from '@/services/authService';
-import { GoogleIcon } from './GoogleIcon';
 import { User, EditablePlan } from '@/types'; // Import User type and EditablePlan
 import { FlowDesignerIcon } from './FlowDesignerLogo'; // Import the specific icon component
 
@@ -172,7 +171,7 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
                   type={showPassword ? 'text' : 'password'} 
                   required 
                   className="w-full bg-zinc-800 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-colors pr-12"
-                  placeholder="••••••••"
+                  placeholder="••••••••••"
                   value={formData.password}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, password: e.target.value})}
                 />

@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info, ImageUp, MessageSquare, Send } from 'lucide-react';
+import { Upload, Trash2, Loader2, CheckCircle2, Image as ImageIcon, AlertTriangle, Users, ArrowLeft, Code, LogOut, ShieldOff, Settings, DollarSign, Link, Unlink, Save, Info, ImageUp } from 'lucide-react';
 import { Button } from '../components/Button';
-import { LandingImage, User, GeneratedImage, UserRole, EditablePlan, AdminMetrics, AdminUser, ChatMessage } from '@/types';
+import { LandingImage, User, GeneratedImage, UserRole, EditablePlan } from '@/types';
 import { useLandingImages } from '@/hooks/useLandingImages';
 import { useAdminGeneratedImages } from '@/hooks/useAdminGeneratedImages';
-import { useAdminMetrics } from '@/hooks/useAdminMetrics'; // NEW
-import { useAdminUsers } from '@/hooks/useAdminUsers'; // NEW
-import { useAdminChat } from '@/hooks/useAdminChat'; // NEW
+import { useAdminMetrics } from '@/hooks/useAdminMetrics';
+import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
 import { getSupabase } from '@/services/supabaseClient';
 import { FlowDesignerIcon } from '../components/FlowDesignerLogo';
-import { cn } from '@/lib/utils'; // Import cn utility
+import { OwnerDashboard } from '../components/AdminDashboard';
 
 interface DevPanelPageProps {
   user: User | null;
@@ -22,17 +21,6 @@ interface DevPanelPageProps {
 }
 
 // --- Subcomponentes ---
-
-// 1. Card de Métrica
-const MetricCard: React.FC<{ icon: React.ReactNode, title: string, value: string | number, color: string }> = ({ icon, title, value, color }) => (
-    <div className={`p-6 rounded-xl border border-white/10 shadow-lg ${color}/10 bg-zinc-900/50`}>
-        <div className={`p-3 w-fit rounded-full ${color}/20 ${color}`}>
-            {icon}
-        </div>
-        <p className="text-sm text-gray-400 mt-4">{title}</p>
-        <h4 className="text-2xl font-bold text-white mt-1">{value}</h4>
-    </div>
-);
 
 // Image Upload Component (Reused)
 interface ImageUploadProps {
@@ -660,6 +648,7 @@ const MercadoPagoManager: React.FC<{ user: User }> = ({ user }) => {
         </div>
     );
 };
+
 
 // --- Componente Principal do Dashboard do Dono (NEW) ---
 const OwnerDashboard: React.FC<{ user: User, saasLogoUrl: string | null, refreshConfig: () => void }> = ({ user, saasLogoUrl, refreshConfig }) => {
