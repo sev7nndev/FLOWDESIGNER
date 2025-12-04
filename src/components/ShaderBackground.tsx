@@ -76,13 +76,13 @@ void main(void) {
 		vec2 p=uv;
 		float d=length(p);
         
-        // Use secondary color for the glow/lines (Pink/Fuchsia)
-		col+=.00125/d*(cos(sin(i)*secondaryColor)+1.); 
+        // Reduzindo a intensidade de 0.00125 para 0.0005 e usando a cor secundária
+		col+=.0005/d*(cos(sin(i)*secondaryColor)+1.); 
         
 		float b=noise(i+p+bg*1.731);
 		col+=.002*b/length(max(p,vec2(b*p.x*.02,p.y)));
         
-        // Mix with a dark background, favoring the primary color tone
+        // Mix com o fundo escuro, favorecendo o tom da cor primária
 		col=mix(col, primaryColor * bg * 0.2, d); 
 	}
 	O=vec4(col,1);
