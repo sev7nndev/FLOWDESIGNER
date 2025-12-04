@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { MoveRight, PhoneCall } from "lucide-react";
+import { MoveRight } from "lucide-react";
 import { Button } from "./Button";
 
 interface HeroSectionProps {
@@ -29,11 +29,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
     <div className="w-full">
       <div className="container mx-auto">
         <div className="flex gap-8 py-20 lg:py-40 items-center justify-center flex-col text-center">
-          <div>
-            <Button variant="secondary" className="gap-4 text-sm px-4 py-2 h-auto rounded-full">
-              Leia nosso artigo de lançamento <MoveRight className="w-4 h-4" />
-            </Button>
-          </div>
           <div className="flex gap-4 flex-col">
             <h1 className="text-5xl md:text-7xl max-w-3xl tracking-tighter font-regular">
               <span className="text-white">Crie artes</span>
@@ -68,9 +63,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
             </p>
           </div>
           <div className="flex flex-row gap-3">
-            <Button variant="secondary" className="gap-4 h-14 px-8 text-lg">
-              Agendar uma chamada <PhoneCall className="w-4 h-4" />
-            </Button>
             <Button onClick={onGetStarted} className="gap-4 h-14 px-8 text-lg">
               Começar Agora <MoveRight className="w-4 h-4" />
             </Button>
