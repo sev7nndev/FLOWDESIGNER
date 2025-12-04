@@ -255,6 +255,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             </div>
         </section>
 
+        {/* NEW FAQ Section */}
+        <section 
+          className="py-20 px-6 bg-zinc-900/30 border-t border-white/5"
+        >
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-12"><h3 className="text-3xl font-bold text-white font-heading">Perguntas Frequentes</h3></div>
+            <div className="space-y-4">
+              <Accordion title="As imagens têm direitos autorais?">Sim, você pode usar todas as imagens geradas nos planos pagos para fins comerciais (Instagram, Facebook, Impressos) sem problemas. No plano Grátis, a imagem contém uma marca d'água.</Accordion>
+              <Accordion title="Funciona no celular?">Perfeitamente. O Flow Designer foi criado pensando no mobile. Você cria a arte e baixa direto na galeria do seu telefone.</Accordion>
+              <Accordion title="Posso cancelar quando quiser?">Sim, não há contrato de fidelidade. Você pode cancelar a assinatura a qualquer momento no seu painel de usuário.</Accordion>
+              <Accordion title="Como funciona o limite de imagens?">O limite é renovado mensalmente a partir da data de início do seu ciclo de faturamento. Se você atingir o limite, pode fazer upgrade ou esperar o próximo ciclo.</Accordion>
+            </div>
+          </div>
+        </section>
+
         <footer className="border-t border-white/5 py-12 bg-zinc-950 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
              <div className="bg-white/10 p-1.5 rounded-lg"><Sparkles size={16} className="text-white" /></div>
