@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { GeneratedImage } from '@/types';
 import { Download, Clock, Maximize } from 'lucide-react';
 import { FullScreenImageModal } from './Modals'; // Importando o novo modal
+import { Button } from './Button'; // Import Button
 
 interface ImageResultProps {
   image: GeneratedImage;
@@ -16,13 +17,13 @@ export const ImageResult: React.FC<ImageResultProps> = ({ image, onDownload }) =
 
   return (
     <>
-      <div className="group relative rounded-2xl overflow-hidden bg-surface border border-white/5 shadow-2xl animate-fade-in max-w-[420px] mx-auto hover:shadow-[0_0_50px_rgba(139,92,246,0.3)] transition-shadow duration-500">
+      <div className="group relative rounded-2xl overflow-hidden bg-black/50 border border-white/10 shadow-2xl animate-fade-in max-w-[420px] mx-auto transition-shadow duration-500">
         {/* 3:4 Aspect Ratio Container */}
-        <div className="aspect-[3/4] w-full relative overflow-hidden bg-black/50 cursor-pointer" onClick={() => setIsModalOpen(true)}>
+        <div className="aspect-[3/4] w-full relative overflow-hidden cursor-pointer" onClick={() => setIsModalOpen(true)}>
           <img 
             src={image.url} 
             alt={image.prompt} 
-            className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105"
+            className="w-full h-full object-cover" // Removed transform/scale hover effect
           />
           
           {/* Overlay Actions */}
@@ -30,13 +31,13 @@ export const ImageResult: React.FC<ImageResultProps> = ({ image, onDownload }) =
             <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
               
               <div className="flex items-center justify-between mb-4">
-                <button 
+                <Button 
                   onClick={(e) => { e.stopPropagation(); onDownload(); }} // Stop propagation to prevent modal opening
                   className="flex items-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white transition-colors shadow-2xl shadow-primary/50 font-bold text-sm uppercase tracking-wider"
                 >
                   <Download size={18} />
                   Baixar Flyer
-                </button>
+                </Button>
                 
                 <button 
                   onClick={(e) => { e.stopPropagation(); setIsModalOpen(true); }}

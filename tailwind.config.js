@@ -35,8 +35,8 @@ export default {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'fade-in': 'fadeIn 0.8s ease-out forwards',
         'shimmer': 'shimmer 2s linear infinite',
-        'scroll': 'scroll 60s linear infinite', // Carrossel de Flyers (60s)
-        'scroll-slow': 'scroll-slow 80s linear infinite', // Carrossel de Depoimentos (80s)
+        'scroll': 'scroll 120s linear infinite', // Carrossel de Flyers (Aumentado para 120s)
+        'scroll-slow': 'scroll-slow 160s linear infinite', // Carrossel de Depoimentos (Aumentado para 160s)
       },
       keyframes: {
         fadeIn: {
