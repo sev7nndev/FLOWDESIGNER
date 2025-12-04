@@ -17,7 +17,6 @@ export const FlyerMockup: React.FC<FlyerMockupProps> = ({ bg, title, subtitle, p
   if (theme === 'mechanic') {
     return (
       <div className="w-56 md:w-64 aspect-[3/4] rounded-xl overflow-hidden relative group flex-shrink-0 shadow-2xl border border-zinc-800">
-        {/* Removido group-hover:scale-110 para manter a imagem estática */}
         <img src={bg} loading="lazy" className="w-full h-full object-cover transform transition-transform duration-700" alt={title} />
         {/* Overlay Diagonal */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90" />
@@ -85,7 +84,6 @@ export const FlyerMockup: React.FC<FlyerMockupProps> = ({ bg, title, subtitle, p
     return (
       <div className="w-56 md:w-64 aspect-[3/4] rounded-xl overflow-hidden relative group flex-shrink-0 shadow-2xl border border-zinc-800 bg-slate-900">
         <div className="h-2/3 overflow-hidden relative">
-           {/* Removido grayscale e opacity-80 para manter a imagem colorida e clara */}
            <img src={bg} loading="lazy" className="w-full h-full object-cover transition-all duration-700" alt={title} />
            <div className="absolute inset-0 bg-slate-900/30" />
         </div>

@@ -4,7 +4,7 @@ import { ChevronRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, CreditCar
 import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
-import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
+import { FlyerMockup } from './FlyerMockup';
 import { LandingImage, EditablePlan } from '@/types';
 import { HeroSection } from './Hero'; 
 import { api } from '@/services/api';
@@ -21,7 +21,15 @@ interface LandingPageProps {
 }
 
 // Definindo o tipo localmente para garantir a compatibilidade
-type FlyerData = Omit<FlyerMockupProps, 'theme'> & { theme: 'mechanic' | 'food' | 'law' | 'tech' };
+type FlyerData = {
+  bg: string;
+  title: string;
+  subtitle: string;
+  phone: string;
+  theme: 'mechanic' | 'food' | 'law' | 'tech';
+  badge: string;
+  price?: string;
+};
 
 // Hardcoded fallback data (used if DB is empty or loading fails)
 const FALLBACK_FLYERS: FlyerData[] = [
