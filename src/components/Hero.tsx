@@ -26,6 +26,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
     return () => clearTimeout(timeoutId);
   }, [titleNumber, titles]);
 
+  // Estilo de sombra de texto para garantir legibilidade sobre o fundo brilhante
+  const textShadowStyle = {
+    textShadow: '0 0 8px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 0, 0, 0.6)',
+  };
+
   return (
     <div className="w-full relative h-full">
       
@@ -36,10 +41,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
       <div className="relative z-20 container mx-auto h-full">
         <div className="flex gap-8 py-16 lg:py-24 items-center justify-center flex-col text-center px-4 h-full">
           
-          {/* Content Wrapper with Backdrop Filter */}
-          <div className="p-6 md:p-8 rounded-2xl bg-black/30 backdrop-blur-sm border border-white/10 shadow-2xl max-w-4xl">
+          {/* Content Wrapper (Removed backdrop blur) */}
+          <div className="max-w-4xl">
             <div className="flex gap-4 flex-col">
-              <h1 className="text-5xl md:text-7xl max-w-3xl tracking-tighter font-regular">
+              <h1 className="text-5xl md:text-7xl max-w-3xl tracking-tighter font-regular" style={textShadowStyle}>
                 <span className="text-white">Crie artes</span>
                 <span className="relative flex w-full justify-center overflow-hidden md:pb-4 md:pt-1 h-16 md:h-24">
                   &nbsp;
@@ -60,6 +65,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
                               opacity: 0,
                             }
                       }
+                      style={textShadowStyle} // Aplicando sombra também ao texto dinâmico
                     >
                       {title}
                     </motion.span>
@@ -67,7 +73,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
                 </span>
               </h1>
 
-              <p className="text-lg md:text-xl leading-relaxed tracking-tight text-gray-400 max-w-2xl mx-auto">
+              <p className="text-lg md:text-xl leading-relaxed tracking-tight text-gray-400 max-w-2xl mx-auto" style={textShadowStyle}>
                 Gerenciar um pequeno negócio já é difícil. Evite mais complicações e abandone métodos ultrapassados. Nosso objetivo é otimizar a criação de artes para PMEs, tornando tudo mais fácil e rápido do que nunca.
               </p>
             </div>
