@@ -9,7 +9,7 @@ export default defineConfig({
     host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: 'http://localhost:3005',
+        target: 'http://localhost:3001', // FIXED: Backend runs on port 3001
         changeOrigin: true,
         secure: false,
         timeout: 300000, // 5 minutes (proxy timeout)

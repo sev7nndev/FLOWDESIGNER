@@ -264,26 +264,43 @@ const SaaSMaintenanceHub: React.FC = () => {
 
     const forceReconnect = async () => {
         setIsRefreshing(true);
-        toast.info("Forçando Reconexão do Sistema...");
+        toast.info("Ativando Sistema...");
         try {
             const supabase = getSupabase();
-            if (!supabase) throw new Error("Supabase not initialized");
+            if (!supabase) {
+                toast.error("Supabase não inicializado");
+                setIsRefreshing(false);
+                return;
+            }
+
             const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast.error("Sessão não encontrada. Faça login novamente.");
+                setIsRefreshing(false);
+                return;
+            }
 
             const res = await fetch('/api/admin/guardian/run-cycle', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${session?.access_token}` }
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                }
             });
 
             if (res.ok) {
+                const data = await res.json();
+                console.log('✅ Sistema ativado:', data);
                 toast.success("Sistema Reativado com Sucesso!");
                 await refreshData();
             } else {
-                toast.error("Falha ao reativar sistema.");
+                const errorData = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
+                console.error('❌ Erro ao ativar:', errorData);
+                toast.error(`Falha: ${errorData.error || 'Erro ao reativar sistema'}`);
             }
-        } catch (e) {
-            console.error(e);
-            toast.error("Erro de conexão com o servidor.");
+        } catch (e: any) {
+            console.error('❌ Exceção ao ativar sistema:', e);
+            toast.error(`Erro de conexão: ${e.message || 'Servidor não respondeu'}`);
         } finally {
             setIsRefreshing(false);
         }
