@@ -12,6 +12,7 @@ const axios = require('axios');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 // const ADVANCED_PROMPT_SYSTEM = require('./advanced_prompt_system.cjs'); // DEPRECATED
+const generateRoute = require('./routes/generate.cjs');
 
 
 const fs = require('fs');

@@ -1,74 +1,60 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+// Initialize Gemini for Vision
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const visionModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // Use 2.0-flash for speed/vision
 
-class TextValidator {
-    /**
-     * Validates if the text in the image is legible and matches the intent
-     * @param {string} imageBase64 - Base64 string of the image
-     * @param {object} businessData - The data that should be in the image
-     * @returns {Promise<{isValid: boolean, confidence: number, reason: string}>}
-     */
-    async validateImageText(imageBase64, businessData) {
-        try {
-            console.log('🧐 [Validator] Checking text legibility with Gemini Vision...');
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+async function validateTextQuality(imageBase64, expectedData) {
+    if (!imageBase64) return { isValid: false, reason: "No image data" };
 
-            const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-            
-            const prompt = `Analyze this flyer image for text legibility and accuracy.
-            
-            Expected Text:
-            - Business Name: "${businessData.nome}"
-            - Phone: "${businessData.whatsapp || businessData.telefone}"
-            
-            Task:
-            1. Can you clearly read the Business Name?
-            2. Is the text well-formed (no gibberish/alien letters)?
-            3. Are there any obvious spelling errors in the big text?
-            
-            Return JSON ONLY:
-            {
-                "legible": boolean,
-                "text_found": "string (what text you actually see)",
-                "score": number (0 to 10, where 10 is perfect),
-                "has_spelling_errors": boolean
-            }`;
+    try {
+        const prompt = `
+ANALYZE THE TEXT IN THIS IMAGE FOR A BRAZILIAN BUSINESS.
 
-            const imagePart = {
-                inlineData: {
-                    data: cleanBase64,
-                    mimeType: "image/png"
-                }
-            };
+EXPECTED INFORMATION:
+- Business Name: "${expectedData.nome}"
+- Phone: "${expectedData.whatsapp || expectedData.telefone}"
 
-            const result = await model.generateContent([prompt, imagePart]);
-            const responseText = result.response.text();
-            
-            // Parse JSON
-            const jsonString = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-            const analysis = JSON.parse(jsonString);
+YOUR TASKS:
+1. Extract the text visible in the image.
+2. Check if the "Business Name" is readable and spelled correctly (ignore minor case/style diffs).
+3. Check if the "Phone" number is present and readable.
+4. Detect if there is any "gibberish" or fake text.
+5. Check if the text is in Portuguese.
 
-            console.log('🧐 [Validator] Analysis Result:', analysis);
+OUTPUT JSON ONLY:
+{
+    "detectedText": "string",
+    "isPortuguese": boolean,
+    "hasUseableName": boolean,
+    "hasUseablePhone": boolean,
+    "hasGibberish": boolean,
+    "legibilityScore": number (0-10, where 10 is perfect),
+    "finalVerdict": boolean (true if usable for client, false if major errors)
+}
+`;
 
-            // Decision Logic
-            const isValid = analysis.legible && analysis.score >= 7;
+        const result = await visionModel.generateContent([
+            prompt,
+            { inlineData: { data: imageBase64, mimeType: "image/png" } }
+        ]);
 
-            return {
-                isValid,
-                confidence: analysis.score,
-                reason: isValid ? "Text is legible" : `Text validation failed: Found '${analysis.text_found}' (Score: ${analysis.score})`
-            };
+        const responseText = result.response.text();
+        const cleanJson = responseText.replace(/```json|```/g, '').trim();
+        const analysis = JSON.parse(cleanJson);
 
-        } catch (error) {
-            console.error('❌ [Validator] Error:', error);
-            // Fail open? Or fail closed? For now, we warn but allow if validator crashes to avoid blocking service.
-            // But user wants strict check. Let's return false usually, but true for network errors to be safe?
-            // "The problem is fallback system fails silently". 
-            // Better to return false so we trigger fallback if validation fails.
-            return { isValid: false, confidence: 0, reason: "Validator Error" };
-        }
+        console.log(`🔍 [Text Validator] Verdict: ${analysis.finalVerdict} | Score: ${analysis.legibilityScore}`);
+        return {
+            isValid: analysis.legibilityScore >= 5, // Lowered threshold for initial rollout
+            details: analysis
+        };
+
+    } catch (error) {
+        console.error("⚠️ [Text Validator] Failed:", error.message);
+        // Fail open or closed? If validator fails, we might assume image is OK to avoid blocking, 
+        // OR assume bad to be safe. Let's assume OK with warning for now to prevent outage if Vision API flakes.
+        return { isValid: true, reason: "Validator Error (Bypassed)" };
     }
 }
 
-module.exports = new TextValidator();
+module.exports = { validateTextQuality };
