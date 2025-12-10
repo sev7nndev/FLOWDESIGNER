@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { GeneratedImage, User, UserRole, QuotaCheckResponse, QuotaStatus, EditablePlan } from '@/types';
+import { GeneratedImage, User, UserRole, QuotaCheckResponse, QuotaStatus, EditablePlan } from '../../types';
 import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download, Zap, ArrowLeft, Trash2 } from 'lucide-react';
 import { Button } from './Button';
-import { api } from '@/services/api';
+import { api } from '../../services/api';
 import { toast } from 'sonner';
 
 // --- Generic Modal Wrapper ---
@@ -304,7 +304,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaRespon
 
   // Ensure plan.max_images_per_month is treated as a number
   const maxImages = plan.max_images_per_month || 0;
-  const usagePercentage = maxImages > 0 ? (usage.current_usage / maxImages) * 100 : 0;
+  const usagePercentage = maxImages > 0 ? (usage.images_generated / maxImages) * 100 : 0;
   const isBlocked = quotaResponse.status === QuotaStatus.BLOCKED;
 
   const handleSubscribe = async (planId: string) => {
@@ -349,7 +349,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, quotaRespon
 
           <div className="flex justify-between items-center text-sm text-gray-400">
             <span>Imagens Usadas:</span>
-            <span className="text-white font-bold">{usage.current_usage} / {maxImages}</span>
+            <span className="text-white font-bold">{usage.images_generated} / {maxImages}</span>
           </div>
 
           {/* Progress Bar */}

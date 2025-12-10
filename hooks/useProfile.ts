@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import useSWR from 'swr';
 import { getSupabase } from '../services/supabaseClient';
 
 interface ProfileData {
@@ -8,90 +8,95 @@ interface ProfileData {
 }
 
 export const useProfile = (userId: string | undefined) => {
-    const [profile, setProfile] = useState<ProfileData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const supabase = getSupabase();
 
-    const fetchProfile = useCallback(async () => {
-        if (!userId || !supabase) {
-            setProfile(null);
-            setIsLoading(false);
-            return;
+    const fetcher = async (uid: string): Promise<ProfileData> => {
+        if (!supabase) throw new Error("No supabase client");
+
+        // 1. Try fetching via Supabase Client (subject to RLS)
+        let profileData: any = null;
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, role, updated_at')
+            .eq('id', uid)
+            .single();
+
+        if (data) {
+            profileData = data;
+        } else if (error && error.code !== 'PGRST116') {
+            console.warn("Supabase client fetch error:", error);
         }
 
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            // RLS is enabled on the 'profiles' table, ensuring the user only sees their own data.
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('first_name, last_name, role, updated_at')
-                .eq('id', userId)
-                .single();
-
-            if (error && error.code !== 'PGRST116') { // PGRST116 means 'no rows found'
-                throw new Error(error.message);
+        // 2. If client fetch failed or returned nothing, try API Proxy (Bypasses RLS)
+        if (!profileData) {
+            console.log("⚠️ Client fetch failed/empty, attempting API Proxy backup...");
+            try {
+                const res = await fetch(`/api/profile/${uid}`);
+                if (res.ok) {
+                    const apiData = await res.json();
+                    profileData = {
+                        first_name: apiData.first_name,
+                        last_name: apiData.last_name,
+                        role: apiData.role
+                    };
+                }
+            } catch (apiErr) {
+                console.error("API Proxy connection failed:", apiErr);
             }
-
-            if (data) {
-                setProfile({
-                    firstName: data.first_name || '',
-                    lastName: data.last_name || '',
-                    role: data.role || 'free',
-                });
-            } else {
-                // Handle case where profile might not exist immediately after signup
-                setProfile({ firstName: '', lastName: '', role: 'free' });
-            }
-        } catch (e: any) {
-            console.error("Failed to fetch profile:", e);
-            setError(e.message || 'Falha ao carregar perfil.');
-        } finally {
-            setIsLoading(false);
         }
-    }, [userId, supabase]);
 
-    useEffect(() => {
-        fetchProfile();
-    }, [fetchProfile]);
+        if (profileData) {
+            return {
+                firstName: profileData.first_name || '',
+                lastName: profileData.last_name || '',
+                role: profileData.role || 'free',
+            };
+        }
 
-    const updateProfile = useCallback(async (newFirstName: string, newLastName: string) => {
-        if (!userId || !supabase) return;
+        // Default fallback
+        return { firstName: '', lastName: '', role: 'free' };
+    };
 
-        setIsLoading(true);
-        setError(null);
+    const { data: profile, error, isLoading, mutate } = useSWR(
+        userId ? ['profile', userId] : null,
+        ([, uid]) => fetcher(uid),
+        {
+            revalidateOnFocus: false, // Profile changes rarely
+            dedupingInterval: 10000
+        }
+    );
+
+    // Update function (Mutation)
+    const updateProfile = async (newFirstName: string, newLastName: string) => {
+        if (!userId || !supabase) return false;
 
         try {
             const { error } = await supabase
                 .from('profiles')
-                .update({ 
-                    first_name: newFirstName, 
+                .update({
+                    first_name: newFirstName,
                     last_name: newLastName,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', userId);
 
-            if (error) {
-                throw new Error(error.message);
-            }
+            if (error) throw error;
 
-            setProfile((prev: ProfileData | null) => ({
-                ...prev!,
-                firstName: newFirstName,
-                lastName: newLastName
-            }));
-            
+            // Optimistic update via mutation
+            mutate((prev: ProfileData | undefined) => prev ? { ...prev, firstName: newFirstName, lastName: newLastName } : undefined, false);
             return true;
         } catch (e: any) {
             console.error("Failed to update profile:", e);
-            setError(e.message || 'Falha ao atualizar perfil.');
             return false;
-        } finally {
-            setIsLoading(false);
         }
-    }, [userId, supabase]);
+    };
 
-    return { profile, isLoading, error, fetchProfile, updateProfile };
+    return {
+        profile: profile || null,
+        isLoading: isLoading && !!userId,
+        error: error ? 'Falha ao carregar perfil.' : null,
+        fetchProfile: mutate, // Compatible
+        updateProfile
+    };
 };

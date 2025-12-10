@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1080, height=1920">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 1080px;
+            height: 1920px;
+            font-family: 'Bebas Neue', 'Impact', sans-serif;
+            background: linear-gradient(135deg, #1A1A1A 0%, #000000 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Grid de fundo tech */
+        .tech-grid {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(255, 102, 0, 0.1) 2px, transparent 2px),
+                linear-gradient(90deg, rgba(255, 102, 0, 0.1) 2px, transparent 2px);
+            background-size: 50px 50px;
+            opacity: 0.3;
+        }
+
+        /* Linhas diagonais */
+        .diagonal-lines {
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background: repeating-linear-gradient(45deg,
+                    transparent,
+                    transparent 100px,
+                    rgba(255, 102, 0, 0.05) 100px,
+                    rgba(255, 102, 0, 0.05) 102px);
+        }
+
+        /* Header */
+        .header {
+            position: absolute;
+            top: 100px;
+            left: 80px;
+            right: 80px;
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 96px;
+            font-weight: 900;
+            color: #FF6600;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            text-shadow:
+                0 0 20px rgba(255, 102, 0, 0.8),
+                0 0 40px rgba(255, 102, 0, 0.5),
+                4px 4px 0 rgba(0, 0, 0, 0.8);
+            line-height: 1;
+        }
+
+        .subtitle {
+            font-size: 42px;
+            font-weight: 700;
+            color: white;
+            margin-top: 20px;
+            letter-spacing: 3px;
+        }
+
+        /* Carro central */
+        .car-container {
+            position: absolute;
+            top: 500px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 900px;
+            height: 600px;
+        }
+
+        .car-silhouette {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #333 0%, #666 100%);
+            clip-path: polygon(15% 40%, 25% 25%, 40% 20%, 60% 20%, 75% 25%, 85% 40%,
+                    90% 60%, 85% 75%, 15% 75%, 10% 60%);
+            box-shadow:
+                0 30px 80px rgba(255, 102, 0, 0.6),
+                inset 0 -20px 40px rgba(255, 102, 0, 0.3);
+            position: relative;
+        }
+
+        /* Efeitos de luz */
+        .headlight {
+            position: absolute;
+            width: 80px;
+            height: 40px;
+            background: radial-gradient(circle, #FFD700 0%, transparent 70%);
+            filter: blur(15px);
+        }
+
+        .headlight-left {
+            top: 35%;
+            left: 5%;
+        }
+
+        .headlight-right {
+            top: 35%;
+            right: 5%;
+        }
+
+        /* Hexágonos decorativos */
+        .hex {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 102, 0, 0.2);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            border: 3px solid rgba(255, 102, 0, 0.5);
+        }
+
+        .hex-1 {
+            top: 300px;
+            left: 100px;
+            transform: rotate(15deg);
+        }
+
+        .hex-2 {
+            top: 400px;
+            right: 150px;
+            transform: rotate(-20deg);
+        }
+
+        .hex-3 {
+            top: 1200px;
+            left: 200px;
+            transform: rotate(30deg);
+        }
+
+        /* Ícones de ferramentas */
+        .tool-icon {
+            position: absolute;
+            font-size: 72px;
+            opacity: 0.3;
+            filter: drop-shadow(0 0 10px rgba(255, 102, 0, 0.5));
+        }
+
+        .tool-1 {
+            top: 350px;
+            left: 150px;
+        }
+
+        .tool-2 {
+            top: 450px;
+            right: 180px;
+        }
+
+        /* Rodapé */
+        .footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.95) 30%);
+            padding: 120px 80px 80px;
+        }
+
+        .services {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .service-item {
+            background: rgba(255, 102, 0, 0.1);
+            border-left: 6px solid #FF6600;
+            padding: 25px 30px;
+            font-size: 32px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .contact-info {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .contact-line {
+            font-size: 48px;
+            font-weight: 900;
+            color: white;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .whatsapp-color {
+            color: #25D366;
+        }
+
+        .location-color {
+            color: #FF6600;
+        }
+
+        /* Linha de acento */
+        .accent-line {
+            position: absolute;
+            height: 8px;
+            background: linear-gradient(90deg, transparent 0%, #FF6600 50%, transparent 100%);
+            width: 100%;
+            top: 420px;
+            box-shadow: 0 0 20px rgba(255, 102, 0, 0.8);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Grid tech de fundo -->
+    <div class="tech-grid"></div>
+    <div class="diagonal-lines"></div>
+
+    <!-- Hexágonos decorativos -->
+    <div class="hex hex-1"></div>
+    <div class="hex hex-2"></div>
+    <div class="hex hex-3"></div>
+
+    <!-- Ícones de ferramentas -->
+    <div class="tool-icon tool-1">🔧</div>
+    <div class="tool-icon tool-2">⚙️</div>
+
+    <!-- Linha de acento -->
+    <div class="accent-line"></div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">{{NOME_EMPRESA}}</div>
+        <div class="subtitle">OFICINA MECÂNICA ESPECIALIZADA</div>
+    </div>
+
+    <!-- Carro -->
+    <div class="car-container">
+        <div class="car-silhouette">
+            <div class="headlight headlight-left"></div>
+            <div class="headlight headlight-right"></div>
+        </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="footer">
+        <div class="services">
+            <div class="service-item">🔩 SUSPENSÃO</div>
+            <div class="service-item">⚡ INJEÇÃO</div>
+            <div class="service-item">🛞 FREIOS</div>
+            <div class="service-item">🔧 MOTOR</div>
+        </div>
+
+        <div class="contact-info">
+            <div class="contact-line whatsapp-color">
+                <span>📱</span>
+                <span>{{WHATSAPP}}</span>
+            </div>
+            <div class="contact-line location-color">
+                <span>📍</span>
+                <span>{{ENDERECO}}</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1080, height=1920">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 1080px;
+            height: 1920px;
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0066CC 0%, #1A2332 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Elementos decorativos */
+        .bg-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+        }
+
+        .shape-1 {
+            width: 400px;
+            height: 400px;
+            top: 200px;
+            right: -100px;
+            transform: rotate(45deg);
+        }
+
+        .shape-2 {
+            width: 300px;
+            height: 300px;
+            bottom: 300px;
+            left: -80px;
+            transform: rotate(30deg);
+        }
+
+        /* Header */
+        .header {
+            position: absolute;
+            top: 150px;
+            left: 80px;
+            right: 80px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 92px;
+            font-weight: 900;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            line-height: 1.1;
+        }
+
+        .tagline {
+            font-size: 44px;
+            font-weight: 600;
+            color: #E0E0E0;
+            margin-top: 30px;
+            letter-spacing: 2px;
+        }
+
+        /* Área central */
+        .center-content {
+            position: absolute;
+            top: 600px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            text-align: center;
+        }
+
+        .main-icon {
+            font-size: 280px;
+            filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+            margin-bottom: 50px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 80px;
+        }
+
+        .feature-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .feature-icon {
+            font-size: 64px;
+            margin-bottom: 15px;
+        }
+
+        .feature-text {
+            font-size: 32px;
+            font-weight: 700;
+            color: white;
+        }
+
+        /* Rodapé */
+        .footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.9) 30%);
+            padding: 120px 80px 80px;
+            text-align: center;
+        }
+
+        .contact-item {
+            font-size: 48px;
+            font-weight: 700;
+            color: white;
+            margin: 25px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .highlight {
+            color: #00D9FF;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Formas decorativas -->
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">{{NOME_EMPRESA}}</div>
+        <div class="tagline">{{TAGLINE}}</div>
+    </div>
+
+    <!-- Conteúdo Central -->
+    <div class="center-content">
+        <div class="main-icon">⭐</div>
+
+        <div class="features">
+            <div class="feature-item">
+                <div class="feature-icon">✅</div>
+                <div class="feature-text">QUALIDADE</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-text">RAPIDEZ</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">💎</div>
+                <div class="feature-text">EXCELÊNCIA</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">🎯</div>
+                <div class="feature-text">PRECISÃO</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="footer">
+        <div class="contact-item highlight">
+            <span>📱</span>
+            <span>{{WHATSAPP}}</span>
+        </div>
+        <div class="contact-item">
+            <span>📍</span>
+            <span>{{ENDERECO}}</span>
+        </div>
+        <div class="contact-item highlight">
+            <span>📷</span>
+            <span>{{INSTAGRAM}}</span>
+        </div>
+    </div>
+</body>
+
+</html>

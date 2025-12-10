@@ -1,61 +1,58 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import useSWR from 'swr';
 import { LandingImage, UserRole } from '../types';
 import { api } from '../services/api';
 
 export const useLandingImages = (userRole: UserRole) => {
-    const [images, setImages] = useState<LandingImage[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
-    const fetchImages = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const fetchedImages = await api.getLandingImages();
-            setImages(fetchedImages);
-        } catch (e: any) {
-            console.error("Failed to fetch landing images:", e);
-            setError("Falha ao carregar imagens da Landing Page.");
-        } finally {
-            setIsLoading(false);
+    // Fetch Landing Images (Public, Cached)
+    const {
+        data: images = [],
+        error: swrError,
+        isLoading,
+        mutate
+    } = useSWR(
+        'landing-images',
+        () => api.getLandingImages(),
+        {
+            revalidateOnFocus: false,
+            dedupingInterval: 60000 * 5 // 5 minutes cache
         }
-    }, []);
+    );
 
-    useEffect(() => {
-        fetchImages();
-    }, [fetchImages]);
-    
     const uploadImage = useCallback(async (file: File, userId: string) => {
         if (userRole !== 'admin' && userRole !== 'dev') {
-            throw new Error("Acesso negado. Apenas administradores e desenvolvedores podem fazer upload.");
+            throw new Error("Acesso negado.");
         }
-        
         try {
             const newImage = await api.uploadLandingImage(file, userId);
-            setImages((prev: LandingImage[]) => [...prev, newImage].sort((a, b) => a.sortOrder - b.sortOrder));
+            // Optimistic / Direct update
+            mutate((current) => {
+                const list = current ? [...current, newImage] : [newImage];
+                return list.sort((a, b) => a.sortOrder - b.sortOrder);
+            }, false);
         } catch (e: any) {
-            throw new Error(e.message || "Erro ao fazer upload da imagem.");
+            throw new Error(e.message || "Erro ao fazer upload.");
         }
-    }, [userRole]);
-    
+    }, [userRole, mutate]);
+
     const deleteImage = useCallback(async (id: string, path: string) => {
         if (userRole !== 'admin' && userRole !== 'dev') {
-            throw new Error("Acesso negado. Apenas administradores e desenvolvedores podem deletar.");
+            throw new Error("Acesso negado.");
         }
-        
         try {
             await api.deleteLandingImage(id, path);
-            setImages((prev: LandingImage[]) => prev.filter((img: LandingImage) => img.id !== id));
+            mutate((current) => current?.filter(img => img.id !== id), false);
         } catch (e: any) {
-            throw new Error(e.message || "Erro ao deletar a imagem.");
+            throw new Error(e.message || "Erro ao deletar.");
         }
-    }, [userRole]);
+    }, [userRole, mutate]);
 
     return {
         images,
         isLoading,
-        error,
-        fetchImages,
+        error: swrError ? "Falha ao carregar imagens." : null,
+        fetchImages: mutate,
         uploadImage,
         deleteImage
     };

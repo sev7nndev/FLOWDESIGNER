@@ -1,4 +1,4 @@
-import { ArtStyle } from '@/types';
+import { ArtStyle } from '../../types';
 
 export const ART_STYLES: ArtStyle[] = [
   {

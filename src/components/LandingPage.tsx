@@ -5,9 +5,9 @@ import { PricingCard } from './PricingCard';
 import { TestimonialCard } from './TestimonialCard';
 import { Accordion } from './Accordion';
 import { FlyerMockupProps, FlyerMockup } from './FlyerMockup';
-import { LandingImage, EditablePlan } from '@/types';
+import { LandingImage, EditablePlan } from '../../types';
 import { HeroSection } from './Hero';
-import { api } from '@/services/api';
+import { api } from '../../services/api';
 import { FeatureCard } from './FeatureCard';
 
 interface LandingPageProps {

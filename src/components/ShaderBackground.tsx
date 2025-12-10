@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from 'react';
-import { cn } from '@/src/lib/utils';
+import { cn } from '../lib/utils';
 
 // --- GLSL Shader Source (Modified for App Colors) ---
 const defaultShaderSource = `#version 300 es

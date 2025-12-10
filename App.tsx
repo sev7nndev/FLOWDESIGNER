@@ -22,6 +22,7 @@ import { OwnerPanelPage } from './src/pages/OwnerPanelPage';
 
 // Lazy Load Dev Panel only (Owner Panel now loads directly for faster access)
 const DevPanelPage = React.lazy(() => import('./src/pages/DevPanelPage').then(module => ({ default: module.DevPanelPage })));
+const AITextOverlay = React.lazy(() => import('./src/components/AITextOverlay').then(module => ({ default: module.default })));
 
 // Define a minimal structure for authenticated user before profile is loaded
 interface AuthUser {
@@ -92,10 +93,11 @@ const AppContent: React.FC = () => {
    * ROUTING LOGIC (Simple State-Based)
    * Maps URL paths to internal View States
    */
-  const getInitialView = (): 'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'PLANS' | 'CHECKOUT' | 'SAAS_PANEL' | 'QA_DASHBOARD' => {
+  const getInitialView = (): 'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'PLANS' | 'CHECKOUT' | 'SAAS_PANEL' | 'QA_DASHBOARD' | 'AI_EDITOR' => {
     const path = window.location.pathname;
     if (path === '/saas-panel' || path === '/owner-panel') return 'SAAS_PANEL';
     if (path === '/dev-panel') return 'DEV_PANEL';
+    if (path === '/ai-editor') return 'AI_EDITOR';
     if (path === '/admin/qa-dashboard') return 'QA_DASHBOARD';
     // If user is already logged in, this will be overridden by auth check, but good for defaults
     return 'LANDING';
@@ -103,7 +105,7 @@ const AppContent: React.FC = () => {
 
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'PLANS' | 'CHECKOUT' | 'SAAS_PANEL' | 'QA_DASHBOARD'>(getInitialView);
+  const [view, setView] = useState<'LANDING' | 'AUTH' | 'APP' | 'DEV_PANEL' | 'PLANS' | 'CHECKOUT' | 'SAAS_PANEL' | 'QA_DASHBOARD' | 'AI_EDITOR'>(getInitialView);
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState<QuotaCheckResponse | null>(null);
@@ -125,6 +127,7 @@ const AppContent: React.FC = () => {
   } = useUsage(authUser?.id, (profile?.role || 'free') as UserRole);
 
   // Combined User State (passed to hooks/components)
+  // REAL AUTHENTICATION RESTORED
   const user: User | null = authUser && profile ? {
     id: authUser.id,
     email: authUser.email,
@@ -189,10 +192,18 @@ const AppContent: React.FC = () => {
     const supabase = getSupabase();
     console.log('🔄 App: Supabase client:', supabase ? 'OK' : 'NULL');
 
+    // Safety Timeout: Force stop loading after 2 seconds if Supabase hangs
+    const timeoutId = setTimeout(() => {
+      console.warn("⚠️ App: Auth check timed out after 2s. Forcing load completion.");
+      setIsAuthLoading(false);
+      setView('LANDING');
+    }, 2000);
+
     if (supabase) {
       // Check Session on initial load
       supabase.auth.getSession().then(({ data: { session } }) => {
         console.log('🔄 App: Session check:', session ? 'User found' : 'No session');
+        clearTimeout(timeoutId); // Clear timeout if session check completes
         if (session?.user) {
           fetchAuthUser(session.user);
         } else {
@@ -200,26 +211,12 @@ const AppContent: React.FC = () => {
         }
       }).catch((error) => {
         console.error('❌ App: Session error:', error);
+        clearTimeout(timeoutId); // Clear timeout on error
         setView('LANDING');
       }).finally(() => {
         console.log('✅ App: Auth loading complete');
         setIsAuthLoading(false); // Mark auth check as complete
       });
-
-      // Safety Timeout: Force stop loading after 10 seconds if Supabase hangs
-      const timeoutId = setTimeout(() => {
-        if (isAuthLoading) {
-          console.warn("⚠️ App: Auth check timed out after 10s. Forcing load completion.");
-          setIsAuthLoading(false);
-          // If we have a session but auth is still loading, force to APP view
-          supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.user) {
-              console.log("⚠️ App: Forcing APP view due to timeout");
-              setView('APP');
-            }
-          });
-        }
-      }, 10000);
 
       // Listen for Auth Changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -232,9 +229,13 @@ const AppContent: React.FC = () => {
         }
       });
 
-      return () => subscription.unsubscribe();
+      return () => {
+        clearTimeout(timeoutId);
+        subscription.unsubscribe();
+      };
     } else {
       console.error('❌ App: Supabase not configured!');
+      clearTimeout(timeoutId);
       setIsAuthLoading(false); // Ensure loading stops if Supabase isn't configured
       // Keep existing view (which might be SAAS_PANEL from initial load)
       if (window.location.pathname !== '/saas-panel') {
@@ -260,6 +261,21 @@ const AppContent: React.FC = () => {
       });
     }
   }, []);
+
+  // 🛡️ EMERGENCY FAILSAFE: Force-quit loading state after 4s no matter what
+  useEffect(() => {
+    const emergencyTimer = setTimeout(() => {
+      setIsAuthLoading((current) => {
+        if (current) {
+          console.error("🚨 EMERGENCY FAILSAFE TRIGGERED: Force-stopping loading state");
+          return false;
+        }
+        return current;
+      });
+    }, 4000);
+    return () => clearTimeout(emergencyTimer);
+  }, []);
+
 
   useEffect(() => {
     if (user) {
@@ -377,8 +393,32 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // MAIN APP UI (Protected)
+  // AI SMART EDITOR ROUTE
+  if (view === 'AI_EDITOR') {
+    return (
+      <div className="app-container">
+        <Toaster position="top-right" richColors />
+        <button
+          onClick={() => setView('APP')}
+          className="fixed top-4 left-4 z-50 bg-white/10 backdrop-blur text-white px-4 py-2 rounded hover:bg-white/20 transition-all font-bold"
+        >
+          ← Voltar
+        </button>
+        <AITextOverlay />
+      </div>
+    );
+  }
+
+  // MAIN APP UI (Protected) - Redirect to landing if not logged in
+  // MAIN APP UI (Protected) - Redirect to landing if not logged in
   if (!user) {
+    // CASE 1: User is authenticated but Profile is still loading -> Show Splash, Don't Redirect
+    if (authUser) {
+      return <SplashScreen />;
+    }
+
+    // CASE 2: User is NOT authenticated -> Redirect to Landing
+    setView('LANDING');
     return <SplashScreen />;
   }
 

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from '../components/Button';
 import { Sparkles, ArrowLeft, CheckCircle2, Zap, DollarSign } from 'lucide-react';
-import { authService } from '@/services/authService';
+import { authService } from '../../services/authService';
 import { GoogleIcon } from './GoogleIcon';
-import { User, EditablePlan } from '@/types'; // Import User type and EditablePlan
+import { User, EditablePlan } from '../../types'; // Import User type and EditablePlan
 
 interface AuthScreensProps {
   onSuccess: (user: User | null) => void;
@@ -44,11 +44,16 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
       } else {
         if (!formData.firstName) throw new Error("Primeiro nome é obrigatório");
 
-        await authService.register(formData.firstName, formData.lastName, formData.email, formData.password);
+        const user = await authService.register(formData.firstName, formData.lastName, formData.email, formData.password);
 
-        // Exibe a mensagem de sucesso em vez de tentar redirecionar
-        setSuccessMessage('Cadastro realizado! Verifique seu e-mail para confirmar sua conta e poder fazer o login.');
-        setIsLoading(false); // Stop loading for registration to show message
+        if (user) {
+          // Auto-login success handling
+          onSuccess(user);
+        } else {
+          // Exibe a mensagem de sucesso em vez de tentar redirecionar (email confirmation case)
+          setSuccessMessage('Cadastro realizado! Verifique seu e-mail para confirmar sua conta e poder fazer o login.');
+          setIsLoading(false);
+        }
       }
     } catch (err: any) {
       let errorMessage = err.message || 'Ocorreu um erro desconhecido.';

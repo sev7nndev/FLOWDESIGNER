@@ -1,8 +1,0 @@
-https://akynbiixxcftxgvjpjxu.supabase.co/storage/v1/object/public/landing-carousel/landing-carousel/5146d02c-6299-4fd7-aac1-a2fa4032254c.jpeg
-https://akynbiixxcftxgvjpjxu.supabase.co/storage/v1/object/public/landing-carousel/landing-carousel/fbc6ee38-2758-49cb-8f2f-9521727cbf32.jpeg
-https://akynbiixxcftxgvjpjxu.supabase.co/storage/v1/object/public/landing-carousel/landing-carousel/fe360818-2a7b-4b66-914e-6cbf39a88962.jpeg
-https://akynbiixxcftxgvjpjxu.supabase.co/storage/v1/object/public/landing-carousel/landing-carousel/341771a1-3b24-46e7-bf6e-b60626f7fafb.jpeg
-https://akynbiixxcftxgvjpjxu.supabase.co/storage/v1/object/public/landing-carousel/landing-carousel/e58ed851-7939-4cb1-b99f-03f9beda7918.jpeg
-https://akynbiixxcftxgvjpjxu.supabase.co/storage/v1/object/public/landing-carousel/landing-carousel/3d735137-ef33-4ae7-8262-71ea8df6631d.jpeg
-https://akynbiixxcftxgvjpjxu.supabase.co/storage/v1/object/public/landing-carousel/ed392e2b-d894-4d9d-8d34-a4adeb6e4983/1764198445296.jpeg
-https://akynbiixxcftxgvjpjxu.supabase.co/storage/v1/object/public/landing-carousel/ed392e2b-d894-4d9d-8d34-a4adeb6e4983/1764198438743.jpeg

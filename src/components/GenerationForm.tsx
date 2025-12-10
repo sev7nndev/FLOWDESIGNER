@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
-import { BusinessInfo, GenerationStatus, QuotaStatus, PlanSetting, ArtStyle } from '@/types';
+import { BusinessInfo, GenerationStatus, QuotaStatus, PlanSetting, ArtStyle } from '../../types';
 import { Button } from './Button';
 import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2, AlertTriangle, Palette, Instagram, Facebook, Globe } from 'lucide-react';
-import { ART_STYLES } from '@/src/constants/artStyles';
+import { ART_STYLES } from '../constants/artStyles';
 import { StyleCard } from './StyleCard';
 
 interface InputFieldProps {
@@ -221,26 +221,79 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                 </div>
             </div>
 
-            {/* Quota Status Display */}
+            {/* Quota Status Display - SENIOR LOGIC UPDATE */}
             {currentPlan && (
-                <div className={`p-3 rounded-xl text-xs flex items-center gap-2 animate-fade-in ${isBlocked ? 'bg-red-500/10 border border-red-500/20 text-red-400' :
-                    isNearLimit ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400' :
-                        'bg-green-500/10 border border-green-500/20 text-green-400'
+                <div className={`p-4 rounded-xl text-sm flex items-start gap-3 animate-fade-in border ${
+                    currentPlan.id === 'dev' || currentPlan.id === 'owner' || currentPlan.id === 'admin'
+                        ? 'bg-purple-900/20 border-purple-500/30 text-purple-300'
+                        : isBlocked 
+                            ? 'bg-red-900/10 border-red-500/30 text-red-300' // Blocked Style
+                            : isNearLimit 
+                                ? 'bg-yellow-900/10 border-yellow-500/30 text-yellow-300' 
+                                : 'bg-green-900/10 border-green-500/30 text-green-300'
                     }`}>
-                    <AlertTriangle size={16} className={isBlocked ? 'text-red-500' : 'text-yellow-500'} />
-                    <p>
-                        {isBlocked
-                            ? `Limite atingido! Você usou ${currentUsage}/${maxImages} do seu plano ${currentPlan.id.toUpperCase()}.`
-                            : isNearLimit
-                                ? `Atenção: Você usou ${currentUsage}/${maxImages} do seu plano ${currentPlan.id.toUpperCase()}.`
-                                : `Plano ${currentPlan.id.toUpperCase()} ativo. Você usou ${currentUsage}/${maxImages} imagens este mês.`
-                        }
-                    </p>
-                    {(isBlocked || isNearLimit) && (
-                        <button onClick={openUpgradeModal} className="text-primary font-bold ml-auto hover:underline">
-                            Upgrade
-                        </button>
-                    )}
+                    
+                    {/* Icon */}
+                    <div className="mt-0.5">
+                        {currentPlan.id === 'dev' || currentPlan.id === 'owner' || currentPlan.id === 'admin' ? (
+                            <Sparkles size={18} className="text-purple-400" />
+                        ) : (
+                            <AlertTriangle size={18} className={isBlocked ? 'text-red-400' : isNearLimit ? 'text-yellow-400' : 'text-green-400'} />
+                        )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-grow">
+                        {currentPlan.id === 'dev' || currentPlan.id === 'owner' || currentPlan.id === 'admin' ? (
+                            <p className="font-semibold">✨ Conta Mestre: Geração Ilimitada Ativa</p>
+                        ) : (
+                            isBlocked ? (
+                                // BLOCKED STATES (Specific Logic)
+                                <div className="space-y-2">
+                                    <p className="font-bold uppercase tracking-wide text-xs opacity-70">Limite Atingido ({currentUsage}/{maxImages})</p>
+                                    
+                                    {currentPlan.id === 'free' && (
+                                        <p>Seus créditos gratuitos acabaram. Para continuar gerando artes profissionais, <b>escolha o Plano Starter (20 artes) ou Pro (50 artes)</b>.</p>
+                                    )}
+                                    
+                                    {currentPlan.id === 'starter' && (
+                                        <p>Você atingiu o limite do Plano Starter. <b>Faça upgrade para o PRO</b> para liberar mais 30 imagens agora, ou aguarde a renovação do seu ciclo mensal.</p>
+                                    )}
+
+                                    {currentPlan.id === 'pro' && (
+                                        <p>Você é um usuário Power! Atingiu o limite máximo do sistema (50 artes). Aguarde a renovação do seu ciclo para gerar mais.</p>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    {currentPlan.id !== 'pro' && (
+                                        <button 
+                                            onClick={openUpgradeModal} 
+                                            className="mt-1 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-white font-bold text-xs transition-colors w-full md:w-auto"
+                                        >
+                                            {currentPlan.id === 'free' ? 'DESBLOQUEAR AGORA' : 'FAZER UPGRADE PARA PRO'}
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                // NORMAL STATES
+                                <div>
+                                    <p className="font-medium">
+                                        {isNearLimit 
+                                            ? `Atenção: Seu plano ${currentPlan.displayName || currentPlan.id} está quase no fim.` 
+                                            : `Plano ${currentPlan.displayName || currentPlan.id} ativo.`
+                                        }
+                                    </p>
+                                    <div className="w-full bg-black/20 h-2 rounded-full mt-2 overflow-hidden">
+                                        <div 
+                                            className={`h-full ${isNearLimit ? 'bg-yellow-500' : 'bg-green-500'}`} 
+                                            style={{ width: `${Math.min((currentUsage / maxImages) * 100, 100)}%` }} 
+                                        />
+                                    </div>
+                                    <p className="text-xs opacity-60 mt-1">{currentUsage} de {maxImages} imagens usadas neste ciclo.</p>
+                                </div>
+                            )
+                        )}
+                    </div>
                 </div>
             )}
 

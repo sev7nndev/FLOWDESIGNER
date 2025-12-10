@@ -1,36 +1,29 @@
-import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import dyadComponentTagger from '@dyad-sh/react-vite-component-tagger';
+import path from 'path';
 
+// https://vitejs.dev/config/
+// Forced restart timestamp: 2025-12-07T14:44:00
 export default defineConfig({
-  server: {
-    port: 3000,
-    host: '0.0.0.0',
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001', // FIXED: Backend runs on port 3001
-        changeOrigin: true,
-        secure: false,
-        timeout: 300000, // 5 minutes (proxy timeout)
-        proxyTimeout: 300000,
-      }
-    }
-  },
-  plugins: [dyadComponentTagger(), react()],
+  plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '.'),
-    }
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  server: {
+    port: 3000,
+    host: true, // Listen on all addresses
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'framer-motion'],
-          ui: ['lucide-react', 'sonner']
-        }
-      }
-    }
-  }
+    outDir: 'dist',
+    sourcemap: true,
+  },
 });

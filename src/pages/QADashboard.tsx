@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card } from '@/src/components/ui/card';
+import { Card } from '../components/ui/card';
 
 
 interface Log {

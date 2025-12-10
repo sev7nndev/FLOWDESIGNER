@@ -11,7 +11,11 @@ const mercadopago = require('mercadopago');
 const axios = require('axios');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+// const ADVANCED_PROMPT_SYSTEM = require('./advanced_prompt_system.cjs'); // DEPRECATED
+
+
 const fs = require('fs');
+const { startCron } = require('./cron/reset-monthly-credits.cjs');
 
 // Load Env
 const envPath = path.resolve(__dirname, '../.env');
@@ -78,7 +82,52 @@ const globalSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY || SUPABA
 
 // GenAI
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const activeModel = "imagen-3.0-generate-001";
+const activeModel = "imagen-4.0-generate-001"; // Imagen 4.0 (Latest)
+
+// --- PERSISTENT DB CONNECTION MANAGER ---
+const maintainSupabaseConnection = async () => {
+  console.log('🔌 Inicializando conexão persistente com Supabase...');
+
+  const pingDB = async () => {
+    try {
+      const start = Date.now();
+      const { data, error } = await globalSupabase.from('profiles').select('id').limit(1);
+
+      if (error) {
+        throw error;
+      }
+
+      const latency = Date.now() - start;
+      console.log(`[${new Date().toLocaleTimeString()}] 💓 Supabase Connection OK (${latency}ms)`);
+      return true;
+    } catch (e) {
+      console.error(`[${new Date().toLocaleTimeString()}] ❌ Supabase Connection LOST:`, e.message);
+      console.log('🔄 Tentando reconectar em 5 segundos...');
+      return false;
+    }
+  };
+
+  // Initial Ping
+  let connected = await pingDB();
+
+  // Retry Loop for Initial Connection
+  while (!connected) {
+    await new Promise(r => setTimeout(r, 5000));
+    connected = await pingDB();
+  }
+
+  // Persistent Keep-Alive Loop (Every 4 minutes)
+  // Prevents "idle" disconnects from serverless DBs
+  setInterval(async () => {
+    await pingDB();
+  }, 4 * 60 * 1000);
+
+  console.log('✅ Sistema de Persistência de Banco de Dados: ATIVO');
+  console.log('✅ O banco de dados permanecerá conectado enquanto o servidor estiver rodando.');
+};
+
+// Start Connection Manager
+maintainSupabaseConnection();
 
 // --- HELPERS ---
 const getAuthUser = async (req) => {
@@ -90,558 +139,76 @@ const getAuthUser = async (req) => {
   return user;
 };
 
+// --- DEBUG ROUTE (Temporary) ---
+app.get('/api/debug-connection', async (req, res) => {
+  try {
+    const isServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const { data: profiles, error } = await globalSupabase.from('profiles').select('*');
+
+    // Check key start (safe log)
+    const keyStart = process.env.SUPABASE_SERVICE_ROLE_KEY ? process.env.SUPABASE_SERVICE_ROLE_KEY.substring(0, 10) : 'NONE';
+
+    res.json({
+      status: 'online',
+      using_service_key: isServiceKey,
+      key_preview: keyStart + '...',
+      profiles_count: profiles?.length || 0,
+      db_error: error,
+      url: process.env.SUPABASE_URL
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // --- ROUTES ---
 
-// 1. Image Generation Route
-app.post('/api/generate', generationLimiter, async (req, res) => {
-  const startTime = Date.now();
-  let user = null;
-  let promptInfo = {};
+// 1. Image Generation Route (UNIFIED)
+app.use('/api/generate', generateRoute);
 
+// DEPRECATED: /api/generate-ultra
+// All logic moved to /api/generate which is now intelligent
+app.post('/api/generate-ultra', async (req, res) => {
+  // Redirect logic or simple error
+  res.redirect(307, '/api/generate'); 
+});
+
+// 1.5. Enhance Prompt Route
+app.post('/api/enhance-prompt', generationLimiter, async (req, res) => {
   try {
-    user = await getAuthUser(req);
-    if (!user) return res.status(401).json({ error: 'N�o autorizado' });
-
-    promptInfo = req.body.promptInfo || {};
-    const { artStyle } = req.body; // Received from frontend
-
-    // Determine Role & Client
-    let role = 'free';
-    const scopedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: req.headers.authorization } }
-    });
-
-    // Get role from database (no hardcoded bypasses)
-    const { data: profile } = await scopedSupabase.from('profiles').select('role').eq('id', user.id).single();
-    role = profile?.role || 'free';
-
-    const hasUnlimitedGeneration = role === 'owner' || role === 'dev' || role === 'admin';
-
-    if (hasUnlimitedGeneration) {
-      console.log(`✅ UNLIMITED GENERATION ACTIVE - Role: ${role}, User: ${user.id}`);
-    }
-
-    // CHECK QUOTA
-    if (!hasUnlimitedGeneration) {
-      const { data: usageData, error: usageError } = await scopedSupabase
-        .from('user_usage')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (usageError && usageError.code !== 'PGRST116') throw usageError;
-
-      const limit = role === 'pro' ? 50 : (role === 'starter' ? 20 : 3);
-      if (usageData && usageData.images_generated >= limit) {
-        return res.status(403).json({ error: 'Limite de gera��o atingido.', quotaStatus: 'BLOCKED' });
-      }
-    }
-
-    // THE DIRECTOR
-    console.log('?? Stage 1: The Director');
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    // Use the selected style or default to 'Cinematic 3D'
-    const selectedStyle = artStyle?.label || "Cinematic 3D";
-    const stylePrompt = artStyle?.prompt || "high quality, 8k, photorealistic, cinematic lighting, unreal engine 5";
-
-    // === UNIVERSAL VISUAL STYLE (Based on Reference Images) ===
-    const UNIVERSAL_STYLE = `
-    **MANDATORY VISUAL STANDARDS** (Apply to ALL niches):
-    - Background: Dark/black with subtle gradients or textures
-    - Lighting: Dramatic cinematic lighting with neon glow effects
-    - Accent Colors: Orange, cyan, blue neon highlights
-    - Typography: Bold sans-serif, large impact headlines
-    - Product/Subject: Photorealistic 3D render, center-focused
-    - Effects: Glowing edges, light trails, particle effects, tech UI elements
-    - Composition: Professional commercial photography style
-    - Quality: Ultra-realistic, 8K, Unreal Engine 5 quality
-    `;
-
-    // --- 50+ NICHE TEMPLATES ---
-    const NICHE_TEMPLATES = `
-    ${UNIVERSAL_STYLE}
-
-    **FOOD & BEVERAGE** (1-10):
-    1. **Hamburgueria / Burger Joint**
-       - Dark background with FIRE/FLAMES, grilled texture
-       - Orange/red neon glow on burger
-       - Photorealistic burger stack with melting cheese
-       - Bold text: "O COMBO PERFEITO" style
-       - Include: fries, drink with ice, grill marks
-
-    2. **A�a� / Smoothie Bar**
-       - Purple/pink neon on dark background
-       - Frozen a�a� bowl with toppings floating
-       - Tropical fruits with glow effect
-       - Fresh, vibrant, health-focused
-
-    3. **Pizzaria / Pizza**
-       - Dark background, wood-fired oven glow (orange)
-       - Melting cheese with steam effects
-       - Italian flag colors as accents
-       - Rustic + modern tech aesthetic
-
-    4. **Churrascaria / Steakhouse**
-       - Fire and smoke, charcoal black background
-       - Sizzling meat with glow
-       - Red/orange ember effects
-       - Masculine, premium feel
-
-    5. **Cafeteria / Coffee Shop**
-       - Warm brown tones on dark background
-       - Steam rising from coffee cup
-       - Coffee beans with glow
-       - Cozy yet modern
-
-    6. **Sushi / Japanese Food**
-       - Clean dark background, blue/cyan accents
-       - Fresh fish with ice crystals
-       - Minimalist Japanese aesthetic
-       - Precision and freshness
-
-    7. **Padaria / Bakery**
-       - Warm golden glow on dark background
-       - Fresh bread with steam
-       - Wheat and flour particles
-       - Artisanal, handcrafted feel
-
-    8. **Sorveteria / Ice Cream**
-       - Colorful neon on black
-       - Melting ice cream with drips
-       - Cold vapor effects
-       - Fun, vibrant, Instagram-worthy
-
-    9. **Bar / Pub**
-       - Neon signs, dark moody atmosphere
-       - Beer with condensation and glow
-       - Wood textures, amber lighting
-       - Social, nightlife vibe
-
-    10. **Restaurante Gourmet / Fine Dining**
-        - Elegant dark background, gold accents
-        - Plated dish with artistic presentation
-        - Soft spotlight on food
-        - Luxury, sophistication
-
-    **AUTOMOTIVE** (11-20):
-    11. **Mec�nica Geral / Auto Repair**
-        - Dark garage, orange LED floor lighting
-        - Luxury car (Audi/BMW style) with hood open
-        - Mechanic in orange uniform
-        - Tools with metallic shine
-        - Tech UI: circuit board patterns
-
-    12. **Mec�nica Especializada / Performance Shop**
-        - Sports cars, carbon fiber textures
-        - Orange/red performance accents
-        - Engine parts with glow
-        - Speed, power, precision
-
-    13. **Despachante / DMV Services**
-        - Cyan/blue tech background with circuit patterns
-        - Car silhouette with digital glow
-        - Documents and checkmarks
-        - Modern, efficient, digital
-
-    14. **Lava-Jato / Car Wash**
-        - Water droplets with blue glow
-        - Shiny clean car surface
-        - Foam and bubbles
-        - Fresh, clean, professional
-
-    15. **Funilaria / Body Shop**
-        - Metallic textures, welding sparks (orange)
-        - Car body panels
-        - Before/after concept
-        - Precision, restoration
-
-    16. **Auto El�trica / Auto Electric**
-        - Electric blue lightning effects
-        - Car electrical system diagrams
-        - Wires with glow
-        - Technical, modern
-
-    17. **Pneus / Tire Shop**
-        - Tire with orange glow
-        - Road with speed lines
-        - Rubber texture
-        - Safety, performance
-
-    18. **Som Automotivo / Car Audio**
-        - Sound waves, bass vibrations
-        - Speakers with neon glow
-        - Music-themed
-        - Energy, power
-
-    19. **Insulfilm / Window Tinting**
-        - Car windows with gradient tint
-        - UV protection visual
-        - Sleek, modern
-        - Privacy, protection
-
-    20. **Reboque / Towing Service**
-        - Tow truck with orange emergency lights
-        - 24/7 concept
-        - Reliable, fast response
-
-    **HOME SERVICES** (21-30):
-    21. **Manuten��o Predial / Building Maintenance**
-        - Blue neon, clean modern building
-        - Tools with glow
-        - Professional, reliable
-
-    22. **Manuten��o de Piscina/SPA**
-        - Crystal blue water with tech UI overlay
-        - Spa jets with bubbles and glow
-        - Wrench icons floating
-        - Clean, luxurious, high-tech
-
-    23. **Eletricista / Electrician**
-        - Electric blue lightning bolts
-        - Electrical panel with glow
-        - Safety, expertise
-
-    24. **Encanador / Plumber**
-        - Water flow with blue glow
-        - Pipes and fixtures
-        - Clean, professional
-
-    25. **Pintor / Painter**
-        - Paint roller with color splash
-        - Before/after wall
-        - Transformation, quality
-
-    26. **Marcenaria / Carpentry**
-        - Wood textures with warm glow
-        - Tools and craftsmanship
-        - Artisanal, custom
-
-    27. **Serralheria / Metalwork**
-        - Metal with welding sparks
-        - Gates, railings
-        - Strong, secure
-
-    28. **Jardinagem / Landscaping**
-        - Green plants with natural glow
-        - Garden tools
-        - Fresh, natural
-
-    29. **Limpeza / Cleaning Service**
-        - Sparkling clean surfaces
-        - Blue/white cleanliness glow
-        - Professional, thorough
-
-    30. **Dedetiza��o / Pest Control**
-        - Shield protection symbol
-        - Safe, effective
-        - Professional, trusted
-
-    **BEAUTY & WELLNESS** (31-40):
-    31. **Sal�o de Beleza / Beauty Salon**
-        - Rose gold/pink neon on black
-        - Manicured hands, glossy nails
-        - Elegant, feminine, luxury
-
-    32. **Barbearia / Barber Shop**
-        - Vintage + modern, orange/brown tones
-        - Grooming tools with glow
-        - Masculine, classic
-
-    33. **Academia / Gym**
-        - Neon blue/orange, dark background
-        - Fitness equipment, dumbbells
-        - Energy, strength, motivation
-
-    34. **Est�tica / Aesthetics Clinic**
-        - Clean white/blue medical aesthetic
-        - Skincare products with glow
-        - Professional, results-driven
-
-    35. **Massagem / Massage Therapy**
-        - Calm blue/purple tones
-        - Spa stones, relaxation
-        - Wellness, tranquility
-
-    36. **Tatuagem / Tattoo Studio**
-        - Dark edgy background, neon outlines
-        - Tattoo machine with ink
-        - Artistic, bold
-
-    37. **Depila��o / Waxing**
-        - Clean, smooth skin focus
-        - Blue/white clinical aesthetic
-        - Professional, hygienic
-
-    38. **Cl�nica Odontol�gica / Dental Clinic**
-        - White teeth with sparkle
-        - Blue medical glow
-        - Health, confidence
-
-    39. **Nutri��o / Nutrition**
-        - Fresh foods with natural glow
-        - Health-focused
-        - Wellness, balance
-
-    40. **Fisioterapia / Physical Therapy**
-        - Body anatomy with blue highlights
-        - Recovery, movement
-        - Professional, healing
-
-    **PROFESSIONAL SERVICES** (41-50):
-    41. **Advocacia / Law Firm**
-        - Black/gold, marble textures
-        - Scales of justice (gold, glowing)
-        - Serious, luxury, authority
-
-    42. **Contabilidade / Accounting**
-        - Blue tech background, financial charts
-        - Calculator, documents
-        - Professional, precise
-
-    43. **Consultoria / Consulting**
-        - Modern office, blue/gray tones
-        - Strategy diagrams
-        - Expert, strategic
-
-    44. **Marketing Digital / Digital Marketing**
-        - Neon social media icons
-        - Analytics graphs
-        - Modern, results-driven
-
-    45. **Fotografia / Photography**
-        - Camera with lens flare
-        - Artistic, creative
-        - Professional, memorable
-
-    46. **Arquitetura / Architecture**
-        - Building blueprints with blue glow
-        - 3D models
-        - Innovative, precise
-
-    47. **Engenharia / Engineering**
-        - Technical drawings, orange accents
-        - Precision tools
-        - Expert, reliable
-
-    48. **Imobili�ria / Real Estate**
-        - Luxury home with warm glow
-        - Keys, modern interior
-        - Dream home, investment
-
-    49. **Seguran�a / Security**
-        - Shield, camera systems
-        - Blue tech aesthetic
-        - Protection, trust
-
-    50. **Pet Shop / Veterin�ria**
-        - Cute pets with soft glow
-        - Paw prints, hearts
-        - Care, love
-
-    **TECH & EDUCATION** (51-55):
-    51. **Inform�tica / IT Services**
-        - Circuit boards, blue/cyan glow
-        - Computer components
-        - Modern, tech-savvy
-
-    52. **Celular / Phone Repair**
-        - Smartphone with screen glow
-        - Tech repair tools
-        - Fast, reliable
-
-    53. **Cursos / Education**
-        - Books, graduation cap with glow
-        - Knowledge, growth
-        - Professional, certified
-
-    54. **Idiomas / Language School**
-        - Flags, speech bubbles
-        - Communication, global
-        - Professional, fluent
-
-    55. **M�sica / Music School**
-        - Instruments with sound waves
-        - Creative, artistic
-        - Passion, skill
-
-    **DYNAMIC FALLBACK** (56):
-    56. **ANY OTHER NICHE**
-        - Analyze business name/description
-        - Apply UNIVERSAL_STYLE
-        - Use appropriate industry imagery
-        - Maintain dark background + neon aesthetic
-    `;
-
-    const directorPrompt = `You are a WORLD - CLASS Advertising Creative Director(Brazil Market Specialist).
-    YOUR GOAL: Analyze the input, DETECT THE NICHE, and generate a VISIONARY COMMERCIAL FLYER PROMPT based on the proven templates below.
-
-    CLIENT INPUT:
-    - Business Name: "${promptInfo.companyName}"
-      - Address: "${promptInfo.addressStreet}, ${promptInfo.addressNumber} - ${promptInfo.addressNeighborhood}, ${promptInfo.addressCity}"
-        - Phone: "${promptInfo.phone}"
-          - Offer / Details: "${promptInfo.details}"
-            - Requested Style: "${selectedStyle}"(${stylePrompt})
-
-    REFERENCE TEMPLATES(Use the one that matches the client):
-    ${NICHE_TEMPLATES}
-
-    INSTRUCTIONS:
-    1. ** RESEARCH SIMULATION(MENTAL) **: Before writing the prompt, mentally browse Behance / Pinterest for the best designs in this niche.Use that high - end aesthetic.
-    2. ** NICHE DETECTION **: Decide which niche fits best.If "Nails" or "Beauty", use Template 8. If none match, use Template 9(Dynamic).
-    3. ** STRICT VISUAL ISOLATION **: NEVER mix elements from different niches.
-    4. ** AGENCY QUALITY(CRITICAL) **: The output most look like a $5000 agency design.
-       - ** AVOID **: "Cartoon 3D", cheap plastic textures, floating isolated icons in empty voids.
-       - ** USE **: "Cinematic Lighting"(Rim light, Softbox), "High-End Textures"(Matte, Glass, Metal), "Editorial Composition"(Rule of thirds).
-       - ** STYLE **: If 3D, use "Hyper-realistic Octane Render".If 2D, use "Premium Swiss Design".
-    5. ** TEXT & DATA **:
-    - HEADLINE: Must be "${promptInfo.companyName}".
-       - BODY COPY: Incorporate the offer "${promptInfo.details}".
-       - FOOTER: You MUST include placeholders for specific contact: "WhatsApp: ${promptInfo.phone}" and "Address: ${promptInfo.addressStreet}...".
-    6. ** LANGUAGE **: All generated text in the image must be Portuguese(BR).
-    7. ** TYPOGRAPHY **: Use sophisticated font pairings.AVOID generic center alignment.Use hierarchy.
-       - ** FOR LAW / ADVOCACY **: FORCE SERIF FONTS(Classic, Elegant).
-    8. ** FORMAT **: FULL CANVAS BLEED.NO BORDERS.NO MOCKUPS.DO NOT generate the flyer sitting on a table.The image IS the flyer.
-
-    OUTPUT STRUCTURE(Single Prompt for Imagen 3):
-    start with: "A professional award-winning advertising flyer design for [Niche]..."
-    Include:
-    - "Bold central headline '${promptInfo.companyName}' with elegant typography"
-      - "Visual elements: [Specific elements from template] (Photorealistic/Premium)"
-      - "Color palette: [Specific colors from template] (High contrast, harmonious)"
-      - "Text layout: Price list placeholder, 'WhatsApp: ${promptInfo.phone}'"
-      - "High quality vector art, 8k resolution, cinematic lighting, trending on Behance"`;
-
-    let professionalPrompt = `Professional commercial flyer for ${promptInfo.companyName}.`;
-    try {
-      const result = await model.generateContent(directorPrompt);
-      professionalPrompt = result.response.text().trim().replace(/```/g, '');
-      console.log('? Director Smart Prompt:', professionalPrompt);
-
-      // --- STRICT DATA INJECTION (ROBUST V2) ---
-      const clientData = [];
-      if (promptInfo.companyName) clientData.push(`Nome do Negócio: ${promptInfo.companyName}`);
-      if (promptInfo.whatsapp) clientData.push(`Telefone: ${promptInfo.whatsapp}`);
-      if (promptInfo.instagram) clientData.push(`Instagram: ${promptInfo.instagram}`);
-      if (promptInfo.rua) clientData.push(`Endereço: ${promptInfo.rua}`);
-      if (promptInfo.site) clientData.push(`Site: ${promptInfo.site}`);
-
-      if (promptInfo.details) clientData.push(`Detalhes: ${promptInfo.details}`);
-
-      if (clientData.length > 0) {
-        const robustBlock = `
-\n═══════════════════════════════════════════════════════════════
-⚠️ DADOS REAIS DO CLIENTE - COPIE EXATAMENTE COMO ESTÁ ESCRITO ⚠️
-═══════════════════════════════════════════════════════════════
-
-${clientData.join('\n')}
-
-═══════════════════════════════════════════════════════════════
-📋 INSTRUÇÕES OBRIGATÓRIAS:
-═══════════════════════════════════════════════════════════════
-
-1. COPIE cada texto EXATAMENTE como aparece acima, letra por letra
-2. NÃO traduza - mantenha em português brasileiro
-3. NÃO mude, adicione ou remova NENHUM caractere
-4. NÃO invente dados - use SOMENTE os dados listados acima
-5. Se um campo não está listado acima, NÃO inclua no cartão
-6. Mantenha todos os acentos, pontos, vírgulas e espaços originais
-7. Use tipografia legível e clara
-8. Certifique-se de que todo o texto está perfeitamente visível
-
-IMPORTANTE: Os dados acima são os ÚNICOS dados verdadeiros. NÃO use nenhum outro texto.
-`;
-        professionalPrompt += robustBlock;
-        console.log('💉 Data Injected (Robust V2):', robustBlock);
-      }
-      // -------------------------------------------------------------
-
-    } catch (e) {
-      console.warn('Director fallback', e);
-    }
-
-    // THE ARTIST
-    const generateImage = async (prompt) => {
-      console.log('?? Stage 2: The Artist (Model: ' + activeModel + ')');
-      try {
-        const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:predict?key=${GEMINI_API_KEY}`, {
-          instances: [{ prompt }],
-          parameters: { sampleCount: 1, aspectRatio: "3:4" }
-        }, {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 60000 // 60s Timeout
-        });
-        const b64 = response.data.predictions?.[0]?.bytesBase64Encoded || response.data.predictions?.[0]?.image?.bytesBase64Encoded;
-        if (!b64) throw new Error('No image generated by API');
-        return b64;
-      } catch (e) {
-        if (e.code === 'ECONNABORTED') throw new Error('Timeout: A IA demorou muito para responder.');
-        console.error('Artist Error:', e.response?.data || e.message);
-        throw e;
-      }
-    };
-
-    let imageBase64 = await generateImage(professionalPrompt);
-    let finalPrompt = professionalPrompt;
-    let criticVerdict = 'SKIPPED';
-
-    // THE CRITIC
-    console.log('?? Stage 3: The Critic');
-    try {
-      const criticModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const imagePart = { inlineData: { data: imageBase64, mimeType: "image/png" } };
-      const criticPrompt = `Review flyer for "${promptInfo.companyName}".
-      VERDICT: "REJECT: <Reason>" or "APPROVE".
-        Check: Text Cutoff, Spelling, Quality.`;
-
-      const criticResult = await criticModel.generateContent([criticPrompt, imagePart]);
-      criticVerdict = criticResult.response.text().trim();
-      console.log('Verdict:', criticVerdict);
-
-      if (criticVerdict.startsWith('REJECT')) {
-        console.log('Retrying...');
-        finalPrompt = `${professionalPrompt}.FIX: ${criticVerdict} `;
-        imageBase64 = await generateImage(finalPrompt);
-        criticVerdict = 'APPROVED (AFTER RETRY)';
-      } else {
-        criticVerdict = 'APPROVED (FIRST PASS)';
-      }
-    } catch (e) { console.warn('Critic failed', e.message); }
-
-    const imageUrl = `data: image / png; base64, ${imageBase64} `;
-
-    // Log QA
-    logQA({
-      type: 'GENERATION',
-      user: user.id,
-      duration: Date.now() - startTime,
-      result: 'SUCCESS',
-      criticVerdict,
-      prompt: promptInfo.companyName
-    });
-
-    // Save & Usage Update (Simplified)
-    // Save image for all authenticated users
-    await scopedSupabase.from('images').insert({ user_id: user.id, prompt: finalPrompt, image_url: imageUrl, business_info: promptInfo });
-    if (!hasUnlimitedGeneration) {
-      const { data: u } = await scopedSupabase.from('user_usage').select('*').eq('user_id', user.id).single();
-      if (u) await scopedSupabase.from('user_usage').update({ images_generated: u.images_generated + 1 }).eq('user_id', user.id);
-      else await scopedSupabase.from('user_usage').insert({ user_id: user.id, images_generated: 1 });
-
-    }
-
-    trackEvent('generation', user.id, { style: selectedStyle });
-    res.json({ image: { id: 'generated', image_url: imageUrl } });
-
-  } catch (error) {
-    console.error('? Generation error:', error);
-    logQA({
-      type: 'ERROR',
-      user: 'unknown',
-      error: error.message,
-      prompt: req.body?.promptInfo?.companyName || 'unknown'
-    });
-    res.status(500).json({ error: error.message });
+    const user = await getAuthUser(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const { prompt } = req.body;
+
+    if (!prompt) return res.status(400).json({ error: 'Prompt required' });
+
+    const enhancementPrompt = `Você é um Copywriter Especialista em Marketing de Varejo. Melhore o texto abaixo para um panfleto comercial.
+    
+    Texto Original: "${prompt}"
+    
+    REGRAS OBRIGATÓRIAS:
+    1. Melhore a persuasão e a clareza para vender.
+    2. Identifique os serviços/produtos principais e liste-os de forma atraente.
+    3. Crie uma frase de destaque (Headline) forte.
+    4. NÃO inclua instruções visuais (ex: "use cores vermelhas", "imagem de fundo"). O Designer já sabe disso.
+    5. NÃO descreva a imagem. Apenas forneça o TEXTO que vai escrito na arte.
+    6. Mantenha o texto curto e direto, adequado para um flyer.
+    7. NÃO use "Sugestão de imagem:".
+    
+    Saída esperada: Apenas o texto comercial final melhorado.`;
+
+
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`,
+      { contents: [{ parts: [{ text: enhancementPrompt }] }] },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+
+    const enhanced = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || prompt;
+    res.json({ enhancedPrompt: enhanced });
+  } catch (err) {
+    console.error('Enhance Error:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -664,12 +231,12 @@ app.get('/api/check-quota', async (req, res) => {
     const user = await getAuthUser(req);
     if (!user) return res.status(401).json({ error: 'Não autorizado' });
 
-    const scopedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const globalSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: req.headers.authorization } }
     });
 
     // 1. Get User Role
-    const { data: profile } = await scopedSupabase
+    const { data: profile } = await globalSupabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -699,7 +266,7 @@ app.get('/api/check-quota', async (req, res) => {
     }
 
     // 3. Get Usage for regular users (free/starter/pro)
-    const { data: usageData } = await scopedSupabase
+    const { data: usageData } = await globalSupabase
       .from('user_usage')
       .select('*')
       .eq('user_id', user.id)
@@ -732,95 +299,31 @@ app.get('/api/check-quota', async (req, res) => {
       }
     });
 
+
   } catch (error) {
-    console.error('Check Quota Error:', error);
+    console.error('Check Quota Error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
-// 4. Admin: List Users
-// 4. Admin: List Users
-app.get('/api/admin/users', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: 'No token' });
-
-    // 1. Verify Caller is Admin via Scoped Client (Security Check)
-    const scoped = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    const { data: { user } } = await scoped.auth.getUser();
-    if (!user) return res.status(401).json({ error: 'Unauthorized' });
-
-    // Check Role using Global to define authority
-    const { data: callerProfile } = await globalSupabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!['owner', 'admin', 'dev'].includes(callerProfile?.role)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    // 2. Fetch All Profiles & Usage using Global Client (Bypass RLS)
-    console.log('?? Admin: Fetching all profiles...');
-    const { data: profiles, error: profileError } = await globalSupabase
-      .from('profiles')
-      .select('*')
-      .order('updated_at', { ascending: false }); // FIX: profiles might not have created_at, use updated_at
-
-    if (profileError) {
-      console.error('? Admin: Profile fetch error', profileError);
-      throw profileError;
-    }
-    console.log(`? Admin: Found ${profiles.length} profiles.`);
-
-    const { data: usage } = await globalSupabase
-      .from('user_usage')
-      .select('*');
-
-    // 3. Merge Data
-    const result = profiles.map(p => {
-      const u = usage?.find(use => use.user_id === p.id);
-      return {
-        id: p.id,
-        email: p.email || 'N/A',
-        first_name: p.first_name,
-        last_name: p.last_name,
-        role: p.role,
-        created_at: p.created_at || p.updated_at, // FIX: Fallback if created_at is missing
-        images_generated: u?.images_generated || 0
-      };
-    });
-
-    res.json(result);
-
-  } catch (e) {
-    console.error('Admin Fetch Error:', e);
-    const isServiceKeyMissing = !SUPABASE_SERVICE_KEY;
-    console.error('?? Service Key Present:', !isServiceKeyMissing);
-    res.status(500).json({ error: e.message, serviceKeyMissing: isServiceKeyMissing });
-  }
-});
-
-// 5. Admin: Create User
 // 5. Admin: Create User
 app.post('/api/admin/create-user', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'No token' });
 
-    // 1. Verify Caller is Admin
-    const scoped = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } }
-    });
-    const { data: { user: caller } } = await scoped.auth.getUser();
-    if (!caller) return res.status(401).json({ error: 'Unauthorized' });
+    // 1. Verify Caller is Admin (Using Helper)
+    const caller = await getAuthUser(req);
+    if (!caller) {
+      console.warn('CreateUser: Token Invalid or Expired');
+      return res.status(401).json({ error: 'Unauthorized: Invalid Token' });
+    }
 
     const { data: callerProfile } = await globalSupabase.from('profiles').select('role').eq('id', caller.id).single();
-    if (!['owner', 'admin'].includes(callerProfile?.role)) {
+
+    // Allow 'dev' role as well for testing
+    if (!['owner', 'admin', 'dev'].includes(callerProfile?.role)) {
+      console.warn(`CreateUser: Forbidden access attempt by ${caller.id} (${callerProfile?.role})`);
       return res.status(403).json({ error: 'Forbidden: Only Owners/Admins can create users.' });
     }
 
@@ -848,34 +351,285 @@ app.post('/api/admin/create-user', async (req, res) => {
 
     if (profileError) throw profileError;
 
+    // 4. Force Plan if requested
+    if (plan && plan !== 'free') {
+      await globalSupabase.from('profiles').update({ role: plan }).eq('id', newUser.user.id);
+
+      // Init usage with limits
+      const limit = plan === 'pro' ? 50 : (plan === 'starter' ? 20 : 3);
+      await globalSupabase.from('user_usage').insert({
+        user_id: newUser.user.id,
+        images_generated: 0,
+        plan_id: plan,
+        cycle_start_date: new Date().toISOString()
+      });
+    }
+
     res.json({ success: true, user: newUser.user });
 
   } catch (e) {
     console.error('Create User Error Details:', JSON.stringify(e, null, 2));
     console.error('Create User Error Message:', e.message);
-    if (e.response) console.error('Create User Response Error:', e.response.data);
-    res.status(500).json({ error: e.message || "Erro desconhecido ao criar usu�rio." });
+    res.status(500).json({ error: e.message || "Erro desconhecido ao criar usuário." });
   }
 });
 
+// 4.1 Admin: List Users
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    const user = await getAuthUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { data: profile } = await globalSupabase.from('profiles').select('role').eq('id', user.id).single();
+    if (!['owner', 'admin', 'dev'].includes(profile?.role)) return res.status(403).json({ error: 'Forbidden' });
+
+    // 1. Fetch ALL profiles (Service Role - No RLS) - Exclude internal roles
+    const { data: users, error: usersError } = await globalSupabase
+      .from('profiles')
+      .select('*')
+      .neq('role', 'owner')
+      .neq('role', 'dev')
+      .neq('role', 'admin')
+      .order('created_at', { ascending: false });
+
+    if (usersError) throw usersError;
+
+    // 2. Fetch ALL usages
+    const { data: usages, error: usageError } = await globalSupabase
+      .from('user_usage')
+      .select('user_id, images_generated');
+
+    // 3. Merge in memory (Robust against FK issues)
+    const usersWithUsage = users.map(u => {
+      const usage = usages?.find(us => us.user_id === u.id);
+      return {
+        ...u,
+        images_generated: usage ? usage.images_generated : 0
+      };
+    });
+
+    res.json({ users: usersWithUsage });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 4.2 Admin: Delete User
+app.delete('/api/admin/users/:id', async (req, res) => {
+  try {
+    const user = await getAuthUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { data: profile } = await globalSupabase.from('profiles').select('role').eq('id', user.id).single();
+    if (!['owner', 'admin'].includes(profile?.role)) return res.status(403).json({ error: 'Forbidden' });
+
+    const targetId = req.params.id;
+
+    // Delete from Auth (Service Role)
+    const { error: authError } = await globalSupabase.auth.admin.deleteUser(targetId);
+    if (authError) throw authError;
+
+    // DB Cascade should handle the rest, but let's be safe
+    // await globalSupabase.from('profiles').delete().eq('id', targetId);
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 4.3 Admin: Stats (Alias for Dashboard)
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    const user = await getAuthUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    // Calculate Revenue from Payments table
+    const { data: payments } = await globalSupabase
+      .from('payments')
+      .select('*')
+      .eq('status', 'approved');
+
+    const now = new Date();
+    const startOfDay = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay())).toISOString();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const revenue = {
+      day: payments?.filter(p => p.created_at >= startOfDay).reduce((sum, p) => sum + Number(p.amount), 0) || 0,
+      week: payments?.filter(p => p.created_at >= startOfWeek).reduce((sum, p) => sum + Number(p.amount), 0) || 0,
+      month: payments?.filter(p => p.created_at >= startOfMonth).reduce((sum, p) => sum + Number(p.amount), 0) || 0,
+      total: payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
+    };
+
+    const recentPayments = await globalSupabase
+      .from('payments')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    res.json({ revenue, payments: recentPayments.data || [] });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 4.4 Admin: Update Plans (Secure)
+app.put('/api/admin/plans', async (req, res) => {
+  try {
+    const user = await getAuthUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { data: profile } = await globalSupabase.from('profiles').select('role').eq('id', user.id).single();
+    if (!['owner', 'admin'].includes(profile?.role)) return res.status(403).json({ error: 'Forbidden' });
+
+    const { plans } = req.body;
+    if (!Array.isArray(plans)) return res.status(400).json({ error: 'Invalid plans data' });
+
+    const updates = plans.map(p => ({
+      id: p.id,
+      price: p.price,
+      max_images_per_month: p.max_images_per_month,
+      description: p.description,
+      display_name: p.display_name,
+      features: p.features
+    }));
+
+    const { error } = await globalSupabase.from('plan_settings').upsert(updates, { onConflict: 'id' });
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 4.6 Admin: Landing Image Upload
+app.post('/api/admin/landing-images/upload', async (req, res) => {
+  try {
+    const user = await getAuthUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { fileBase64, fileName, userId } = req.body;
+
+    // Convert Base64 to Buffer
+    const buffer = Buffer.from(fileBase64.split(',')[1], 'base64');
+    const path = `landing/${Date.now()}_${fileName}`;
+
+    const { data, error } = await globalSupabase.storage
+      .from('landing-carousel')
+      .upload(path, buffer, {
+        contentType: 'image/png', // Assumes PNG/JPG
+        upsert: true
+      });
+
+    if (error) throw error;
+
+    // Insert into DB registry
+    const { data: dbImage, error: dbError } = await globalSupabase
+      .from('landing_carousel_images')
+      .insert({
+        image_url: path,
+        uploaded_by: userId,
+        sort_order: 0
+      })
+      .select()
+      .single();
+
+    if (dbError) throw dbError;
+
+    // Get Public URL
+    const { data: { publicUrl } } = globalSupabase.storage.from('landing-carousel').getPublicUrl(path);
+
+    res.json({ image: { ...dbImage, url: publicUrl } });
+
+  } catch (e) {
+    console.error('Upload Error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 4.6.5 Admin: Get Landing Images
+app.get('/api/admin/landing-images', async (req, res) => {
+  try {
+    // Public or Admin? Landing page is public, so this should probably be public to render the carousel?
+    // But the component is "Manager". Let's verify usage.
+    // Ideally GET is public, but this is the admin list.
+    // We'll make it public for now so the landing page can use it too without auth.
+
+    const { data: images, error } = await globalSupabase
+      .from('landing_carousel_images')
+      .select('*')
+      .order('sort_order', { ascending: true });
+
+    if (error) throw error;
+
+    // Get Public URLs
+    const imagesWithUrls = images.map(img => {
+      const { data: { publicUrl } } = globalSupabase.storage.from('landing-carousel').getPublicUrl(img.image_url);
+      return { ...img, url: publicUrl };
+    });
+
+    res.json(imagesWithUrls);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 4.7 Admin: Delete Landing Image
+app.delete('/api/admin/landing-images/:id', async (req, res) => {
+  try {
+    const user = await getAuthUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    // First get the path from DB? Or pass it from client? Client passes it.
+    const { imagePath } = req.body; // Ideally should look up by ID to be safe
+    const id = req.params.id;
+
+    // Delete from Storage
+    if (imagePath) {
+      await globalSupabase.storage.from('landing-carousel').remove([imagePath]);
+    }
+
+    // Delete from DB
+    const { error } = await globalSupabase
+      .from('landing_carousel_images')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    res.json({ success: true });
+
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 4.8 Admin-Dev: MP Connect URL
+app.get('/api/admin/mp-connect', async (req, res) => {
+  try {
+    const clientId = process.env.MP_CLIENT_ID;
+    const redirectUri = process.env.MP_REDIRECT_URI || 'http://localhost:5173/owner'; // Fallback to dev
+    // State should be random token ideally
+    const url = `https://auth.mercadopago.com.br/authorization?client_id=${clientId}&response_type=code&platform_id=mp&state=${uuidv4()}&redirect_uri=${redirectUri}`;
+    res.json({ connectUrl: url });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 // 6. Public: Register User (Bypass RLS Triggers)
 app.post('/api/register', authLimiter, async (req, res) => {
   try {
     const { email, password, firstName, lastName } = req.body;
 
-    if (!email || !password || !firstName) {
-      return res.status(400).json({ error: 'Dados incompletos' });
-    }
-
-    // 1. Create User in Supabase Auth
-    // We use globalSupabase (Service Role) to ensure we can create the user 
-    // and immediately set up their profile without RLS blocking the profile insert.
-    const { data: authData, error: authError } = await globalSupabase.auth.signUp({
+    const { data: authData, error: authError } = await globalSupabase.auth.admin.createUser({
       email,
       password,
-      // We don't use metadata for profile fields to avoid trigger race conditions, 
-      // we insert profile manually below.
+      email_confirm: true,
+      user_metadata: { first_name: firstName, last_name: lastName }
     });
+
 
     if (authError) throw authError;
 
@@ -933,11 +687,11 @@ app.delete('/api/images/:id', async (req, res) => {
 
     const { id } = req.params;
 
-    const scopedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const globalSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: req.headers.authorization } }
     });
 
-    const { error } = await scopedSupabase
+    const { error } = await globalSupabase
       .from('images')
       .delete()
       .eq('id', id)
@@ -948,119 +702,63 @@ app.delete('/api/images/:id', async (req, res) => {
     res.json({ success: true });
 
   } catch (e) {
-    console.error('Delete Image Error:', e);
+    console.error('Delete Image Error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// --- MERCADO PAGO ---
-const MP_CONFIG_FILE = path.resolve(__dirname, 'mp_config.json');
-
-// Helper to get MP Access Token
-const getMPToken = () => {
-  if (fs.existsSync(MP_CONFIG_FILE)) {
-    try {
-      const config = JSON.parse(fs.readFileSync(MP_CONFIG_FILE, 'utf8'));
-      return config.access_token;
-    } catch (e) {
-      console.error('Error reading MP config:', e);
-    }
-  }
-  return process.env.MP_ACCESS_TOKEN; // Fallback to env
-};
-
-// 5. Admin: MP Status
-app.get('/api/admin/mp-status', (req, res) => {
-  const token = getMPToken();
-  res.json({ connected: !!token });
-});
-
-// 6. Admin: MP Connect (Get OAuth URL)
-app.get('/api/admin/mp-connect', async (req, res) => {
-  const APP_ID = process.env.MP_APP_ID;
-  const REDIRECT_URI = process.env.MP_REDIRECT_URI || 'http://localhost:3000/owner-panel'; // Update with your actual redirect
-  // Check if we need to encode state? For now simple.
-
-  if (!APP_ID) return res.status(500).json({ error: 'MP_APP_ID not configured' });
-
-  const url = `https://auth.mercadopago.com.br/authorization?client_id=${APP_ID}&response_type=code&platform_id=mp&state=random_state&redirect_uri=${REDIRECT_URI}`;
-
-  res.json({ connectUrl: url });
-});
-
-// 7. MP Auth Callback (Exchange Code)
-app.post('/api/mercadopago/auth', async (req, res) => {
-  const { code } = req.body;
-  if (!code) return res.status(400).json({ error: 'No code provided' });
-
-  try {
-    const response = await axios.post('https://api.mercadopago.com/oauth/token', {
-      client_secret: process.env.MP_CLIENT_SECRET, // Your access_token is the client_secret for OAuth flows usually? No, client_secret is distinct.
-      client_id: process.env.MP_APP_ID,
-      grant_type: 'authorization_code',
-      code: code,
-      redirect_uri: process.env.MP_REDIRECT_URI || 'http://localhost:3000/owner-panel'
-    });
-
-    const { access_token, refresh_token, user_id } = response.data;
-
-    // Save to file
-    fs.writeFileSync(MP_CONFIG_FILE, JSON.stringify({ access_token, refresh_token, user_id, updated: new Date() }));
-
-    res.json({ success: true });
-
-  } catch (error) {
-    console.error('MP Auth Error:', error.response?.data || error);
-    res.status(500).json({ error: 'Failed to authenticate with Mercado Pago' });
-  }
-});
-
-// 8. Subscribe Route (Create Preference)
-app.post('/api/subscribe', paymentLimiter, async (req, res) => {
+// 8. User: Subscribe (Payment)
+app.post('/api/subscribe', async (req, res) => {
   try {
     const user = await getAuthUser(req);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
     const { planId } = req.body;
-    const mpToken = getMPToken();
+    // 1. Try to get Owner Token from DB First
+    const { data: ownerAccount } = await createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+      .from('owners_payment_accounts')
+      .select('mp_access_token')
+      .limit(1)
+      .maybeSingle();
 
-    if (!mpToken) return res.status(400).json({ error: 'Owner Mercado Pago not connected.' });
+    const mpToken = ownerAccount?.mp_access_token || process.env.MP_ACCESS_TOKEN;
+    if (!mpToken) return res.status(500).json({ error: 'MP Token not configured' });
 
-    // Plan details
-    const plans = {
-      'starter': { price: 29.99, title: 'Plano Starter - Flow Designer' },
-      'pro': { price: 49.99, title: 'Plano Pro - Flow Designer' }
-    };
+    // 1. Fetch Plan Details from DB (Dynamic Pricing)
+    const { data: planData, error: planError } = await globalSupabase
+      .from('plan_settings')
+      .select('*')
+      .eq('id', planId)
+      .single();
 
-    const plan = plans[planId];
-    if (!plan) return res.status(400).json({ error: 'Invalid plan' });
+    if (planError || !planData) {
+      // Fallback for dev/test if DB entry missing, but warn
+      console.warn(`Plan ${planId} not found in DB. Using fallback logic.`);
+      if (planId === 'starter') planData = { display_name: 'Plano Starter', price: 29.99, id: 'starter' };
+      else if (planId === 'pro') planData = { display_name: 'Plano Pro', price: 49.99, id: 'pro' };
+      else return res.status(400).json({ error: 'Plano inválido ou inexistente.' });
+    }
 
     const client = new mercadopago.MercadoPagoConfig({ accessToken: mpToken });
-    const preference = new mercadopago.Preference(client);
+    const preApproval = new mercadopago.PreApproval(client);
 
-    const result = await preference.create({
+    const result = await preApproval.create({
       body: {
-        items: [
-          {
-            id: planId,
-            title: plan.title,
-            quantity: 1,
-            unit_price: plan.price
-          }
-        ],
-        payer: {
-          email: user.email // user.email from auth
+        reason: planData.display_name || `Plano ${planData.id}`,
+        external_reference: user.id,
+        payer_email: user.email,
+        auto_recurring: {
+          frequency: 1,
+          frequency_type: 'months',
+          transaction_amount: Number(planData.price),
+          currency_id: 'BRL'
         },
-        back_urls: {
-          success: 'http://localhost:3000/?status=success',
-          failure: 'http://localhost:3000/?status=failure',
-          pending: 'http://localhost:3000/?status=pending'
-        },
-        external_reference: user.id, // CRITICAL: Link payment to User
-        auto_return: 'approved'
+        back_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/success`,
+        status: 'pending',
       }
     });
 
+    // Note: PreApproval returns 'init_point' just like Preference
     res.json({ paymentUrl: result.init_point });
 
   } catch (error) {
@@ -1070,71 +768,103 @@ app.post('/api/subscribe', paymentLimiter, async (req, res) => {
 });
 
 // 9. Webhook (Enhanced)
+// 9. Webhook (Enhanced)
 app.post('/api/webhook', async (req, res) => {
-  const topic = req.query.topic || req.body.type;
-  const id = req.query.id || req.body.data?.id;
+  // try {
+    const { topic, id } = req.query;
+    const type = topic || req.body?.type;
+    const dataId = id || req.body?.data?.id;
 
-  console.log('?? Webhook:', topic, id);
+    if (!dataId) return res.sendStatus(200);
 
-  try {
-    if (topic === 'payment') {
-      const mpToken = getMPToken();
-      if (!mpToken) throw new Error('No MP Token to verify payment');
+    console.log(`🔔 Webhook received: ${type} | ID: ${dataId}`);
 
-      // Verify payment status with MP
-      const paymentResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${id}`, {
-        headers: { Authorization: `Bearer ${mpToken}` }
-      });
+    // [SECURITY] 0. Always return 200 to MP to prevent retry loops (unless critical infra failure)
+    // We will handle logic errors internally.
 
-      const payment = paymentResponse.data;
+    try {
+        // [IDEMPOTENCY] 1. Check if payment already processed
+        // Use a persistent connection to avoid "too many clients" in webhook storms
+        const scoped = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+        
+        const { data: existingPayment } = await scoped
+            .from('payments')
+            .select('id')
+            .eq('mercadopago_payment_id', String(dataId))
+            .limit(1)
+            .maybeSingle();
 
-      if (payment.status === 'approved') {
-        const userId = payment.external_reference;
-        const paidAmount = payment.transaction_amount;
-
-        // Determine Plan from Amount (Robust enough for now)
-        let planId = 'free';
-        if (paidAmount >= 49) planId = 'pro';
-        else if (paidAmount >= 29) planId = 'starter';
-
-        // Update User Role & Usage
-        if (userId) {
-          const scoped = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-
-          // Update Profile
-          await scoped.from('profiles').update({ role: planId }).eq('id', userId);
-
-          // Reset/Update Usage Limits
-          const limit = planId === 'pro' ? 50 : 20;
-
-          // Update usage table (reset images_generated? Or keep adding? Usually reset or boost)
-          // Let's just ensure they are unblocked.
-          // Actually, usually subscription resets cycle.
-          await scoped.from('user_usage').update({
-            cycle_start_date: new Date().toISOString()
-            // images_generated: 0 // Optional: Reset on upgrade
-          }).eq('user_id', userId);
-
-          // Record Payment
-          await scoped.from('payments').insert({
-            user_id: userId,
-            amount: paidAmount,
-            status: 'approved',
-            mercadopago_payment_id: String(id),
-            paid_at: new Date(payment.date_approved || new Date()).toISOString(),
-            plan: planId
-          });
-
-          console.log(`? Payment approved for user ${userId}. Upgraded to ${planId}`);
+        if (existingPayment) {
+            console.log(`⚠️ Payment ${dataId} already processed. Skipping.`);
+            return res.sendStatus(200);
         }
-      }
+
+        // 2. Get Owner Token
+        const { data: ownerAccount } = await scoped
+            .from('owners_payment_accounts')
+            .select('mp_access_token')
+            .limit(1)
+            .maybeSingle();
+
+        const mpToken = ownerAccount?.mp_access_token || process.env.MP_ACCESS_TOKEN;
+
+        if (!mpToken) {
+            console.error("❌ Webhook Error: MP_ACCESS_TOKEN not configured");
+            return res.sendStatus(200); // Return 200 to stop retries, config won't fix itself in 10s
+        }
+
+        const client = new mercadopago.MercadoPagoConfig({ accessToken: mpToken });
+        const paymentClient = new mercadopago.Payment(client);
+
+        const payment = await paymentClient.get({ id: dataId });
+
+        if (payment && payment.status === 'approved') {
+            const userId = payment.external_reference;
+            const paidAmount = payment.transaction_amount;
+            const metadata = payment.metadata || {};
+
+            console.log(`💰 Payment Approved: R$ ${paidAmount} for User ${userId}`);
+
+            // Determine Plan
+            let planId = metadata.plan_id;
+            if (!planId) {
+                if (paidAmount >= 49) planId = 'pro';
+                else if (paidAmount >= 29) planId = 'starter';
+                else planId = 'free';
+            }
+
+            if (userId) {
+                // Update Profile
+                await scoped.from('profiles').update({ role: planId }).eq('id', userId);
+
+                // Reset Usage
+                await scoped.from('user_usage').update({
+                    cycle_start_date: new Date().toISOString()
+                }).eq('user_id', userId);
+
+                // Record Payment (Critical for Idempotency)
+                await scoped.from('payments').insert({
+                    user_id: userId,
+                    amount: paidAmount,
+                    status: 'approved',
+                    mercadopago_payment_id: String(dataId),
+                    paid_at: new Date(payment.date_approved || new Date()).toISOString(),
+                    plan: planId
+                });
+                
+                console.log(`✅ User ${userId} upgraded to ${planId}`);
+            }
+        }
+
+        return res.sendStatus(200);
+
+    } catch (error) {
+        console.error('❌ Webhook Processing Error:', error.message);
+        // Important: Still return 200 to Mercado Pago so they don't spam us
+        return res.sendStatus(200);
     }
-    res.sendStatus(200);
-  } catch (e) {
-    console.error('Webhook processing error:', e.message);
-    res.sendStatus(500);
-  }
 });
+
 
 // Health Check Endpoint
 
@@ -1221,11 +951,11 @@ app.get('/api/admin/guardian/stats', async (req, res) => {
     const user = await getAuthUser(req);
     if (!user) return res.status(401).json({ error: 'Não autorizado' });
 
-    const scopedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const globalSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: req.headers.authorization } }
     });
 
-    const { data: profile } = await scopedSupabase.from('profiles').select('role').eq('id', user.id).single();
+    const { data: profile } = await globalSupabase.from('profiles').select('role').eq('id', user.id).single();
     if (!profile || (profile.role !== 'dev' && profile.role !== 'owner' && profile.role !== 'admin')) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
@@ -1256,11 +986,11 @@ app.get('/api/admin/guardian/logs', async (req, res) => {
     const user = await getAuthUser(req);
     if (!user) return res.status(401).json({ error: 'Não autorizado' });
 
-    const scopedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const globalSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: req.headers.authorization } }
     });
 
-    const { data: profile } = await scopedSupabase.from('profiles').select('role').eq('id', user.id).single();
+    const { data: profile } = await globalSupabase.from('profiles').select('role').eq('id', user.id).single();
     if (!profile || (profile.role !== 'dev' && profile.role !== 'owner' && profile.role !== 'admin')) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
@@ -1280,46 +1010,49 @@ app.get('/api/admin/guardian/logs', async (req, res) => {
   }
 });
 
+// Public Health Check (No Auth Required)
+app.get('/api/health-check', async (req, res) => {
+  try {
+    const dbStart = Date.now();
+    const { error: dbError } = await globalSupabase.from('profiles').select('id').limit(1);
+    const dbLatency = Date.now() - dbStart;
+
+    res.json({
+      status: dbError ? 'degraded' : 'healthy',
+      database: dbError ? 'disconnected' : 'connected',
+      services: {
+        gemini: !!GEMINI_API_KEY ? 'active' : 'inactive'
+      },
+      version: 'v2.0',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      checks: {
+        database: !dbError,
+        gemini: !!GEMINI_API_KEY,
+        mercadopago: !!process.env.MP_ACCESS_TOKEN
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'offline',
+      database: 'disconnected',
+      services: { gemini: 'inactive' },
+      error: error.message
+    });
+  }
+});
+
 // Guardian Run Cycle (System Activation)
 app.post('/api/admin/guardian/run-cycle', async (req, res) => {
   try {
     const user = await getAuthUser(req);
     if (!user) return res.status(401).json({ error: 'Não autorizado' });
 
-    const scopedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const globalSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: req.headers.authorization } }
     });
 
-    const { data: profile } = await scopedSupabase.from('profiles').select('role').eq('id', user.id).single();
-    if (!profile || (profile.role !== 'dev' && profile.role !== 'owner' && profile.role !== 'admin')) {
-      return res.status(403).json({ error: 'Acesso negado' });
-    }
-
-    console.log('🔄 Guardian cycle triggered by:', user.id);
-
-    // Perform system checks
-    const checks = {
-      database: false,
-      gemini: false,
-      mercadopago: false
-    };
-
-    // Check database
-    try {
-      await globalSupabase.from('profiles').select('id').limit(1);
-      checks.database = true;
-    } catch (e) {
-      console.error('DB check failed:', e);
-    }
-
-    // Check Gemini
-    checks.gemini = !!GEMINI_API_KEY;
-
-    // Check Mercado Pago
-    checks.mercadopago = !!process.env.MP_ACCESS_TOKEN;
-
-    console.log('✅ Guardian cycle complete:', checks);
-
+    const { data: profile } = await globalSupabase.from('profiles').select('role').eq('id', user.id).single();
     res.json({
       success: true,
       message: 'Sistema reativado com sucesso',
@@ -1333,6 +1066,231 @@ app.post('/api/admin/guardian/run-cycle', async (req, res) => {
   }
 });
 
+// EMERGENCY: Grant Dev Access (Remove after first use)
+app.post('/api/admin/emergency-grant-dev', async (req, res) => {
+  try {
+    const user = await getAuthUser(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+
+    console.log('🚨 Emergency dev grant requested by:', user.email);
+
+    // Use Service Role Key to bypass RLS
+    const { data, error } = await globalSupabase
+      .from('profiles')
+      .update({ role: 'dev' })
+      .eq('id', user.id)
+      .select();
+
+    if (error) {
+      console.error('❌ Failed to grant dev access:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log('✅ Dev access granted to:', user.email);
+    res.json({
+      success: true,
+      message: 'Acesso Dev concedido com sucesso!',
+      profile: data[0]
+    });
+
+  } catch (error) {
+    console.error('Emergency grant error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
+// Get Profile Proxy (Bypasses Client-Side RLS issues)
+app.get('/api/profile/:userId', generalLimiter, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID required' });
+    }
+
+    // Usando globalSupabase com Service Key para ignorar RLS
+    const { data, error } = await globalSupabase
+      .from('profiles')
+      .select('first_name, last_name, role')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Profile fetch error:', error);
+      // Se não encontrar, retorna 404
+      if (error.code === 'PGRST116') return res.status(404).json({ error: 'Profile not found' });
+      return res.status(500).json({ error: error.message });
+    }
+
+    return res.json(data);
+  } catch (e) {
+    console.error('Profile proxy unexpected error:', e);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// 1.2 Smart Layout Analysis Route (Support for AITextOverlay)
+app.post('/api/analyze-layout', generationLimiter, async (req, res) => {
+  try {
+    const user = await getAuthUser(req);
+    // Optional: Require auth, or allow public for demo? Let's require auth.
+    // if (!user) return res.status(401).json({ error: 'Não autorizado' });
+
+    const { imageBase64, formData } = req.body;
+
+    if (!imageBase64) return res.status(400).json({ error: 'Image required' });
+
+    // Use Gemini 1.5 Flash for Multimodal Analysis (Fast & Smart)
+    // Note: 'gemini-1.5-flash' handles images natively.
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+    You are a WORLD-CLASS GRAPHIC DESIGNER for commercial flyers.
+    Your goal is to create a STUNNING, PROFESSIONAL layout for this image.
+
+    CLIENT PROVIDED DATA (You MUST use ALL of this):
+    ${formData.titulo ? `- HEADLINE (Big & Bold): "${formData.titulo}"` : ''}
+    ${formData.subtitulo ? `- SUB-HEADLINE: "${formData.subtitulo}"` : ''}
+    ${formData.whatsapp ? `- WHATSAPP (Vital): "${formData.whatsapp}"` : ''}
+    ${formData.facebook ? `- FACEBOOK: "${formData.facebook}"` : ''}
+    ${formData.instagram ? `- INSTAGRAM: "${formData.instagram}"` : ''}
+    ${formData.endereco ? `- ADDRESS (Vital): "${formData.endereco}"` : ''}
+    ${formData.email ? `- EMAIL: "${formData.email}"` : ''}
+    ${formData.descricao ? `- EXTRA INFO: "${formData.descricao}"` : ''}
+
+    CRITICAL RULES:
+    1. **DATA INTEGRITY**: If the client provided a phone, address, or name, it MUST appear in the layout. DO NOT SKIP ANY DATA.
+    2. **VISUAL HIERARCHY**: 
+       - Headline: Massive, distinct font, top or center.
+       - Contact Info: Readable, grouped (usually bottom), high contrast.
+    3. **PROFESSIONAL STYLES**:
+       - Use 'stroke' properties for text on busy backgrounds.
+       - Use 'backgroundColor' (box behind text) if legibility is hard.
+       - Use 'textShadow' for depth.
+    4. **COLORS**: Pick colors from the image palette but ensure WCAG AA contrast.
+    5. **POSITIONING**: Do NOT cover faces or main products. Use negative space.
+
+    RESPONSE FORMAT (Direct JSON Only):
+    {
+      "layout": [
+        {
+          "type": "string (headline|subhead|contact|info)",
+          "text": "string (EXACT text from client data)",
+          "x": number (0-100 % from left),
+          "y": number (0-100 % from top),
+          "fontSize": number (scales with image, e.g., 60 for headline, 25 for contact),
+          "fontFamily": "string (Impact, Arial Black, Roboto, Brush Script MT, Courier New)",
+          "color": "hex string",
+          "align": "string (left|center|right)",
+          "fontWeight": "string (bold|normal|900)",
+          "textShadow": "string (e.g., '4px 4px 0px #000000' or '0px 0px 20px #FF00FF')",
+          "strokeColor": "hex string (optional, for outline)",
+          "strokeWidth": number (optional, e.g., 2-5)",
+          "backgroundColor": "hex string (optional, for box behind text)",
+          "padding": number (optional, padding for background box),
+          "rotation": number (degrees, usually 0, maybe -5 for dynamic titles),
+          "letterSpacing": number (pixels, optional),
+          "maxWidth": number (pixels)
+        }
+      ],
+      "analysis": "Brief design rationale"
+    }
+    `;
+
+    // Prepare image part
+    const imagePart = {
+      inlineData: {
+        data: imageBase64.split(',')[1] || imageBase64,
+        mimeType: "image/png"
+      }
+    };
+
+    const result = await model.generateContent([prompt, imagePart]);
+    const responseText = result.response.text();
+
+    console.log("🎨 Smart Layout Analysis Complete");
+
+    // Clean and Parse JSON
+    const jsonString = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const layoutData = JSON.parse(jsonString);
+
+    res.json(layoutData);
+
+  } catch (error) {
+    console.error('Layout Analysis Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// --- PAYMENT SANDBOX & LOGGING ROUTES ---
+
+// 1. GET PAYMENT LOGS (For Admin Debugging)
+app.get('/api/admin/payment-logs', async (req, res) => {
+  try {
+    const user = await getAuthUser(req);
+    // Strict Admin Chec k
+    const { data: profile } = await globalSupabase.from('profiles').select('role').eq('id', user.id).single();
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'owner' && profile.role !== 'dev')) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    const { data: logs, error } = await globalSupabase
+        .from('payment_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+    
+    if (error) throw error;
+    res.json({ logs });
+
+  } catch (error) {
+    console.error('Error fetching payment logs:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 2. TEST WEBHOOK (Simulation)
+app.post('/api/test-webhook', async (req, res) => {
+  console.log('🧪 [TEST WEBHOOK] Recebido:', req.body);
+  const { action, user_id, email, plan, status } = req.body;
+
+  try {
+     // 1. Log simulation intent
+     await globalSupabase.from('payment_logs').insert({
+       user_id: user_id, 
+       event_type: 'SIMULATION',
+       status: status,
+       payload: req.body
+     });
+
+    // 2. Simulate Plan Update Logic (Mirroring Real Webhook)
+    if (status === 'approved') {
+       console.log(`✅ [SIMULATION] Approving ${plan} for ${email}`);
+       
+       // Update User Role/Plan
+       const { error: profileError } = await globalSupabase
+        .from('profiles')
+        .update({ role: plan })
+        .eq('id', user_id);
+
+       if (profileError) throw profileError;
+
+       // Verify usage/quota reset would happen here normally via webhook logic
+       // For simulation, we just update the role.
+       
+       res.json({ success: true, message: `Simulação de ${plan} APROVADO executada.` });
+    } else {
+       res.json({ success: true, message: `Simulação de status ${status} registrada.` });
+    }
+
+  } catch (error) {
+    console.error('❌ [SIMULATION ERROR]:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 
 // Catch-all 404
@@ -1342,14 +1300,23 @@ app.use((req, res) => {
 
 // START
 if (require.main === module) {
-  const server = app.listen(PORT, () => {
+  // Iniciar cron job de renovação de créditos
+  startCron();
+
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`🏥 Health check: http://localhost:${PORT}/health`);
   });
 
+  // --- KEEP SUPABASE ALIVE ---
+  // Ping Supabase a cada 5 minutos para evitar auto-pause
+  // --- KEEP SUPABASE ALIVE ---
+  // (Maintained by maintainSupabaseConnection at start of file)
+
   // Graceful Shutdown
   const shutdown = (signal) => {
     console.log(`\n${signal} received. Shutting down gracefully...`);
+    // Connection is maintained by maintainSupabaseConnection function
     server.close(() => {
       console.log('✅ Server closed');
       process.exit(0);

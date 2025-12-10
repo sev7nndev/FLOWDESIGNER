@@ -47,11 +47,14 @@ export const authService = {
       }
 
       // After server creates user, we try to login immediately to set the session on the client
-      const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+
       if (loginError) {
         // If auto-login fails (maybe email confirmation needed), just return null
-        // The UI will likely show "Success, please login" anyway.
         console.warn("Auto-login after register failed:", loginError);
+      } else if (loginData.user) {
+        // Auto-login success! Return the user so UI can redirect
+        return loginData.user as unknown as User;
       }
 
     } catch (e: any) {

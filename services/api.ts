@@ -13,7 +13,7 @@ export const api = {
         if (!session) throw new Error("Faça login para gerar artes.");
 
         try {
-            const response = await fetch(`${BACKEND_URL}/generate`, {
+            const response = await fetch(`${BACKEND_URL}/generate-ultra`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -158,12 +158,12 @@ export const api = {
         });
     },
 
-    // NEW: Fetch all plan settings (combined limits and details)
+    // NEW: Fetch all plan settings (combined limits and details from single table now)
     getPlanSettings: async (): Promise<EditablePlan[]> => {
         const supabase = getSupabase();
         if (!supabase) throw new Error("Supabase not configured.");
 
-        // Fetch limits/prices
+        // Fetch everything from plan_settings
         const { data: settingsData, error: settingsError } = await supabase
             .from('plan_settings')
             .select('*');
@@ -173,38 +173,19 @@ export const api = {
             throw new Error(settingsError.message);
         }
 
-        // Fetch marketing details
-        const { data: detailsData, error: detailsError } = await supabase
-            .from('plan_details')
-            .select('*');
+        if (!settingsData) return [];
 
-        if (detailsError) {
-            console.error("Error fetching plan_details:", detailsError);
-            throw new Error(detailsError.message);
-        }
+        // Map to EditablePlan
+        const plans: EditablePlan[] = settingsData.map(setting => ({
+            id: setting.id as any,
+            display_name: setting.display_name || setting.id,
+            description: setting.description || '',
+            features: setting.features || [],
+            price: setting.price || 0,
+            max_images_per_month: setting.max_images_per_month || 0,
+        }));
 
-        // Ensure data is not null before proceeding
-        if (!settingsData || !detailsData) {
-            console.error("Plan data is null or empty. Check RLS policies and if tables are populated.");
-            throw new Error("Plan data could not be loaded. Tables might be empty or inaccessible.");
-        }
-
-        const settingsMap = new Map(settingsData.map(s => [s.id, s]));
-
-        // Combine data
-        const combinedPlans: EditablePlan[] = detailsData.map(detail => {
-            const setting = settingsMap.get(detail.id);
-            return {
-                id: detail.id as any,
-                display_name: detail.display_name,
-                description: detail.description,
-                features: detail.features,
-                price: setting?.price || 0,
-                max_images_per_month: setting?.max_images_per_month || 0,
-            };
-        });
-
-        return combinedPlans;
+        return plans;
     },
 
     // NEW: Check user quota status
@@ -248,7 +229,7 @@ export const api = {
         }
     },
 
-    // NEW: Admin update plan settings (now handles both tables)
+    // NEW: Admin update plan settings (now handles both tables via Backend Route)
     updatePlanSettings: async (plans: EditablePlan[]): Promise<void> => {
         const supabase = getSupabase();
         if (!supabase) throw new Error("Supabase not configured.");
@@ -257,38 +238,18 @@ export const api = {
         if (!session) throw new Error("Acesso negado.");
 
         try {
-            // 1. Prepare updates for plan_settings (limits/price)
-            const settingsUpdates = plans.map(p => ({
-                id: p.id,
-                price: p.price,
-                max_images_per_month: p.max_images_per_month,
-                updated_by: session.user.id,
-                updated_at: new Date().toISOString()
-            }));
+            const response = await fetch(`${BACKEND_URL}/admin/plans`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ plans })
+            });
 
-            // 2. Prepare updates for plan_details (marketing info)
-            const detailsUpdates = plans.map(p => ({
-                id: p.id,
-                display_name: p.display_name,
-                description: p.description,
-                features: p.features,
-                updated_at: new Date().toISOString()
-            }));
-
-            // Execute updates in parallel
-            const [settingsResult, detailsResult] = await Promise.all([
-                supabase.from('plan_settings').upsert(settingsUpdates, { onConflict: 'id' }),
-                supabase.from('plan_details').upsert(detailsUpdates, { onConflict: 'id' })
-            ]);
-
-            if (settingsResult.error) {
-                console.error("Error updating plan_settings:", settingsResult.error);
-                throw new Error(settingsResult.error.message);
-            }
-
-            if (detailsResult.error) {
-                console.error("Error updating plan_details:", detailsResult.error);
-                throw new Error(detailsResult.error.message);
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || "Falha ao atualizar planos.");
             }
 
         } catch (error) {
@@ -360,28 +321,24 @@ export const api = {
     exchangeMpCode: async (code: string): Promise<void> => {
         const supabase = getSupabase();
         if (!supabase) throw new Error("Supabase not configured.");
-
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error("Acesso negado.");
 
-        try {
-            const response = await fetch(`${BACKEND_URL}/admin/mp-exchange`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${session.access_token}`
-                },
-                body: JSON.stringify({ code })
-            });
+        // Updated to match backend route /api/admin/mp-exchange
+        const response = await fetch(`${BACKEND_URL}/admin/mp-exchange`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${session?.access_token}`
+            },
+            body: JSON.stringify({ code })
+        });
 
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || "Falha na troca de token");
-            }
-        } catch (error) {
-            console.error("Error exchanging MP code:", error);
-            throw error;
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || "Falha na troca de código MP");
         }
+
+        return await response.json();
     },
 
     getLandingImages: async (): Promise<LandingImage[]> => {
@@ -518,7 +475,7 @@ export const api = {
         }
     },
 
-    enhancePrompt: async (prompt: string): Promise<string> => {
+    enhancePrompt: async (prompt: string, promptInfo?: BusinessInfo): Promise<string> => {
         const supabase = getSupabase();
         if (!supabase) throw new Error("Supabase not configured.");
 
@@ -532,7 +489,10 @@ export const api = {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${session.access_token}`
                 },
-                body: JSON.stringify({ prompt })
+                body: JSON.stringify({
+                    prompt,
+                    promptInfo
+                })
             });
 
             if (!response.ok) {

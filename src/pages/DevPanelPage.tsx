@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Trash2, Loader2, Image as ImageIcon, Users, Clock, ArrowLeft, Code, LogOut, ShieldOff, CheckCircle2, AlertTriangle, Zap, Activity, CreditCard, DollarSign } from 'lucide-react';
 import { Button } from '../components/Button';
-import { LandingImage, User, GeneratedImage, UserRole } from '@/types';
-import { useLandingImages } from '@/hooks/useLandingImages';
-import { useAdminGeneratedImages } from '@/hooks/useAdminGeneratedImages';
-import { api } from '@/services/api';
-import { ImageUpload, MercadoPagoManager, PlanSettingsManager, SystemHealthWidget } from '@/src/components/admin/AdminWidgets';
+import { LandingImage, User, GeneratedImage, UserRole } from '../../types';
+import { useLandingImages } from '../../hooks/useLandingImages';
+import { useAdminGeneratedImages } from '../../hooks/useAdminGeneratedImages';
+import { api } from '../../services/api';
+import { ImageUpload, MercadoPagoManager, PlanSettingsManager, SystemHealthWidget } from '../components/admin/AdminWidgets';
 import { toast } from 'sonner';
-import { getSupabase } from '@/services/supabaseClient';
+import { getSupabase } from '../../services/supabaseClient';
+import { PaymentDebugPanel } from '../components/PaymentDebugPanel';
 
 interface DevPanelPageProps {
     user: User | null;
@@ -477,6 +478,9 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
                     {/* Seção -1: Guardian AI & System Health */}
                     <div className="space-y-6">
                         <SaaSMaintenanceHub />
+
+                        {/* Payment Sandbox (Dev Only) */}
+                        <PaymentDebugPanel userId={user?.id || ''} />
 
                         <div className="w-full">
                             <SystemHealthWidget />

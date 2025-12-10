@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User, QuotaStatus, QuotaCheckResponse, ArtStyle } from '../types';
 import { api } from '../services/api';
 import { PLACEHOLDER_EXAMPLES } from '../constants';
-import { ART_STYLES } from '@/src/constants/artStyles'; // Import art styles
+import { ART_STYLES } from '../src/constants/artStyles';
 import { toast } from 'sonner'; // Import toast
 
 const INITIAL_FORM: BusinessInfo = {
@@ -150,18 +150,25 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
                 currentImage: null // Clear old image to show skeleton
             }));
 
-            // 2. Proceed with generation, now including the selected style
-            const newImage = await api.generate(form, selectedStyle);
+            // 2. Generate Clean Background (Backend)
+            const cleanImage = await api.generate(form, selectedStyle);
+
+            // 3. (REMOVED) Frontend Text Overlay
+            // The backend (Imagen 4 Ultra) now handles all text generation.
+            // We use the clean image directly.
+            const finalImageUrl = cleanImage.url;
+            
+            const hybridImage = { ...cleanImage, url: finalImageUrl };
 
             setState((prev: GenerationState) => ({
                 status: GenerationStatus.SUCCESS,
-                currentImage: newImage,
-                history: [newImage, ...prev.history]
+                currentImage: hybridImage,
+                history: [hybridImage, ...prev.history]
             }));
 
             toast.success("Arte gerada com sucesso!");
 
-            // 3. Refresh usage data after successful generation
+            // 4. Refresh usage data after successful generation
             refreshUsage();
 
         } catch (err: any) {
@@ -206,11 +213,12 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
 
         setIsEnhancing(true);
         try {
-            const enhanced = await api.enhancePrompt(form.details);
+            const enhanced = await api.enhancePrompt(form.details, form);
             setForm(prev => ({ ...prev, details: enhanced }));
             toast.success("Prompt melhorado com sucesso!");
         } catch (error) {
-            toast.error("Erro ao melhorar prompt.");
+            console.error("Enhance prompt error:", error);
+            toast.error("Erro ao melhorar prompt. Tente novamente.");
         } finally {
             setIsEnhancing(false);
         }

@@ -1,4 +1,5 @@
-﻿{
+{
   "npm.packageManager": "npm",
-  "npm.exclude": "**/node_modules/**"
+  "npm.exclude": "**/node_modules/**",
+  "java.server.launchMode": "LightWeight"
 }

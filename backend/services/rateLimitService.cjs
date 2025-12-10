@@ -5,22 +5,24 @@ const rateLimit = require('express-rate-limit');
  * Protects API endpoints from abuse
  */
 
-// General API rate limit (100 requests per 15 minutes)
+// General API rate limit (Increased for Admin usage clarity)
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100,
+    max: 1000, // Relaxed from 100 to 1000 to allow Admin heavy usage
     message: { error: 'Muitas requisições. Tente novamente em alguns minutos.' },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false
 });
 
 // Strict limit for AI generation (prevents abuse of expensive API)
 const generationLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 3, // 3 generations per minute max
+    max: 10, // Increased to 10 to allow testing
     message: { error: 'Limite de gerações atingido. Aguarde 1 minuto.' },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false,
     // Custom key generator to rate limit by user ID if authenticated
     keyGenerator: (req) => {
         // If user is authenticated, use their ID
@@ -32,13 +34,14 @@ const generationLimiter = rateLimit({
     }
 });
 
-// Auth endpoints (login/register) - prevent brute force
+// Auth endpoints (login/register) - prevent brute force but allow admin testing
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 attempts per 15 minutes
-    message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos.' },
+    max: 100, // Relaxed from 5 to 100 so Admin can create test accounts
+    message: { error: 'Muitas tentativas de login/registro. Aguarde um momento.' },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false
 });
 
 // Payment endpoints - extra strict
@@ -48,11 +51,23 @@ const paymentLimiter = rateLimit({
     message: { error: 'Limite de tentativas de pagamento atingido.' },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false
+});
+
+// Admin/Guardian endpoints - higher limits for dev/owner
+const adminLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 30, // 30 requests per minute (much higher than general)
+    message: { error: 'Muitas requisições admin. Aguarde 1 minuto.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: false
 });
 
 module.exports = {
     generalLimiter,
     generationLimiter,
     authLimiter,
-    paymentLimiter
+    paymentLimiter,
+    adminLimiter
 };

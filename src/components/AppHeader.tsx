@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LogOut, Settings, Sparkles, User as UserIcon, Code, Zap, AlertTriangle, CreditCard, Menu, X } from 'lucide-react';
-import { User, UserRole, QuotaStatus } from '@/types';
+import { User, UserRole, QuotaStatus } from '../../types';
 
 interface AppHeaderProps {
   user: User | null;

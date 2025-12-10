@@ -1,0 +1,58 @@
+{
+    "name": "Despachante Profissional",
+    "niche": "despachante",
+    "baseImage": "template.png",
+    "imageSize": {
+        "width": 1024,
+        "height": 1365
+    },
+    "textLayers": {
+        "companyName": {
+            "x": 512,
+            "y": 950,
+            "maxWidth": 900,
+            "fontSize": 72,
+            "fontPath": "FONT_SANS_64_BLACK",
+            "color": "#003366",
+            "align": "center",
+            "shadow": false
+        },
+        "tagline": {
+            "x": 512,
+            "y": 1050,
+            "maxWidth": 800,
+            "fontSize": 32,
+            "fontPath": "FONT_SANS_32_BLACK",
+            "color": "#0066CC",
+            "align": "center",
+            "shadow": false
+        },
+        "phone": {
+            "x": 512,
+            "y": 1150,
+            "fontSize": 48,
+            "fontPath": "FONT_SANS_64_BLACK",
+            "color": "#003366",
+            "align": "center",
+            "shadow": false
+        },
+        "instagram": {
+            "x": 512,
+            "y": 1220,
+            "fontSize": 32,
+            "fontPath": "FONT_SANS_32_BLACK",
+            "color": "#003366",
+            "align": "center",
+            "shadow": false
+        },
+        "address": {
+            "x": 512,
+            "y": 1270,
+            "fontSize": 28,
+            "fontPath": "FONT_SANS_32_BLACK",
+            "color": "#666666",
+            "align": "center",
+            "shadow": false
+        }
+    }
+}

@@ -94,7 +94,7 @@ export interface UserUsage {
   user_id: string;
   plan_id: UserRole;
   cycle_start_date: string;
-  current_usage: number;
+  images_generated: number;
 }
 
 // NEW: Quota Status

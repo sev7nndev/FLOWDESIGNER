@@ -3,8 +3,8 @@ import { Button } from '../components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Users, CreditCard, Trash2, UserPlus, X, Check, AlertTriangle, Copy, LayoutDashboard, Settings, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
-import { getSupabase } from '@/services/supabaseClient';
-import { MercadoPagoManager, PlanSettingsManager, SystemHealthWidget } from '../components/admin/AdminWidgets';
+import { getSupabase } from '../../services/supabaseClient';
+import { MercadoPagoManager, PlanSettingsManager, SystemHealthWidget, LandingCarouselManager } from '../components/admin/AdminWidgets';
 
 interface OwnerPanelPageProps {
     onBack: () => void;
@@ -225,17 +225,20 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
             const { data: { user } } = await supabase.auth.getUser();
 
             if (user) {
-                // Fetch profile to get role
-                const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+                // NEW: RPC Call (Security Definer Bypass)
+                const { data: roleData, error: roleError } = await supabase.rpc('get_my_role');
 
-                // SECURITY CHECK
-                if (!profile || (profile.role !== 'owner' && profile.role !== 'admin' && profile.role !== 'dev')) {
-                    toast.error("Acesso Negado: Apenas proprietários podem acessar este painel.");
-                    onBack(); // Redirect back
+                if (roleError) console.error("RPC Role Error:", roleError);
+
+                const userRole = roleData || 'free';
+
+                if (userRole !== 'owner' && userRole !== 'admin' && userRole !== 'dev') {
+                    console.log("DEBUG ACCESS DENIED. Role read:", userRole);
+                    toast.error(`Acesso Negado. Apenas proprietários.`);
                     return;
                 }
 
-                setCurrentUser({ ...user, role: profile.role || 'owner' });
+                setCurrentUser({ ...user, role: userRole });
             } else {
                 onBack(); // No user
                 return;
@@ -245,6 +248,43 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
         };
 
         init();
+    }, [supabase]);
+
+    // Notificações em tempo real
+    useEffect(() => {
+        if (!supabase) return;
+
+        const profilesSubscription = supabase
+            .channel('owner-notifications-profiles')
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'profiles'
+            }, (payload) => {
+                const firstName = (payload.new as any).first_name || 'Usuário';
+                toast.success(`🎉 Novo cadastro: ${firstName}`, { duration: 5000 });
+                loadUsers();
+            })
+            .subscribe();
+
+        const paymentsSubscription = supabase
+            .channel('owner-notifications-payments')
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'payments'
+            }, (payload) => {
+                const amount = (payload.new as any).amount || 0;
+                const plan = (payload.new as any).plan || 'unknown';
+                toast.success(`💰 Novo pagamento: ${formatBRL(amount)} (${plan})`, { duration: 5000 });
+                loadRevenue();
+            })
+            .subscribe();
+
+        return () => {
+            profilesSubscription.unsubscribe();
+            paymentsSubscription.unsubscribe();
+        };
     }, [supabase]);
 
     const loadUsers = async () => {
@@ -312,6 +352,11 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
         }
     };
 
+    // Helper for BRL
+    const formatBRL = (value: number) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    };
+
     return (
         <div className="min-h-screen bg-black text-white p-4 md:p-8 font-sans">
             <div className="max-w-7xl mx-auto">
@@ -347,12 +392,10 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
                             onClick={onBack}
                             icon={<LogOut size={18} />}
                         >
-                            Sair
+                            Voltar pro App
                         </Button>
                     </div>
                 </div>
-
-                {/* System Health on all tabs (Small) or just dashboard? Let's put on Dashboard top */}
 
 
                 {activeTab === 'dashboard' && (
@@ -369,7 +412,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
                                             <CreditCard size={16} />
                                         </div>
                                     </div>
-                                    <div className="text-2xl font-bold text-white">R$ {Number(revenue.day).toFixed(2)}</div>
+                                    <div className="text-2xl font-bold text-white">{formatBRL(Number(revenue.day))}</div>
                                 </CardContent>
                             </Card>
                             <Card className="bg-zinc-900/50 border-white/10">
@@ -380,7 +423,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
                                             <CreditCard size={16} />
                                         </div>
                                     </div>
-                                    <div className="text-2xl font-bold text-white">R$ {Number(revenue.week).toFixed(2)}</div>
+                                    <div className="text-2xl font-bold text-white">{formatBRL(Number(revenue.week))}</div>
                                 </CardContent>
                             </Card>
                             <Card className="bg-zinc-900/50 border-white/10">
@@ -391,7 +434,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
                                             <CreditCard size={16} />
                                         </div>
                                     </div>
-                                    <div className="text-2xl font-bold text-white">R$ {Number(revenue.month).toFixed(2)}</div>
+                                    <div className="text-2xl font-bold text-white">{formatBRL(Number(revenue.month))}</div>
                                 </CardContent>
                             </Card>
                             <Card className="bg-zinc-900/50 border-white/10">
@@ -402,7 +445,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
                                             <CreditCard size={16} />
                                         </div>
                                     </div>
-                                    <div className="text-2xl font-bold text-white">R$ {Number(revenue.total).toFixed(2)}</div>
+                                    <div className="text-2xl font-bold text-white">{formatBRL(Number(revenue.total))}</div>
                                 </CardContent>
                             </Card>
                         </div>
@@ -431,13 +474,13 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
                                                 {payments.slice(0, 10).map((payment) => (
                                                     <tr key={payment.id} className="border-b border-white/5 hover:bg-white/5">
                                                         <td className="py-3 px-4 text-gray-400">
-                                                            {new Date(payment.paid_at).toLocaleDateString()}
+                                                            {new Date(payment.paid_at).toLocaleDateString('pt-BR')}
                                                         </td>
                                                         <td className="py-3 px-4 text-white">
                                                             {users.find(u => u.id === payment.user_id)?.email || payment.user_email || '...'}
                                                         </td>
                                                         <td className="py-3 px-4 text-green-400 font-medium">
-                                                            R$ {Number(payment.amount).toFixed(2)}
+                                                            {formatBRL(Number(payment.amount))}
                                                         </td>
                                                         <td className="py-3 px-4 text-right">
                                                             <span className={`px-2 py-1 rounded text-xs ${payment.status === 'approved' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
@@ -482,61 +525,61 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
                                     </CardContent>
                                 </Card>
                             </div>
+
                         </div>
 
-                        {/* Users Table */}
-                        <Card className="bg-zinc-900/50 border-white/10">
+                        {/* Client Management Table (Restored) */}
+                        <Card className="bg-zinc-900/50 border-white/10 mt-6">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <Users className="w-5 h-5 text-gray-400" />
-                                    Base de Clientes Completa
+                                    Base de Clientes
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="overflow-x-auto">
-                                    <table className="w-full">
+                                    <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b border-white/10">
-                                                <th className="text-left py-3 px-4 text-gray-400">Email</th>
-                                                <th className="text-left py-3 px-4 text-gray-400">Nome</th>
-                                                <th className="text-left py-3 px-4 text-gray-400">Plano</th>
-                                                <th className="text-left py-3 px-4 text-gray-400">Imagens</th>
-                                                <th className="text-left py-3 px-4 text-gray-400">Cadastro</th>
-                                                <th className="text-right py-3 px-4 text-gray-400">Ações</th>
+                                                <th className="text-left py-3 px-4 text-gray-500">Info</th>
+                                                <th className="text-left py-3 px-4 text-gray-500">Plano</th>
+                                                <th className="text-left py-3 px-4 text-gray-500">Uso (Mês)</th>
+                                                <th className="text-right py-3 px-4 text-gray-500">Ações</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {users.map(user => (
+                                            {users.map((user) => (
                                                 <tr key={user.id} className="border-b border-white/5 hover:bg-white/5">
-                                                    <td className="py-3 px-4 text-white">{user.email}</td>
-                                                    <td className="py-3 px-4 text-gray-300">{user.first_name} {user.last_name}</td>
                                                     <td className="py-3 px-4">
-                                                        <span className={`px-2 py-1 rounded text-xs ${user.role === 'pro' ? 'bg-purple-500/20 text-purple-400' :
-                                                            user.role === 'starter' ? 'bg-blue-500/20 text-blue-400' :
-                                                                'bg-gray-500/20 text-gray-400'
+                                                        <div className="font-medium text-white">{user.first_name} {user.last_name}</div>
+                                                        <div className="text-xs text-gray-500">{user.email}</div>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <span className={`px-2 py-1 rounded text-xs uppercase font-bold ${user.role === 'pro' ? 'bg-purple-500/20 text-purple-400' :
+                                                            user.role === 'owner' ? 'bg-amber-500/20 text-amber-400' :
+                                                                'bg-blue-500/20 text-blue-400'
                                                             }`}>
                                                             {user.role}
                                                         </span>
                                                     </td>
-                                                    <td className="py-3 px-4 text-gray-300">{user.images_generated}</td>
-                                                    <td className="py-3 px-4 text-gray-400">
-                                                        {new Date(user.created_at).toLocaleDateString()}
+                                                    <td className="py-3 px-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-24 h-2 bg-zinc-800 rounded-full overflow-hidden">
+                                                                <div className="h-full bg-green-500" style={{ width: `${Math.min(((user.images_generated || 0) / (user.role === 'pro' ? 50 : user.role === 'starter' ? 20 : 3)) * 100, 100)}%` }}></div>
+                                                            </div>
+                                                            <span className="text-xs text-gray-400">{user.images_generated || 0}</span>
+                                                        </div>
                                                     </td>
                                                     <td className="py-3 px-4 text-right">
-                                                        <Button
-                                                            variant="danger"
-                                                            onClick={() => handleDeleteUser(user.id)}
-                                                            className="h-8 px-3 text-xs"
-                                                            icon={<Trash2 size={14} />}
-                                                        >
-                                                            Excluir
-                                                        </Button>
+                                                        <Button variant="danger" onClick={() => handleDeleteUser(user.id)} icon={<Trash2 size={14} />} />
                                                     </td>
                                                 </tr>
                                             ))}
                                             {users.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={6} className="text-center py-10 text-gray-500">Nenhum cliente encontrado.</td>
+                                                    <td colSpan={4} className="py-8 text-center text-gray-600">
+                                                        Nenhum cliente encontrado
+                                                    </td>
                                                 </tr>
                                             )}
                                         </tbody>
@@ -552,8 +595,13 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
                         {/* Mercado Pago Integration */}
                         {currentUser && <MercadoPagoManager user={currentUser} />}
 
+                        {/* Landing Page Carousel */}
+                        <LandingCarouselManager />
+
                         {/* Plan Settings */}
                         <PlanSettingsManager />
+
+                        {/* Payment Sandbox removed from here */}
                     </div>
                 )}
 

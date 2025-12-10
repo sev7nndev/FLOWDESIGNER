@@ -88,3 +88,10 @@ body {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* Shimmer Effect for Loading Bar */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

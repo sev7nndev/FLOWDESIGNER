@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef } from "react";
-import { cn } from "@/src/lib/utils";
+import { cn } from "../lib/utils";
 import { animate } from "framer-motion";
 
 interface GlowingEffectProps {
@@ -79,7 +79,7 @@ const GlowingEffect = memo(
             parseFloat(element.style.getPropertyValue("--start")) || 0;
           let targetAngle =
             (180 * Math.atan2(mouseY - center[1], mouseX - center[0])) /
-              Math.PI +
+            Math.PI +
             90;
 
           const angleDiff = ((targetAngle - currentAngle + 180) % 360) - 180;
