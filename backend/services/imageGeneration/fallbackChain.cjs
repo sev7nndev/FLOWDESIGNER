@@ -14,10 +14,17 @@ async function generateWithImagen4(prompt) {
     console.log('🎨 [Gen 1] Attempting Imagen 4.0...');
     try {
         const response = await axios.post(
-            `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${GEMINI_API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${GEMINI_API_KEY}`,
             {
-                instances: [{ prompt: prompt, aspectRatio: "9:16" }],
-                parameters: { sampleCount: 1, outputOptions: { mimeType: "image/png" } }
+                instances: [{ 
+                    prompt: prompt, 
+                    aspectRatio: "9:16",
+                    guidanceScale: 8.5 // Higher guidance for better prompt adherence (Ultra behavior)
+                }],
+                parameters: { 
+                    sampleCount: 1, 
+                    outputOptions: { mimeType: "image/png" } 
+                }
             },
             { headers: { 'Content-Type': 'application/json' }, timeout: 80000 }
         );
