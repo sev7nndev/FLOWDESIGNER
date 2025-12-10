@@ -32,7 +32,8 @@ function detectNicheByRegex(text) {
         { key: 'climatizacao', regex: /\b(ar condicionado|climatiza[çc][ãa]o|refrigera[çc][ãa]o|instala[çc][ãa]o)\b/ },
         { key: 'advogado', regex: /\b(advogado|jur[íi]dico|oab|direito|lei)\b/ },
         { key: 'contabilidade', regex: /\b(contabil|contador|imposto|financeiro)\b/ },
-        { key: 'delivery', regex: /\b(entrega|delivery|motoboy|r[áa]pido)\b/ }
+        // Delivery LAST to avoid false positives on "entrega rapida"
+        { key: 'delivery', regex: /\b(motoboy|entregas? express|log[íi]stica|transportadora)\b/ } 
     ];
 
     for (const p of patterns) {
@@ -98,29 +99,30 @@ Niche: ${niche.toUpperCase()} - ${context.mood}
 VISUAL DESCRIPTION:
 Scene: ${context.scene}
 Elements: ${context.elements}
-Lighting: Professional studio lighting, cinematic, 8k resolution.
+Lighting: Professional studio lighting, cinematic, 8k resolution, sharp focus.
 Colors: Palette of ${context.colors.join(', ')}.
 Style: ${businessData.logo ? "Clean modern layout integrated with the logo" : "Professional 3D typography layout"}.
-Negative Prompt: ${context.negative || "amateur, blurry, distorted, messy, bad composition"}, text cutoff, cropping, low quality.
+Negative Prompt: ${context.negative || "amateur, blurry, distorted, messy, bad composition, watermark, text cutoff, cropping, low quality"}.
 
 TEXT CONTENT INSTRUCTIONS (CRITICAL):
 You MUST render the following text in PERFECT PORTUGUESE (PT-BR).
 Font: ${context.textStyle}.
 Text must be LEGILE, SHARP, and INTEGRATED into the design (not just an overlay).
 
-TEXT TO RENDER:
+TEXT TO RENDER (MANDATORY):
 1. HEADLINE (Big): "${businessData.nome}"
 2. SUBTITLE (Medium): "${businessData.pedido || businessData.descricao || businessData.servicos || ''}"
-3. CONTACT (Bottom, Small but Clear):
-   - Phone: "${businessData.whatsapp || businessData.telefone}"
+3. CONTACT INFO (Bottom, Small but Clear):
+   - Phone/Whatsapp: "${businessData.whatsapp || businessData.telefone}"
    - Address: "${businessData.address || ''}"
-   - ${businessData.instagram ? `Instagram: "${businessData.instagram}"` : ''}
+   - Social: "${businessData.instagram ? 'Insta: ' + businessData.instagram : ''}"
 
-COMPOSITION:
+COMPOSITION RULES:
 - Portrait 9:16 aspect ratio.
 - Leave space at top for headline.
 - Leave space at bottom for contact info.
 - No spelling errors.
+- Do NOT use "lorem ipsum" or gibberish.
 `.trim();
 
     return prompt;

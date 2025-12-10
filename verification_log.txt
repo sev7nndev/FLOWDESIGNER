@@ -1,0 +1,17 @@
+🧪 STARTING VERIFICATION TESTS...
+
+📋 Testing: Pizzaria do Zé
+✅ [PASS] Detected: pizzaria
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Consultoria Alpha
+✅ [PASS] Detected: profissional
+✅ [PASS] Prompt contains mandatory contact fields.
+✅ [PASS] Prompt free of blur keywords.
+---------------------------------------------------
+📋 Testing: Flash Motoboy
+✅ [PASS] Detected: delivery
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
