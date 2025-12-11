@@ -28,6 +28,36 @@ const cases = [
         descricao: "Entregas express e logistica",
         pedido: "",
         expectedNiche: "delivery" // Should validly be delivery
+    },
+    {
+        name: "Assistência Técnica TechFix",
+        descricao: "Conserto de celulares e notebooks, troca de tela.",
+        pedido: "",
+        expectedNiche: "assistencia_tecnica"
+    },
+    {
+        name: "Academia Iron",
+        descricao: "Musculação e Treino Funcional",
+        pedido: "",
+        expectedNiche: "academia"
+    },
+    {
+        name: "Padaria Doce Pão",
+        descricao: "Pães quentinhos e bolos",
+        pedido: "",
+        expectedNiche: "padaria"
+    },
+    {
+        name: "CVC Viagens",
+        descricao: "Pacotes turísticos e passagens",
+        pedido: "",
+        expectedNiche: "viagens"
+    },
+    {
+        name: "Pesca Esportiva Tucunaré",
+        descricao: "Artigos de pesca, iscas artificiais e varas.",
+        pedido: "flyer promocional de iscas",
+        expectedNiche: "dynamic_creative" // Should trigger dynamic mode
     }
 ];
 

@@ -4,6 +4,15 @@
  */
 
 const NICHE_PROMPTS = {
+    // 🔧 SERVIÇOS TÉCNICOS
+    assistencia_tecnica: {
+        scene: "High-tech electronics repair workbench with tools and motherboard",
+        elements: "soldering iron, circuit board, disassembled smartphone, multimeter, magnifying glass, antistatic mat",
+        colors: ["#0055ff (Tech Blue)", "#333333 (Dark Grey)", "#ffffff (White)"],
+        mood: "Technical, precise, expert, reliable",
+        textStyle: "Modern tech sans-serif, clean and digital",
+        negative: "dirty, messy, broken glass, old computer, blur"
+    },
     // 🚗 AUTOMOTIVO
     mecanica: {
         scene: "Modern automotive workshop with professional LED lighting and organized tools, sharp focus",
@@ -174,6 +183,84 @@ const NICHE_PROMPTS = {
         colors: ["#ff0000 (Alert Red)", "#ffffff", "#000000"],
         mood: "Fast, urgent, convenient, urban",
         textStyle: "Italic bold sans-serif (speed)"
+    },
+
+    // 💪 SAÚDE & FITNESS
+    academia: {
+        scene: "Modern gym interior with weights and cardio equipment, sharp focus",
+        elements: "dumbbells, treadmill, mirrors, fitness model workout, protein shaker",
+        colors: ["#000000 (Black)", "#ffff00 (Neon Yellow)", "#grey"],
+        mood: "Energetic, strong, intense, motivating",
+        textStyle: "Bold slanted sports font, dynamic"
+    },
+
+    // 🍞 GASTRONOMIA (Novos)
+    padaria: {
+        scene: "Traditional bakery counter with fresh golden breads, warm lighting",
+        elements: "fresh bread basket, croissant, flour dust, baker hat, ears of wheat",
+        colors: ["#d2691e (Bread Brown)", "#f4a460 (Golden)", "#ffffff"],
+        mood: "Warm, fresh, homemade, traditional",
+        textStyle: "Rustic serif or handwritten"
+    },
+    cafeteria: {
+        scene: "Cozy coffee shop table with steam coming from cup, sharp detail",
+        elements: "latte art, coffee beans, espresso machine, wooden table, croissant",
+        colors: ["#6f4e37 (Coffee Brown)", "#f5f5dc (Beige)", "#black"],
+        mood: "Cozy, aromatic, premium, energizing",
+        textStyle: "Vintage minimalist sans-serif"
+    },
+    supermercado: {
+        scene: "Bright supermarket aisle with fresh colorful products, high resolution",
+        elements: "shopping cart, fresh fruits, vegetables, shelves, discount tags",
+        colors: ["#ff0000 (Sale Red)", "#ffffff", "#228b22 (Fresh Green)"],
+        mood: "Fresh, variety, economical, family",
+        textStyle: "Bold heavy sans-serif (retail style)"
+    },
+
+    // 👗 LIFESTYLE
+    moda: {
+        scene: "Fashion boutique or street style photo shoot, high fashion",
+        elements: "trendy clothing on hanger, mannequin, fashion accessories, shopping bags",
+        colors: ["#000000 (Chic Black)", "#ffffff", "#gold"],
+        mood: "Trendy, stylish, elegant, exclusive",
+        textStyle: "Modern editorial serif (Vogue style)"
+    },
+    viagens: {
+        scene: "Breathtaking travel destination landscape (beach or city), cinematic",
+        elements: "airplane wing, suitcase, passport, palm trees, blue ocean",
+        colors: ["#00bfff (Ocean Blue)", "#ffd700 (Sun)", "#white"],
+        mood: "Adventurous, relaxing, dream, freedom",
+        textStyle: "Clean modern sans-serif or handwritten travel"
+    },
+    eventos: {
+        scene: "Festive party decoration with balloons and lighting, vibrant",
+        elements: "balloons, confetti, champagne glass, party lights, gift box",
+        colors: ["#ffd700 (Gold)", "#ff00ff (Purple)", "#00ffff (Cyan)"],
+        mood: "Celebration, happy, fun, memorable",
+        textStyle: "Festive script or bold display font"
+    },
+
+    // 📚 SERVIÇOS GERAIS
+    educacao: {
+        scene: "Modern classroom or study desk with books and learning tools",
+        elements: "books, globe, graduation cap, pencil, laptop, blackboard",
+        colors: ["#000080 (Navy Blue)", "#ffffff", "#ffd700 (Success Gold)"],
+        mood: "Knowledge, growth, smart, future",
+        textStyle: "Academic serif or clean geometric sans"
+    },
+    limpeza: {
+        scene: "Sparkling clean living room with cleaning tools, bright window",
+        elements: "spray bottle, yellow gloves, bucket, vacuum cleaner, sparkles",
+        colors: ["#00bfff (Clean Blue)", "#ffffff (Pure White)", "#ffff00 (Lemon)"],
+        mood: "Clean, fresh, hygienic, efficient",
+        textStyle: "Clean rounded sans-serif"
+    },
+    seguranca: {
+        scene: "High-tech security monitoring room or secure home gate",
+        elements: "CCTV camera, digital shield lock icon, security guard uniform, fence",
+        colors: ["#002244 (Security Blue)", "#ffff00 (Warning)", "#grey"],
+        mood: "Safe, protected, vigilant, trustworthy",
+        textStyle: "Strong block military/tech font"
     }
 };
 

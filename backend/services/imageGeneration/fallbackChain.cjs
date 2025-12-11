@@ -7,11 +7,12 @@ const NICHE_PROMPTS = require('./nicheContexts.cjs');
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const FREEPIK_API_KEY = process.env.FREEPIK_API_KEY;
 
+
 /**
- * GENERATOR 1: Google Imagen 4.0
+ * GENERATOR 1: Google Imagen 4 Ultra
  */
 async function generateWithImagen4(prompt) {
-    console.log('🎨 [Gen 1] Attempting Imagen 4.0...');
+    console.log('🎨 [Gen 1] Attempting Imagen 4 Ultra...');
     try {
         const response = await axios.post(
             `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${GEMINI_API_KEY}`,
@@ -19,7 +20,7 @@ async function generateWithImagen4(prompt) {
                 instances: [{ 
                     prompt: prompt, 
                     aspectRatio: "9:16",
-                    guidanceScale: 8.5 // Higher guidance for better prompt adherence (Ultra behavior)
+                    guidanceScale: 8.5 // Optimized for Ultra detail
                 }],
                 parameters: { 
                     sampleCount: 1, 
@@ -33,11 +34,7 @@ async function generateWithImagen4(prompt) {
         if (!b64) throw new Error("No image data from Imagen.");
         return b64;
     } catch (e) {
-        // Fallback to older model if 4.0 fails (sometimes 4.0 is beta/unavailable)
-        // Or actually, 3.0-generate-001 is the stable endpoint often. Diagnostic said "Imagen 4".
-        // Let's assume the diagnostics implied "latest available".
-        // If 4.0 fails, throw to fallback chain.
-        throw new Error(`Imagen Error: ${e.message}`);
+        throw new Error(`Imagen Ultra Error: ${e.message}`);
     }
 }
 
@@ -53,13 +50,19 @@ async function generateWithFreepik(prompt) {
             "https://api.freepik.com/v1/ai/text-to-image",
             {
                 prompt: prompt,
-                image: { size: "portrait_16_9" }, // Freepik format might differ, standardizing
-                styling: { style: "photo", items: { check_nswf: true } }
+                image: { size: "portrait_16_9" },
+                styling: { 
+                    style: "digital-art", // Changed to 'digital-art' for clean advertising/flyer look
+                    items: { check_nswf: true } 
+                },
+                // Requesting high quality logic
+                guidance_scale: 4.5 // Higher guidance to enforce "Flyer/Ad" structure
             },
             {
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-freepik-api-key': FREEPIK_API_KEY
+                    'x-freepik-api-key': FREEPIK_API_KEY,
+                    'Accept': 'application/json'
                 },
                 timeout: 120000
             }
@@ -85,13 +88,20 @@ async function generate(businessData) {
 
     // 1. Intelligence Phase
     const niche = await detectNicheIntelligent(businessData);
-    let prompt = await generateProfessionalPrompt(businessData, niche);
+    
+    let customContext = null;
+    if (niche === 'dynamic_creative') {
+        const { generateDynamicNicheContext } = require('./promptEngine.cjs');
+        customContext = await generateDynamicNicheContext(businessData);
+    }
+    
+    let prompt = await generateProfessionalPrompt(businessData, niche, customContext);
     
     console.log(`🎯 [Target] Niche: ${niche} | Prompt Length: ${prompt.length}`);
 
     // 2. Execution Chain
     const attempts = [
-        { name: 'Imagen 4.0', fn: () => generateWithImagen4(prompt) },
+        { name: 'Imagen 4 Ultra', fn: () => generateWithImagen4(prompt) },
         { name: 'Freepik Flux', fn: () => generateWithFreepik(prompt) }
     ];
 

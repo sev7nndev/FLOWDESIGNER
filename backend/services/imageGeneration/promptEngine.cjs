@@ -15,8 +15,19 @@ function detectNicheByRegex(text) {
     // Map regex to keys in NICHE_PROMPTS
     const patterns = [
         { key: 'mecanica', regex: /\b(mec[âa]nica|oficina|carro|automotivo|auto pe[çc]as|funilaria)\b/ },
+        { key: 'assistencia_tecnica', regex: /\b(assist[êe]ncia|t[ée]cnica|conserto|manuten[çc][ãa]o|celular|iphone|notebook|computador)\b/ },
         { key: 'estetica_automotiva', regex: /\b(lava r[áa]pido|lavagem|polimento|detail|car wash|higieniza[çc][ãa]o)\b/ },
         { key: 'pizzaria', regex: /\b(pizza|forno a lenha|pizzaiolo)\b/ },
+        { key: 'academia', regex: /\b(academia|gym|treino|muscula[çc][ãa]o|crossfit|personal trainer|fitness)\b/ },
+        { key: 'padaria', regex: /(padaria|confeitaria|panificadora|p[ãa]o|bolo|torta|doce)/ },
+        { key: 'cafeteria', regex: /\b(caf[ée]s?|cafeteria|capuccino|espresso|barista)\b/ },
+        { key: 'supermercado', regex: /\b(supermercado|mercado|hortifruti|a[çc]ougue|mercadinho|compras)\b/ },
+        { key: 'moda', regex: /\b(moda|roupas?|loja de roupas?|vestu[áa]rio|boutique|cal[çc]ados?|estilo)\b/ },
+        { key: 'viagens', regex: /\b(viag(?:em|ens)|turismo|ag[êe]ncia de viagens?|passagens?|pacotes?|hotel)\b/ },
+        { key: 'eventos', regex: /\b(festas?|eventos?|casamento|anivers[áa]rio|buffets?|decora[çc][ãa]o)\b/ },
+        { key: 'educacao', regex: /\b(escola|cursos?|aulas?|ensino|educa[çc][ãa]o|col[ée]gio|tutorial)\b/ },
+        { key: 'limpeza', regex: /\b(limpeza|faxina|higieniza[çc][ãa]o|dedetiza[çc][ãa]o|lavanderia)\b/ },
+        { key: 'seguranca', regex: /\b(seguran[çc]a|vigil[âa]ncia|c[âa]meras?|alarms?|monitoramento)\b/ },
         { key: 'hamburgueria', regex: /\b(hamburguer|burger|burguer|artesanal|smash)\b/ },
         { key: 'sushi', regex: /\b(sushi|japon[êe]s|temaki|yakisoba|oriental)\b/ },
         { key: 'acai', regex: /\b(a[çc]a[íi]|sorvete|gelado|cupuacu)\b/ },
@@ -79,15 +90,50 @@ RETURN ONLY THE KEY NAME. NO JSON. NO EXPLANATION.`;
         console.warn('⚠️ [Niche] Gemini classification failed:', e.message);
     }
     
-    return 'profissional'; // Fallback
+    return 'dynamic_creative'; // Smart Fallback to Dynamic Mode
+}
+
+/**
+ * Generates a dynamic visual context for unknown niches using Gemini
+ */
+async function generateDynamicNicheContext(businessData) {
+    console.log(`🧠 [Dynamic] Generating custom context for: ${businessData.nome}`);
+    const prompt = `
+    You are an expert Art Director. The user has a business named "${businessData.nome}" offering "${businessData.descricao}".
+    This business does NOT fit into standard categories.
+    Create a custom visual "Briefing" for a High-End Advertising Flyer.
+
+    Return JSON ONLY with these keys:
+    {
+      "scene": "detailed description of the background scene, photorealistic, 8k",
+      "elements": "list of 4-5 visual elements, props, or tools related to this specific business",
+      "colors": ["#hex (Name)", "#hex (Name)", "#hex (Name)"],
+      "mood": "3-4 adjectives describing the vibe (e.g. Mysterious, High-Tech, Organic)",
+      "textStyle": "Best font style description for this business",
+      "negative": "what to avoid in this specific scene"
+    }
+    Include "sharp focus" and "high resolution" in the scene.
+    DO NOT return markdown code blocks, just the JSON string.
+    `;
+
+    try {
+        const result = await classificationModel.generateContent(prompt);
+        const text = result.response.text().replace(/```json|```/g, '').trim();
+        const context = JSON.parse(text);
+        console.log(`🎨 [Dynamic] Context created:`, context.mood);
+        return context;
+    } catch (e) {
+        console.warn(`⚠️ [Dynamic] Failed to generate context, falling back to professional:`, e.message);
+        return NICHE_PROMPTS['profissional'];
+    }
 }
 
 /**
  * Prompt Engineer
  * Generates the perfect Imagen 4.0 prompt based on niche and data.
  */
-async function generateProfessionalPrompt(businessData, niche) {
-    const context = NICHE_PROMPTS[niche] || NICHE_PROMPTS['profissional'];
+async function generateProfessionalPrompt(businessData, niche, customContext = null) {
+    const context = customContext || NICHE_PROMPTS[niche] || NICHE_PROMPTS['profissional'];
     
     // Construct the prompt manually (Template-based) to ensure strict adherence
     // We use English for the prompt instructions as Imagen follows them better
@@ -130,5 +176,6 @@ COMPOSITION RULES:
 
 module.exports = {
     detectNicheIntelligent,
-    generateProfessionalPrompt
+    generateProfessionalPrompt,
+    generateDynamicNicheContext
 };

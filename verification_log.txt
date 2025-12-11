@@ -15,3 +15,141 @@
 ✅ [PASS] Prompt contains mandatory contact fields.
 ❌ [FAIL] Prompt still has blur keywords!
 ---------------------------------------------------
+🧪 STARTING VERIFICATION TESTS...
+
+📋 Testing: Pizzaria do Zé
+✅ [PASS] Detected: pizzaria
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Consultoria Alpha
+✅ [PASS] Detected: profissional
+✅ [PASS] Prompt contains mandatory contact fields.
+✅ [PASS] Prompt free of blur keywords.
+---------------------------------------------------
+📋 Testing: Flash Motoboy
+✅ [PASS] Detected: delivery
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Assistência Técnica TechFix
+✅ [PASS] Detected: assistencia_tecnica
+✅ [PASS] Prompt contains mandatory contact fields.
+✅ [PASS] Prompt free of blur keywords.
+---------------------------------------------------
+🧪 STARTING VERIFICATION TESTS...
+
+📋 Testing: Pizzaria do Zé
+✅ [PASS] Detected: pizzaria
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Consultoria Alpha
+✅ [PASS] Detected: profissional
+✅ [PASS] Prompt contains mandatory contact fields.
+✅ [PASS] Prompt free of blur keywords.
+---------------------------------------------------
+📋 Testing: Flash Motoboy
+✅ [PASS] Detected: delivery
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Assistência Técnica TechFix
+✅ [PASS] Detected: assistencia_tecnica
+✅ [PASS] Prompt contains mandatory contact fields.
+✅ [PASS] Prompt free of blur keywords.
+---------------------------------------------------
+📋 Testing: Academia Iron
+✅ [PASS] Detected: academia
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Padaria Doce Pão
+❌ [FAIL] Expected: padaria, Got: profissional
+✅ [PASS] Prompt contains mandatory contact fields.
+✅ [PASS] Prompt free of blur keywords.
+---------------------------------------------------
+📋 Testing: CVC Viagens
+✅ [PASS] Detected: viagens
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+🧪 STARTING VERIFICATION TESTS...
+
+📋 Testing: Pizzaria do Zé
+✅ [PASS] Detected: pizzaria
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Consultoria Alpha
+✅ [PASS] Detected: profissional
+✅ [PASS] Prompt contains mandatory contact fields.
+✅ [PASS] Prompt free of blur keywords.
+---------------------------------------------------
+📋 Testing: Flash Motoboy
+✅ [PASS] Detected: delivery
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Assistência Técnica TechFix
+✅ [PASS] Detected: assistencia_tecnica
+✅ [PASS] Prompt contains mandatory contact fields.
+✅ [PASS] Prompt free of blur keywords.
+---------------------------------------------------
+📋 Testing: Academia Iron
+✅ [PASS] Detected: academia
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Padaria Doce Pão
+✅ [PASS] Detected: padaria
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: CVC Viagens
+✅ [PASS] Detected: viagens
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+🧪 STARTING VERIFICATION TESTS...
+
+📋 Testing: Pizzaria do Zé
+✅ [PASS] Detected: pizzaria
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Consultoria Alpha
+❌ [FAIL] Expected: profissional, Got: dynamic_creative
+✅ [PASS] Prompt contains mandatory contact fields.
+✅ [PASS] Prompt free of blur keywords.
+---------------------------------------------------
+📋 Testing: Flash Motoboy
+✅ [PASS] Detected: delivery
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Assistência Técnica TechFix
+✅ [PASS] Detected: assistencia_tecnica
+✅ [PASS] Prompt contains mandatory contact fields.
+✅ [PASS] Prompt free of blur keywords.
+---------------------------------------------------
+📋 Testing: Academia Iron
+✅ [PASS] Detected: academia
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Padaria Doce Pão
+✅ [PASS] Detected: padaria
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: CVC Viagens
+✅ [PASS] Detected: viagens
+✅ [PASS] Prompt contains mandatory contact fields.
+❌ [FAIL] Prompt still has blur keywords!
+---------------------------------------------------
+📋 Testing: Pesca Esportiva Tucunaré
+✅ [PASS] Detected: dynamic_creative
+✅ [PASS] Prompt contains mandatory contact fields.
+✅ [PASS] Prompt free of blur keywords.
+---------------------------------------------------
