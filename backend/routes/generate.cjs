@@ -1,150 +1,67 @@
 const express = require('express');
 const router = express.Router();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const NICHE_PROMPTS = require('../services/nicheContexts.cjs');
 
-const fallbackChain = require('../services/imageGeneration/fallbackChain.cjs');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const imageModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+const classificationModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-const { createClient } = require('@supabase/supabase-js');
-const { v4: uuidv4 } = require('uuid');
+async function detectNiche(text) {
+    const lower = (text || "").toLowerCase();
 
-// ----------------------
-// SUPABASE (Service Key)
-// ----------------------
-const supabase = createClient(
-    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+    for (const key of Object.keys(NICHE_PROMPTS)) {
+        if (lower.includes(key.replace("_", " "))) return key;
+    }
 
-// ----------------------
-// AUTH HANDLER
-// ----------------------
-async function getAuthUser(req) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return null;
-
-    const token = authHeader.split(' ')[1];
-    if (!token) return null;
-
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    return user;
+    try {
+        const prompt = `Classify this business into one valid key: ${Object.keys(NICHE_PROMPTS).join(', ')}.
+Text: ${text}.
+Return ONLY the key.`;
+        const completion = await classificationModel.generateContent(prompt);
+        const result = completion.response.text().trim();
+        return NICHE_PROMPTS[result] ? result : "profissional";
+    } catch {
+        return "profissional";
+    }
 }
 
 router.post('/', async (req, res) => {
-    console.log('🔥 [Generate] Request received');
-    req.setTimeout(300000);
-
     try {
-        // AUTH
-        let user = await getAuthUser(req);
-        if (req.headers['x-debug-bypass'] === 'secret_banana_key') {
-            user = { id: 'debug-uuid-v3', email: 'debug@flow.app', role: 'owner' };
-        }
-        if (!user) return res.status(401).json({ error: 'Unauthorized' });
+        const { prompt } = req.body;
+        if (!prompt) return res.status(400).json({ error: "Prompt is required." });
 
-        // GET FORM DATA
-        const { promptInfo } = req.body;
-        const info = promptInfo || req.body;
+        const nicheKey = await detectNiche(prompt);
+        const ctx = NICHE_PROMPTS[nicheKey] || NICHE_PROMPTS["profissional"];
 
-        const businessData = {
-            nome: info.companyName || "Sua Empresa",
-            descricao: info.details || "",
-            pedido: info.briefing || info.pedido || "",
-            whatsapp: info.phone || "",
-            telefone: info.phone || "", 
-            addressStreet: info.addressStreet || "",
-            addressNumber: info.addressNumber || "",
-            addressNeighborhood: info.addressNeighborhood || "",
-            addressCity: info.addressCity || "",
-            // Legacy address field fallback
-            address: info.address || `${info.addressStreet || ''}, ${info.addressNumber || ''} - ${info.addressCity || ''}`,
-            servicos: info.details || "",
-            logo: info.logo || info.logoUrl || null,
-            instagram: info.instagram || "",
-            facebook: info.facebook || "",
-            website: info.website || "",
-            email: info.email || ""
-        };
+        const negativeUniversal =
+            "low quality, blur, distorted text, wrong language, bad anatomy, watermark, extra letters, duplicate text, random spanish, misspelled portuguese, cropped numbers, placeholder, mockup frame, UI elements, overlays, label";
 
-        // CALL FALLBACK CHAIN (Intelligent Generation)
-        console.log("🎨 Calling Fallback Chain...");
-        const generationResult = await fallbackChain.generate(businessData);
-        const { imageBase64, prompt, method } = generationResult;
-        
-        // Use the generated prompt for storage, not the manually built one
-        const finalPrompt = prompt;
+        const finalPrompt =
+            `Generate a professional advertising banner.
+Business niche style: ${nicheKey}.
+Scene: ${ctx.scene}.
+Key elements: ${ctx.elements}.
+Color palette: ${ctx.colors.join(", ")}.
+Mood: ${ctx.mood}.
+Typography: ${ctx.textStyle}.
+Never use Spanish or English text inside the image unless explicitly requested.
+Text on image (if needed): exactly as provided by user, correct Portuguese only.
+Avoid: ${ctx.negative || ""}, ${negativeUniversal}.
+Respect proportions. Center main object. No borders, no frames.`
 
-        // SAVE IMAGE TO SUPABASE
-        console.log("💾 Saving image to Supabase...");
-        const buffer = Buffer.from(imageBase64, 'base64');
-        const filename = `${user.id}/${Date.now()}_${uuidv4()}.png`;
-
-        const { error: uploadError } = await supabase.storage
-            .from('generated-images')
-            .upload(filename, buffer, {
-                contentType: 'image/png',
-                upsert: false
-            });
-
-        if (uploadError)
-            throw new Error(`Upload failed: ${uploadError.message}`);
-
-        const { data: { publicUrl } } = supabase.storage
-            .from('generated-images')
-            .getPublicUrl(filename);
-
-        // SAVE IN TABLE
-        await supabase.from('images').insert({
-            user_id: user.id,
+        const result = await imageModel.generateImage({
             prompt: finalPrompt,
-            image_url: publicUrl,
-            business_info: businessData,
-            metadata: { method: method || "FallbackChain", generatedAt: new Date().toISOString() }
+            size: "1024x1024",
+            n: 1
         });
 
-        // UPDATE PLAN USAGE (EXCEPT ADMINS)
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
+        const base64 = result.response.candidates[0].content[0].text;
 
-        const role = profile?.role || 'free';
-        const unlimited = ['owner', 'admin', 'dev'].includes(role);
-
-        if (!unlimited) {
-            const { data: usage } = await supabase
-                .from('user_usage')
-                .select('*')
-                .eq('user_id', user.id)
-                .maybeSingle();
-
-            const used = usage?.images_generated || 0;
-
-            await supabase
-                .from('user_usage')
-                .upsert({
-                    user_id: user.id,
-                    images_generated: used + 1,
-                    plan_id: usage?.plan_id || role,
-                    cycle_start_date: usage?.cycle_start_date || new Date().toISOString()
-                });
-        }
-
-        // RESPONSE
-        res.json({
-            success: true,
-            image: {
-                image_url: publicUrl,
-                base64: `data:image/png;base64,${imageBase64}`
-            },
-            prompt: finalPrompt,
-            method: method || "FallbackChain"
-        });
+        res.json({ base64 });
 
     } catch (err) {
-        console.error("❌ Generate Error:", err);
-        res.status(500).json({
-            error: err.message || "Unexpected error generating image"
-        });
+        res.status(500).json({ error: "Erro ao gerar imagem.", details: err.message });
     }
 });
 
