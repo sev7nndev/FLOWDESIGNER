@@ -3,7 +3,7 @@ const NICHE_PROMPTS = require('./nicheContexts.cjs');
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const classificationModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+const classificationModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
 /**
  * Regex-based Niche Detection (Fast)
@@ -177,5 +177,10 @@ COMPOSITION RULES:
 module.exports = {
     detectNicheIntelligent,
     generateProfessionalPrompt,
-    generateDynamicNicheContext
+    generateDynamicNicheContext,
+    condensePrompt: (prompt) => {
+        // Simple truncation fallback since Gemini condenser was causing issues
+        if (!prompt || prompt.length < 1000) return prompt;
+        return prompt.substring(0, 1000);
+    }
 };
