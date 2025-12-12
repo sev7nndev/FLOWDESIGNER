@@ -3,51 +3,57 @@ const router = express.Router();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Modelo para geração de imagem
 const imageModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-// Modelo para classificação (não será mais usado, mas deixei caso precise depois)
-const classificationModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
 router.post('/', async (req, res) => {
     try {
-        const { prompt } = req.body;
+        const body = req.body;
+
+        // 🔥 Aceita 3 formatos diferentes do frontend
+        const prompt =
+              body.prompt ||
+              body.briefing ||
+              body.details ||
+              body.promptInfo?.briefing ||
+              body.promptInfo?.details ||
+              body.promptInfo?.pedido ||
+              null;
 
         if (!prompt) {
-            return res.status(400).json({ error: "Prompt is required." });
+            console.log("❌ Body recebido:", body);
+            return res.status(400).json({
+                error: "Prompt não encontrado. O frontend não enviou nenhum campo de texto."
+            });
         }
 
-        // 🔥 Prompt final sem usar nicheContexts
         const finalPrompt = `
-Crie uma imagem profissional em estilo flyer publicitário vertical.
-Use SOMENTE português do Brasil.
-
-TEXTO DO USUÁRIO:
-${prompt}
+Crie uma imagem profissional no estilo flyer comercial vertical.
+Texto fornecido pelo usuário (use exatamente como está, SEM INVENTAR):
+"${prompt}"
 
 REGRAS:
-- NUNCA usar inglês ou espanhol na arte.
-- Nunca inventar frases novas.
-- O texto deve estar nítido, legível e correto em português.
-- Evitar totalmente: texto distorcido, letras destruídas, números cortados,
-  sombras irreais, baixa resolução, arte borrada, ruído, marcas d’água,
-  elementos duplicados, escrita aleatória, símbolos estranhos,
-  texto no fundo que interfira na leitura.
-- A arte deve parecer um flyer comercial real, limpo, organizado e profissional.
-- Deixe o texto sempre bem centralizado ou bem estruturado no layout.
-- Sem bordas pesadas.
-- Composição equilibrada, moderna e sem poluição visual.
+- Escreva SOMENTE em português do Brasil.
+- Não use inglês, espanhol ou palavras aleatórias.
+- Texto nítido, sem distorções, sem borrões, sem cortes.
+- Nada de letras quebradas, números cortados ou sombras artificiais.
+- Não gerar nenhum texto de fundo.
+- Layout moderno, limpo, bem organizado e profissional.
+- Centralizar ou estruturar bem o texto.
+- Evitar poluição visual, ruído, manchas ou artefatos.
+- Sem bordas ou molduras escuras.
         `;
 
-        // 🔥 Chamada correta da API Gemini Flash para imagem
         const result = await imageModel.generateImage({
             prompt: finalPrompt,
             size: "1024x1024",
             n: 1
         });
 
-        const base64 = result.response.candidates[0].content[0].text;
+        const base64 = result.response.candidates?.[0]?.content?.[0]?.text;
+
+        if (!base64) {
+            throw new Error("Gemini não retornou imagem.");
+        }
 
         return res.json({ base64 });
 
