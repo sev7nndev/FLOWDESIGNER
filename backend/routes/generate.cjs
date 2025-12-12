@@ -3,57 +3,68 @@ const router = express.Router();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const imageModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+// MODELO: gemini-2.0-flash — suporta imagens via generateContent
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 router.post('/', async (req, res) => {
     try {
         const body = req.body;
 
-        // 🔥 Aceita 3 formatos diferentes do frontend
+        // Aceita vários formatos de campos (para funcionar com seu frontend atual)
         const prompt =
-              body.prompt ||
-              body.briefing ||
-              body.details ||
-              body.promptInfo?.briefing ||
-              body.promptInfo?.details ||
-              body.promptInfo?.pedido ||
-              null;
+            body.prompt ||
+            body.briefing ||
+            body.details ||
+            body.descricao ||
+            body.texto ||
+            body.promptInfo?.briefing ||
+            body.promptInfo?.details ||
+            body.promptInfo?.pedido ||
+            null;
 
         if (!prompt) {
             console.log("❌ Body recebido:", body);
             return res.status(400).json({
-                error: "Prompt não encontrado. O frontend não enviou nenhum campo de texto."
+                error: "Nenhum texto encontrado para gerar a imagem."
             });
         }
 
         const finalPrompt = `
-Crie uma imagem profissional no estilo flyer comercial vertical.
-Texto fornecido pelo usuário (use exatamente como está, SEM INVENTAR):
+Você é um gerador de artes comerciais.
+Crie UMA imagem no formato quadrado (1024x1024) bem nítida, profissional e sem texto distorcido.
+
+INSTRUÇÕES RÍGIDAS:
+- Todo texto deve ser EXATAMENTE em português do Brasil.
+- NÃO invente palavras.
+- NÃO gere letras quebradas.
+- NÃO deixe números cortados.
+- NÃO coloque textos duplicados.
+- NÃO coloque textos fantasma no fundo.
+- NÃO gere bordas escuras ou molduras.
+
+Texto fornecido pelo usuário (usar exatamente como está):
 "${prompt}"
 
-REGRAS:
-- Escreva SOMENTE em português do Brasil.
-- Não use inglês, espanhol ou palavras aleatórias.
-- Texto nítido, sem distorções, sem borrões, sem cortes.
-- Nada de letras quebradas, números cortados ou sombras artificiais.
-- Não gerar nenhum texto de fundo.
-- Layout moderno, limpo, bem organizado e profissional.
-- Centralizar ou estruturar bem o texto.
-- Evitar poluição visual, ruído, manchas ou artefatos.
-- Sem bordas ou molduras escuras.
-        `;
+Gere APENAS a imagem, sem descrição.
+`;
 
-        const result = await imageModel.generateImage({
-            prompt: finalPrompt,
-            size: "1024x1024",
-            n: 1
-        });
+        // GEMINI 2.0 — gerar imagem usando generateContent
+        const result = await model.generateContent([
+            {
+                text: finalPrompt
+            }
+        ]);
 
-        const base64 = result.response.candidates?.[0]?.content?.[0]?.text;
+        const image = result.response.candidates?.[0]?.content?.find(
+            c => c.type === "inline_data"
+        );
 
-        if (!base64) {
-            throw new Error("Gemini não retornou imagem.");
+        if (!image) {
+            throw new Error("Gemini não retornou imagem base64.");
         }
+
+        const base64 = image.inline_data.data;
 
         return res.json({ base64 });
 
