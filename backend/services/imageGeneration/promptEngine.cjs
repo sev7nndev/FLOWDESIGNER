@@ -1,7 +1,8 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { retryWithBackoff } = require('../../utils/retryWithBackoff.cjs');
 const NICHE_PROMPTS = require('./nicheContexts.cjs');
 
-// Initialize Gemini
+// Initialize Gemini with fixed model
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const classificationModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
@@ -79,7 +80,17 @@ Request: ${businessData.pedido || ''}
 If it fits none perfectly, choose the closest one or "profissional" as last resort.
 RETURN ONLY THE KEY NAME. NO JSON. NO EXPLANATION.`;
 
-        const result = await classificationModel.generateContent(prompt);
+        const result = await retryWithBackoff(
+            async () => await classificationModel.generateContent(prompt),
+            {
+                maxRetries: 3,
+                initialDelayMs: 1000,
+                onRetry: (attempt, delay) => {
+                    console.log(`⏳ Retry ${attempt}/3 para classificação de nicho em ${Math.round(delay/1000)}s`);
+                }
+            }
+        );
+        
         const detected = result.response.text().trim().toLowerCase();
         
         if (NICHE_PROMPTS[detected]) {
@@ -117,7 +128,14 @@ async function generateDynamicNicheContext(businessData) {
     `;
 
     try {
-        const result = await classificationModel.generateContent(prompt);
+        const result = await retryWithBackoff(
+            async () => await classificationModel.generateContent(prompt),
+            {
+                maxRetries: 3,
+                initialDelayMs: 1000
+            }
+        );
+        
         const text = result.response.text().replace(/```json|```/g, '').trim();
         const context = JSON.parse(text);
         console.log(`🎨 [Dynamic] Context created:`, context.mood);

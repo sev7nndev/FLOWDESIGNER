@@ -5,7 +5,7 @@ import { getSupabase } from "./supabaseClient";
 const BACKEND_URL = "/api";
 
 export const api = {
-    generate: async (businessInfo: BusinessInfo, artStyle: ArtStyle): Promise<GeneratedImage> => {
+    generate: async (businessInfo: BusinessInfo, artStyle: ArtStyle, retryCount = 0): Promise<GeneratedImage> => {
         const supabase = getSupabase();
         if (!supabase) throw new Error("Erro de conexão com o App.");
 
@@ -13,19 +13,28 @@ export const api = {
         if (!session) throw new Error("Faça login para gerar artes.");
 
         try {
-            const response = await fetch(`${BACKEND_URL}/generate-ultra`, {
+            const response = await fetch(`${BACKEND_URL}/generate`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${session.access_token}`
                 },
                 body: JSON.stringify({
-                    promptInfo: businessInfo,
-                    artStyle: artStyle, // Send selected style to backend
+                    form: businessInfo,
+                    selectedStyle: artStyle,
                 })
             });
 
             if (!response.ok) {
+                // Handle 429 Rate Limit with retry
+                if (response.status === 429 && retryCount < 2) {
+                    const waitTime = 3000 * (retryCount + 1); // 3s, 6s
+                    console.log(`⏳ Rate limit atingido. Tentando novamente em ${waitTime/1000}s... (tentativa ${retryCount + 1}/2)`);
+                    
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    return api.generate(businessInfo, artStyle, retryCount + 1);
+                }
+
                 try {
                     const err = await response.json();
 
@@ -38,19 +47,45 @@ export const api = {
                         throw quotaError;
                     }
 
+                    // Handle 429 with better message
+                    if (response.status === 429) {
+                        throw new Error(err.error || "Limite de requisições atingido. Por favor, aguarde alguns minutos e tente novamente.");
+                    }
+
                     throw new Error(err.error || "Erro no servidor");
                 } catch (e) {
                     // Re-throw quota error if caught here
                     if ((e as any).quotaStatus === 'BLOCKED') throw e;
+                    
+                    // Re-throw if it's already a proper Error
+                    if (e instanceof Error && e.message !== "Unexpected end of JSON input") throw e;
 
                     console.error("Falha ao analisar a resposta de erro como JSON.", { status: response.status, statusText: response.statusText });
+                    
+                    // Better error message for 429
+                    if (response.status === 429) {
+                        throw new Error("Limite de requisições atingido. Por favor, aguarde 1-2 minutos e tente novamente.");
+                    }
+                    
                     throw new Error(`O servidor retornou um erro inesperado (Status: ${response.status}). Verifique se o backend está rodando corretamente.`);
                 }
             }
 
             const data = await response.json();
 
-            // Get a secure, signed URL for the newly created image
+            // NEW: Handle base64 response from Freepik Mystic
+            if (data.base64) {
+                // Create a temporary image record for display
+                return {
+                    id: `temp-${Date.now()}`,
+                    url: data.base64,
+                    prompt: businessInfo.details,
+                    businessInfo: businessInfo,
+                    createdAt: Date.now()
+                };
+            }
+
+            // Legacy: Get a secure, signed URL for the newly created image
             const signedUrl = await api.getDownloadUrl(data.image.image_url);
 
             return {

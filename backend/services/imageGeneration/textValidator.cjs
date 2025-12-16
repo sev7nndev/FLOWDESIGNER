@@ -1,8 +1,10 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { retryWithBackoff } = require('../../utils/retryWithBackoff.cjs');
 
 // Initialize Gemini for Vision
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const visionModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // Use 2.0-flash for speed/vision
+const visionModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
 
 async function validateTextQuality(imageBase64, expectedData) {
     if (!imageBase64) return { isValid: false, reason: "No image data" };
@@ -34,10 +36,16 @@ OUTPUT JSON ONLY:
 }
 `;
 
-        const result = await visionModel.generateContent([
-            prompt,
-            { inlineData: { data: imageBase64, mimeType: "image/png" } }
-        ]);
+        const result = await retryWithBackoff(
+            async () => await visionModel.generateContent([
+                prompt,
+                { inlineData: { data: imageBase64, mimeType: "image/png" } }
+            ]),
+            {
+                maxRetries: 3,
+                initialDelayMs: 1000
+            }
+        );
 
         const responseText = result.response.text();
         const cleanJson = responseText.replace(/```json|```/g, '').trim();

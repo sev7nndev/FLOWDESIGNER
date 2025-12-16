@@ -1,6 +1,10 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { retryWithBackoff } = require('./utils/retryWithBackoff.cjs');
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 class UltraAdvancedImagenGenerator {
     constructor(apiKey, freepikKey) {
@@ -93,24 +97,24 @@ Gere APENAS o prompt text (em INGLÊS, pois o Flux entende melhor os comandos vi
 Garanta que as instruções peçam "correct spelling" e "legible font".`;
 
         const userContent = JSON.stringify(briefingFlyer);
+        const model = genAI.getGenerativeModel({ model: this.geminiModel });
 
         try {
-            const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/${this.geminiModel}:generateContent?key=${this.apiKey}`,
-                {
-                    contents: [{
-                        role: "user",
-                        parts: [{ text: systemPrompt + "\n\nO JSON do briefing é:\n" + userContent }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.7, // Creativity balance
-                        maxOutputTokens: 1000,
-                    }
+            const result = await retryWithBackoff(
+                async () => {
+                    return await model.generateContent([
+                        {
+                            text: systemPrompt + "\n\nO JSON do briefing é:\n" + userContent
+                        }
+                    ]);
                 },
-                { timeout: 60000 }
+                {
+                    maxRetries: 3,
+                    initialDelayMs: 1000
+                }
             );
 
-            const generatedText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            const generatedText = result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!generatedText) throw new Error("Gemini returned empty text.");
             
             const cleanText = generatedText.replace(/^```(markdown|text)?/, '').replace(/```$/, '').trim();
@@ -121,8 +125,8 @@ Garanta que as instruções peçam "correct spelling" e "legible font".`;
             return cleanText;
 
         } catch (error) {
-            try { fs.writeFileSync('backend/debug_gemini_error.json', JSON.stringify(error.response?.data || error.message, null, 2)); } catch(e){}
-            console.error("❌ ERRO NO STEP 1 (Gemini):", error.response?.data || error.message);
+            try { fs.writeFileSync('backend/debug_gemini_error.json', JSON.stringify(error.message, null, 2)); } catch(e){}
+            console.error("❌ ERRO NO STEP 1 (Gemini):", error.message);
             
             // IMPROVED Fallback Prompt to avoid "Pillow" look
             const fallbackPrompt = `
