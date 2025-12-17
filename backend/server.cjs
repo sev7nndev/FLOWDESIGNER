@@ -47,16 +47,37 @@ const logQA = (entry) => {
 };
 
 // Middleware
+// Middleware
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://flowdesigner.vercel.app',
+  'https://flowdesigner-saas.vercel.app',
+  'https://flow-designer.vercel.app',
+  /\.vercel\.app$/
+];
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'https://flowdesigner-saas.vercel.app',
-    'https://flow-designer.vercel.app',
-    /\.vercel\.app$/
-  ],
-  credentials: true
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Enable Pre-flight across the board
+app.options('*', cors());
+
+// Debug Middleware: Log all requests
+app.use((req, res, next) => {
+  console.log(`📡 [INCOMING] ${req.method} ${req.url} | Origin: ${req.headers.origin}`);
+  next();
+});
+
+// Root Route (Vital for Health Checks)
+app.get('/', (req, res) => {
+  res.status(200).send('Flow Designer Backend Online 🚀');
+});
+
 app.use(generalLimiter); // Rate limiting for all routes
 app.use(express.json({ limit: '50mb' }));
 
