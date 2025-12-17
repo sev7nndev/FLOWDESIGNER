@@ -10,6 +10,12 @@
     "server": "node backend/server.cjs",
     "server:dev": "node backend/server.cjs"
   },
+  "overrides": {
+    "@react-three/drei": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
+  },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
     "@capacitor/cli": "^7.4.4",
