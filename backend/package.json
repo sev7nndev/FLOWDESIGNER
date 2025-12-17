@@ -21,7 +21,12 @@
     "express-rate-limit": "^7.1.5",
     "mercadopago": "^2.0.15",
     "node-cron": "^3.0.3",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "resend": "^3.0.0",
+    "jimp": "^0.22.12",
+    "@jimp/custom": "^0.22.12",
+    "@jimp/plugins": "^0.22.12",
+    "@jimp/types": "^1.6.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
