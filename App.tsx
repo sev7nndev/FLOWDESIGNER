@@ -304,6 +304,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="app-container">
         <Toaster position="top-right" richColors />
+        <Analytics />
         <LandingPage
           onGetStarted={handleShowPlans}
           onLogin={() => setView('AUTH')}
