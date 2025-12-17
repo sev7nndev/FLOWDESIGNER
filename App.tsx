@@ -14,6 +14,7 @@ import { useLandingImages } from './hooks/useLandingImages';
 import { PlansPage } from './src/pages/PlansPage';
 import { useUsage } from './hooks/useUsage';
 import { Toaster, toast } from 'sonner';
+import { Analytics } from '@vercel/analytics/react';
 import { CheckoutPage } from './src/pages/CheckoutPage';
 import { SplashScreen } from './src/components/SplashScreen';
 import QADashboard from './src/pages/QADashboard';
