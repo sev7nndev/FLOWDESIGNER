@@ -385,7 +385,12 @@ export const SystemHealthWidget: React.FC = () => {
             setHealth(data);
         } catch (e) {
             console.error('Health check error:', e);
-            setHealth({ status: 'offline', database: 'disconnected', services: { gemini: 'inactive' } });
+            setHealth({ 
+                status: 'offline', 
+                database: 'disconnected', 
+                services: { gemini: 'inactive' },
+                error: e instanceof Error ? e.message : 'Unknown Error' 
+            });
         } finally {
             setLoading(false);
         }
@@ -406,6 +411,14 @@ export const SystemHealthWidget: React.FC = () => {
                 <div className="flex gap-2">
                     <p className="text-gray-500 text-xs mt-1">Uptime: {Math.floor(health?.uptime || 0)}s</p>
                 </div>
+                {health?.status === 'offline' && (
+                     <div className="mt-2 text-[10px] text-red-400 font-mono bg-red-950/30 p-2 rounded border border-red-900/50">
+                        <p>ERRO: {health?.error || 'Falha de Conexão'}</p>
+                        <p className="opacity-70 mt-1">
+                            TARGET: {BACKEND_URL.replace('https://', '')}/api/health-check
+                        </p>
+                    </div>
+                )}
             </div>
 
             <div className="flex gap-4">
