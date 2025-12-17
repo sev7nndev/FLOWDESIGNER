@@ -322,6 +322,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="app-container">
         <Toaster position="top-right" richColors />
+        <Analytics />
         <AuthScreens
           onSuccess={() => { }}
           onBack={() => { setView('LANDING'); setSelectedPlanId(null); }}
@@ -336,6 +337,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="app-container">
         <Toaster position="top-right" richColors />
+        <Analytics />
         <PlansPage
           user={user}
           onBackToApp={() => setView(user ? 'APP' : 'LANDING')}
@@ -355,6 +357,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="app-container">
         <Toaster position="top-right" richColors />
+        <Analytics />
         <CheckoutPage
           user={user}
           planId={selectedPlanId}
@@ -369,6 +372,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="app-container">
         <Toaster position="top-right" richColors />
+        <Analytics />
         <Suspense fallback={<SplashScreen />}>
           <DevPanelPage
             user={user}
@@ -384,6 +388,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="app-container">
         <Toaster position="top-right" richColors />
+        <Analytics />
         <OwnerPanelPage onBack={() => setView('APP')} />
       </div>
     );
@@ -393,6 +398,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="app-container">
         <Toaster position="top-right" richColors />
+        <Analytics />
         <QADashboard />
       </div>
     );
@@ -403,6 +409,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="app-container">
         <Toaster position="top-right" richColors />
+        <Analytics />
         <button
           onClick={() => setView('APP')}
           className="fixed top-4 left-4 z-50 bg-white/10 backdrop-blur text-white px-4 py-2 rounded hover:bg-white/20 transition-all font-bold"
@@ -430,6 +437,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="app-container min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">
       <Toaster position="top-right" richColors />
+      <Analytics />
       <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
 
       <AppHeader
