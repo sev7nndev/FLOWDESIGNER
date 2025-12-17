@@ -150,7 +150,7 @@ export const api = {
 
         try {
             // Use backend endpoint instead of direct Supabase query
-            const response = await fetch('http://localhost:3001/api/history', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://flow-backend-pjcq.onrender.com'}/api/history`, {
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`
                 }
