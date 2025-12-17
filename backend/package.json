@@ -5,7 +5,8 @@
   "main": "server.cjs",
   "scripts": {
     "start": "node server.cjs",
-    "dev": "nodemon server.cjs"
+    "dev": "nodemon server.cjs",
+    "build": "echo 'No build needed for backend'"
   },
   "engines": {
     "node": ">=18.0.0"
