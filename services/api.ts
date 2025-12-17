@@ -1,8 +1,8 @@
 import { GeneratedImage, BusinessInfo, LandingImage, QuotaCheckResponse, EditablePlan, ArtStyle } from "../types";
 import { getSupabase } from "./supabaseClient";
 
-// URL do seu Backend Node.js local (ou deployado)
-const BACKEND_URL = "/api";
+// URL do Backend - usa variável de ambiente ou fallback para Render
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://flow-backend-pjcq.onrender.com";
 
 export const api = {
     generate: async (businessInfo: BusinessInfo, artStyle: ArtStyle, retryCount = 0): Promise<GeneratedImage> => {
