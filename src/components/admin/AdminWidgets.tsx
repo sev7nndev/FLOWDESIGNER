@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, AlertTriangle, CheckCircle2, DollarSign, Settings, Save, Loader2, Link, Unlink, Info, Activity, Trash2 } from 'lucide-react';
 import { Button } from '../Button';
-import { api } from '../../../services/api';
+import { api, BACKEND_URL } from '../../../services/api';
 import { toast } from 'sonner';
 import { User, UserRole, EditablePlan } from '../../../types';
 import { getSupabase } from '../../../services/supabaseClient';
@@ -375,7 +375,7 @@ export const SystemHealthWidget: React.FC = () => {
         setLoading(true);
         try {
             // Call public health check endpoint (no auth required)
-            const res = await fetch('/api/health-check');
+            const res = await fetch(`${BACKEND_URL}/health-check`);
 
             if (!res.ok) throw new Error('Health check failed');
 

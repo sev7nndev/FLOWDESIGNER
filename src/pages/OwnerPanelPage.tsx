@@ -5,6 +5,7 @@ import { Users, CreditCard, Trash2, UserPlus, X, Check, AlertTriangle, Copy, Lay
 import { toast } from 'sonner';
 import { getSupabase } from '../../services/supabaseClient';
 import { MercadoPagoManager, PlanSettingsManager, SystemHealthWidget, LandingCarouselManager } from '../components/admin/AdminWidgets';
+import { BACKEND_URL } from '../../services/api';
 
 interface OwnerPanelPageProps {
     onBack: () => void;
@@ -58,7 +59,7 @@ const CreateUserModal: React.FC<{ onClose: () => void; onSuccess: () => void; de
             const token = (await getSupabase()?.auth.getSession())?.data.session?.access_token;
             if (!token) throw new Error("Não autenticado");
 
-            const response = await fetch('/api/admin/create-user', {
+            const response = await fetch(`${BACKEND_URL}/admin/create-user`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -292,7 +293,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
             const token = (await supabase?.auth.getSession())?.data.session?.access_token;
             if (!token) return;
 
-            const response = await fetch('/api/admin/users', {
+            const response = await fetch(`${BACKEND_URL}/admin/users`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -315,7 +316,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
             const token = (await supabase?.auth.getSession())?.data.session?.access_token;
             if (!token) throw new Error("Não autenticado");
 
-            const response = await fetch(`/api/admin/users/${userId}`, {
+            const response = await fetch(`${BACKEND_URL}/admin/users/${userId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -338,7 +339,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
             const token = (await supabase?.auth.getSession())?.data.session?.access_token;
             if (!token) return;
 
-            const response = await fetch('/api/admin/stats', {
+            const response = await fetch(`${BACKEND_URL}/admin/stats`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
