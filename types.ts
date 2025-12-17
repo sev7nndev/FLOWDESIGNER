@@ -77,6 +77,7 @@ export interface LandingImage {
 // NEW: Plan Settings Type (Limits and Price)
 export interface PlanSetting {
   id: UserRole; // 'free', 'starter', 'pro'
+  displayName?: string;
   price: number;
   max_images_per_month: number;
 }

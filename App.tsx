@@ -456,7 +456,6 @@ const AppContent: React.FC = () => {
               status={state.status}
               error={state.error}
               handleInputChange={handleInputChange}
-              handleLogoUpload={handleLogoUpload}
               handleGenerate={handleGenerate}
               loadExample={loadExample}
               selectedStyle={selectedStyle}
