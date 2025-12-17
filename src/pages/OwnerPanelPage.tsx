@@ -59,7 +59,7 @@ const CreateUserModal: React.FC<{ onClose: () => void; onSuccess: () => void; de
             const token = (await getSupabase()?.auth.getSession())?.data.session?.access_token;
             if (!token) throw new Error("Não autenticado");
 
-            const response = await fetch(`${BACKEND_URL}/admin/create-user`, {
+            const response = await fetch(`${BACKEND_URL}/api/admin/create-user`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -293,7 +293,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
             const token = (await supabase?.auth.getSession())?.data.session?.access_token;
             if (!token) return;
 
-            const response = await fetch(`${BACKEND_URL}/admin/users`, {
+            const response = await fetch(`${BACKEND_URL}/api/admin/users`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -316,7 +316,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
             const token = (await supabase?.auth.getSession())?.data.session?.access_token;
             if (!token) throw new Error("Não autenticado");
 
-            const response = await fetch(`${BACKEND_URL}/admin/users/${userId}`, {
+            const response = await fetch(`${BACKEND_URL}/api/admin/users/${userId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -339,7 +339,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
             const token = (await supabase?.auth.getSession())?.data.session?.access_token;
             if (!token) return;
 
-            const response = await fetch(`${BACKEND_URL}/admin/stats`, {
+            const response = await fetch(`${BACKEND_URL}/api/admin/stats`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 

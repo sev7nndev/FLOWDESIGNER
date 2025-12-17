@@ -13,7 +13,7 @@ export const api = {
         if (!session) throw new Error("Faça login para gerar artes.");
 
         try {
-            const response = await fetch(`${BACKEND_URL}/generate`, {
+            const response = await fetch(`${BACKEND_URL}/api/generate`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -110,7 +110,7 @@ export const api = {
         if (!session) throw new Error("Faça login para deletar imagens.");
 
         try {
-            const response = await fetch(`${BACKEND_URL}/images/${id}`, {
+            const response = await fetch(`${BACKEND_URL}/api/images/${id}`, {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",
@@ -211,7 +211,7 @@ export const api = {
         if (!session) throw new Error("Usuário não autenticado.");
 
         try {
-            const response = await fetch(`${BACKEND_URL}/check-quota`, {
+            const response = await fetch(`${BACKEND_URL}/api/check-quota`, {
                 headers: {
                     "Authorization": `Bearer ${session.access_token}`
                 }
@@ -252,7 +252,7 @@ export const api = {
         if (!session) throw new Error("Acesso negado.");
 
         try {
-            const response = await fetch(`${BACKEND_URL}/admin/plans`, {
+            const response = await fetch(`${BACKEND_URL}/api/admin/plans`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -281,7 +281,7 @@ export const api = {
         if (!session) throw new Error("Faça login para assinar.");
 
         try {
-            const response = await fetch(`${BACKEND_URL}/subscribe`, {
+            const response = await fetch(`${BACKEND_URL}/api/subscribe`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -312,7 +312,7 @@ export const api = {
         if (!session) throw new Error("Acesso negado. Faça login como administrador.");
 
         try {
-            const response = await fetch(`${BACKEND_URL}/admin/mp-connect`, {
+            const response = await fetch(`${BACKEND_URL}/api/admin/mp-connect`, {
                 headers: {
                     "Authorization": `Bearer ${session.access_token}`
                 }
@@ -338,7 +338,7 @@ export const api = {
         const { data: { session } } = await supabase.auth.getSession();
 
         // Updated to match backend route /api/admin/mp-exchange
-        const response = await fetch(`${BACKEND_URL}/admin/mp-exchange`, {
+        const response = await fetch(`${BACKEND_URL}/api/admin/mp-exchange`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -399,7 +399,7 @@ export const api = {
                 const fileName = file.name;
 
                 try {
-                    const response = await fetch(`${BACKEND_URL}/admin/landing-images/upload`, {
+                    const response = await fetch(`${BACKEND_URL}/api/admin/landing-images/upload`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -432,7 +432,7 @@ export const api = {
         if (!session) throw new Error("Faça login para deletar imagens.");
 
         try {
-            const response = await fetch(`${BACKEND_URL}/admin/landing-images/${id}`, {
+            const response = await fetch(`${BACKEND_URL}/api/admin/landing-images/${id}`, {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",
@@ -497,7 +497,7 @@ export const api = {
         if (!session) throw new Error("Faça login para usar a IA.");
 
         try {
-            const response = await fetch(`${BACKEND_URL}/enhance-prompt`, {
+            const response = await fetch(`${BACKEND_URL}/api/enhance-prompt`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

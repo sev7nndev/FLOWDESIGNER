@@ -375,7 +375,7 @@ export const SystemHealthWidget: React.FC = () => {
         setLoading(true);
         try {
             // Call public health check endpoint (no auth required)
-            const res = await fetch(`${BACKEND_URL}/health-check`);
+            const res = await fetch(`${BACKEND_URL}/api/health-check`);
 
             if (!res.ok) throw new Error('Health check failed');
 
