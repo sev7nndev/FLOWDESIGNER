@@ -47,7 +47,16 @@ const logQA = (entry) => {
 };
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://flowdesigner-saas.vercel.app',
+    'https://flow-designer.vercel.app',
+    /\.vercel\.app$/
+  ],
+  credentials: true
+}));
 app.use(generalLimiter); // Rate limiting for all routes
 app.use(express.json({ limit: '50mb' }));
 
