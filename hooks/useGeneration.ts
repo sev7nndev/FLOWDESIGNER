@@ -97,15 +97,43 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
     }, []);
 
     const historyLoadedRef = useRef(false);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
     const loadHistory = useCallback(async () => {
-        if (!user || historyLoadedRef.current) return;
+        console.log('🔍 loadHistory called', { user: !!user, alreadyLoaded: historyLoadedRef.current });
+        
+        if (!user) {
+            console.log('❌ loadHistory: No user, skipping');
+            return;
+        }
+        
+        if (historyLoadedRef.current) {
+            console.log('✅ loadHistory: Already loaded, skipping');
+            return;
+        }
+        
+        if (isLoadingHistory) {
+            console.log('⏸️ loadHistory: Already loading, skipping duplicate call');
+            return;
+        }
+        
+        console.log('⏳ loadHistory: Starting to load...');
+        setIsLoadingHistory(true);
+        
         try {
+            console.log('📡 loadHistory: Calling api.getHistory()...');
             const history = await api.getHistory();
+            console.log('✅ loadHistory: Got history:', history.length, 'images');
+            
             setState((prev: GenerationState) => ({ ...prev, history }));
             historyLoadedRef.current = true;
+            
+            console.log('✅ loadHistory: State updated successfully');
         } catch (e) {
-            console.error("Failed to load history", e);
+            console.error("❌ loadHistory: Failed to load history", e);
+        } finally {
+            console.log('🏁 loadHistory: Setting isLoadingHistory to false');
+            setIsLoadingHistory(false);
         }
     }, [user]);
 
@@ -256,6 +284,7 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
         setState,
         handleEnhancePrompt,
         isEnhancing,
-        deleteHistoryItem // Exported
+        deleteHistoryItem,
+        isLoadingHistory // Exported
     };
 };

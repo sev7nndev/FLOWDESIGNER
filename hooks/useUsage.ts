@@ -20,11 +20,11 @@ export const useUsage = (userId: string | undefined, userRole: UserRole | undefi
         isLoading: isQuotaLoading,
         mutate
     } = useSWR(
-        userId ? '/api/check-quota' : null, // Conditional fetch
-        () => api.checkQuota().catch(() => null), // Catch error to avoid throwing
+        userId ? '/api/check-quota' : null,
+        () => api.checkQuota().catch(() => null),
         {
-            revalidateOnFocus: true, // Refresh when user comes back
-            dedupingInterval: 5000 // 5s debounce for rapid navigations
+            revalidateOnFocus: false,
+            dedupingInterval: 5000
         }
     );
 

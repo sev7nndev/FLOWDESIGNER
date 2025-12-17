@@ -10,8 +10,8 @@ export interface BusinessInfo {
   companyName: string;
   phone: string;
   email?: string;
-  instagram?: string; // New
-  facebook?: string;  // New
+  instagram?: string;
+  facebook?: string;
   website?: string;
   addressStreet: string;
   addressNumber: string;
@@ -19,6 +19,10 @@ export interface BusinessInfo {
   addressCity: string;
   details: string;
   logo: string;
+  services?: string[]; // NEW: Array of services offered
+  outputFormat?: '3:4' | '9:16' | '1:1' | '210:297'; // NEW: Output format selection
+  promotion?: string; // NEW: Special promotion/offer
+  price?: string; // NEW: Featured price
 }
 
 export enum GenerationStatus {

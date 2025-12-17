@@ -1,7 +1,8 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { BusinessInfo, GenerationStatus, QuotaStatus, PlanSetting, ArtStyle } from '../../types';
 import { Button } from './Button';
-import { Wand2, Sparkles, MapPin, Phone, Building2, Upload, Layers, CheckCircle2, AlertTriangle, Palette, Instagram, Facebook, Globe } from 'lucide-react';
+import { Wand2, Sparkles, MapPin, Phone, Building2, Layers, AlertTriangle, Palette, Instagram, Facebook, Globe, Briefcase, X } from 'lucide-react';
+import { formatPhone, isValidEmail, parseServices } from '../utils/inputMasks';
 import { ART_STYLES } from '../constants/artStyles';
 import { StyleCard } from './StyleCard';
 
@@ -36,7 +37,6 @@ interface GenerationFormProps {
     status: GenerationStatus;
     error?: string;
     handleInputChange: (field: keyof BusinessInfo, value: string) => void;
-    handleLogoUpload: (file: File) => void;
     handleGenerate: () => void;
     loadExample: () => void;
 
@@ -57,11 +57,46 @@ interface GenerationFormProps {
 }
 
 const GenerationFormComponent: React.FC<GenerationFormProps> = ({
-    form, status, error, handleInputChange, handleLogoUpload, handleGenerate, loadExample,
+    form, status, error, handleInputChange, handleGenerate, loadExample,
     quotaStatus, currentUsage, maxImages, currentPlan, openUpgradeModal,
     handleEnhancePrompt, isEnhancing
 }) => {
     const isGenerating = status === GenerationStatus.THINKING || status === GenerationStatus.GENERATING;
+    
+    // Services state
+    const [servicesInput, setServicesInput] = useState('');
+    const [services, setServices] = useState<string[]>(form.services || []);
+    
+    // Handle phone formatting
+    const handlePhoneChange = (value: string) => {
+        const formatted = formatPhone(value);
+        handleInputChange('phone', formatted);
+    };
+    
+    // Handle services with duplicate detection
+    const addService = () => {
+        if (servicesInput.trim() && services.length < 10) {
+            const trimmed = servicesInput.trim().toLowerCase();
+            // Check for duplicates (case-insensitive)
+            const isDuplicate = services.some(s => s.toLowerCase() === trimmed);
+            
+            if (!isDuplicate) {
+                const newServices = [...services, servicesInput.trim()];
+                setServices(newServices);
+                handleInputChange('services' as any, newServices as any);
+                setServicesInput('');
+            } else {
+                // Visual feedback for duplicate
+                alert('Este serviço já foi adicionado!');
+            }
+        }
+    };
+    
+    const removeService = (index: number) => {
+        const newServices = services.filter((_, i) => i !== index);
+        setServices(newServices);
+        handleInputChange('services' as any, newServices as any);
+    };
 
     // Validation: All fields required except logo
     const canGenerate =
@@ -75,11 +110,6 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
 
     const isBlocked = quotaStatus === QuotaStatus.BLOCKED;
     const isNearLimit = quotaStatus === QuotaStatus.NEAR_LIMIT;
-
-    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) handleLogoUpload(file);
-    };
 
     const handleGenerateClick = () => {
         if (isBlocked) {
@@ -111,27 +141,14 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="grid grid-cols-1 gap-5">
                         <InputField
                             label="Nome da Empresa *"
                             value={form.companyName}
                             field="companyName"
                             placeholder="Ex: Calors Automóveis"
                             onChange={handleInputChange}
-                            maxLength={100}
                         />
-                        <div className="space-y-1.5 group">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
-                                <Upload size={10} /> Logotipo (Opcional)
-                            </label>
-                            <div className="relative">
-                                <input type="file" accept="image/*" onChange={onFileChange} className="hidden" id="logo-upload" />
-                                <label htmlFor="logo-upload" className={`w-full bg-zinc-900 border rounded-xl px-4 py-3 text-sm cursor-pointer transition-all flex items-center justify-between hover:border-white/20 ${form.logo ? 'text-green-400 border-green-500/30 bg-green-900/30' : 'text-gray-500 border-white/10'}`}>
-                                    <span className="truncate">{form.logo ? 'Logo Carregada' : 'Enviar Imagem (Max 30KB)'}</span>
-                                    {form.logo ? <CheckCircle2 size={16} className="text-green-400" /> : <Upload size={16} />}
-                                </label>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -165,7 +182,19 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                             <InputField label="Cidade *" value={form.addressCity} field="addressCity" placeholder="Cidade" onChange={handleInputChange} />
                         </div>
                         <div className="col-span-12 md:col-span-4">
-                            <InputField label="WhatsApp *" value={form.phone} field="phone" placeholder="(XX) 99999-9999" icon={<Phone size={10} />} onChange={handleInputChange} />
+                            <div className="space-y-1.5 group">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 group-focus-within:text-primary transition-colors flex items-center gap-1.5">
+                                    <Phone size={10} /> WhatsApp *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={form.phone}
+                                    onChange={(e) => handlePhoneChange(e.target.value)}
+                                    placeholder="(21) 99999-9999"
+                                    maxLength={15}
+                                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-primary focus:ring-2 focus:ring-primary/30 transition-all outline-none"
+                                />
+                            </div>
                         </div>
                         <div className="col-span-12 md:col-span-4">
                             <InputField label="Email (Opcional)" value={form.email || ''} field="email" placeholder="email@exemplo.com" onChange={handleInputChange} />
@@ -185,6 +214,116 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                 </div>
             </div>
 
+            {/* Section 2.5: Services */}
+            <div className="bg-zinc-900/90 border border-white/10 rounded-2xl p-5 md:p-6 shadow-2xl relative overflow-hidden">
+                <div className="relative space-y-4">
+                    <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                        <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-400 border border-green-500/20">
+                            <Briefcase size={18} />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-white text-lg">2.5. Serviços Oferecidos</h3>
+                            <p className="text-xs text-gray-500">O que sua empresa faz (até 10 serviços). Recomendado: adicione 1 serviço por vez</p>
+                        </div>
+                    </div>
+
+                    {/* Services Input */}
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={servicesInput}
+                            onChange={(e) => setServicesInput(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addService())}
+                            placeholder="Ex: Troca de óleo, Alinhamento, Balanceamento..."
+                            disabled={services.length >= 10}
+                            className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-primary focus:ring-2 focus:ring-primary/30 transition-all outline-none disabled:opacity-50"
+                        />
+                        <button
+                            onClick={addService}
+                            disabled={!servicesInput.trim() || services.length >= 10}
+                            className="px-4 py-3 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl hover:bg-green-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+                        >
+                            Adicionar
+                        </button>
+                    </div>
+
+                    {/* Services Chips */}
+                    {services.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                            {services.map((service, index) => (
+                                <div
+                                    key={index}
+                                    className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 px-3 py-1.5 rounded-full text-sm"
+                                >
+                                    <span>{service}</span>
+                                    <button
+                                        onClick={() => removeService(index)}
+                                        className="hover:bg-green-500/20 rounded-full p-0.5 transition-colors"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Counter */}
+                    <p className="text-xs text-gray-500">
+                        {services.length}/10 serviços adicionados
+                        {services.length === 0 && ' (opcional, mas recomendado)'}
+                    </p>
+                </div>
+            </div>
+
+            {/* Section 2.6: Promoção e Preço (DIFERENCIAL) */}
+            <div className="bg-gradient-to-br from-yellow-900/20 to-orange-900/20 border border-yellow-500/30 rounded-2xl p-5 md:p-6 shadow-2xl relative overflow-hidden">
+                <div className="relative space-y-4">
+                    <div className="flex items-center gap-3 border-b border-yellow-500/20 pb-4">
+                        <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 border border-yellow-500/30">
+                            <Sparkles size={18} />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-white text-lg">2.6. Promoção e Preço Destaque</h3>
+                            <p className="text-xs text-gray-400">Destaque ofertas especiais (opcional)</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Promotion */}
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                                🎁 Promoção Especial
+                            </label>
+                            <input
+                                type="text"
+                                value={form.promotion || ''}
+                                onChange={(e) => handleInputChange('promotion' as any, e.target.value)}
+                                placeholder="Ex: 20% OFF na primeira compra"
+                                className="w-full bg-zinc-900 border border-yellow-500/30 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/30 transition-all outline-none"
+                            />
+                        </div>
+
+                        {/* Price */}
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                                💰 Preço Destaque
+                            </label>
+                            <input
+                                type="text"
+                                value={form.price || ''}
+                                onChange={(e) => handleInputChange('price' as any, e.target.value)}
+                                placeholder="Ex: A partir de R$ 49,90"
+                                className="w-full bg-zinc-900 border border-yellow-500/30 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/30 transition-all outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    <p className="text-xs text-yellow-400/70">
+                        💡 Dica: Promoções e preços em destaque aumentam conversões!
+                    </p>
+                </div>
+            </div>
+
             {/* Section 3: Briefing */}
             <div className="bg-gradient-to-b from-zinc-900 to-zinc-950 border border-white/10 rounded-2xl p-4 shadow-2xl flex-grow flex flex-col group hover:border-primary/30 transition-colors">
                 <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-3">
@@ -197,16 +336,7 @@ const GenerationFormComponent: React.FC<GenerationFormProps> = ({
                             <p className="text-xs text-gray-500">Descreva o que você precisa que a I.A. crie</p>
                         </div>
                     </div>
-                    {handleEnhancePrompt && (
-                        <button
-                            onClick={handleEnhancePrompt}
-                            disabled={isEnhancing}
-                            className="text-sm text-lime-400 hover:text-lime-300 flex items-center gap-1 font-medium px-3 py-1 rounded-full bg-lime-500/10 border border-lime-500/20 transition-all hover:bg-lime-500/20 shadow-[0_0_15px_-5px_rgba(132,204,22,0.5)]"
-                        >
-                            <Sparkles size={14} className={isEnhancing ? "animate-spin" : ""} />
-                            {isEnhancing ? "Melhorando..." : "Melhorar com IA"}
-                        </button>
-                    )}
+                    
                 </div>
                 <textarea
                     value={form.details}

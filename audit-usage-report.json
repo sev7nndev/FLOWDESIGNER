@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-12-17T15:15:28.796Z",
+  "summary": {
+    "totalUsers": 3,
+    "perfectSync": 3,
+    "minorDiscrepancy": 0,
+    "majorDiscrepancy": 0,
+    "missingUsage": 0,
+    "totalCounterValue": 33,
+    "totalActualImages": 33
+  },
+  "discrepancies": []
+}

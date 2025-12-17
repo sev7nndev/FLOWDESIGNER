@@ -128,69 +128,48 @@ export const api = {
         }
     },
 
+
     getHistory: async (): Promise<GeneratedImage[]> => {
+        console.log('🔍 getHistory: INÍCIO DA FUNÇÃO');
+        
         const supabase = getSupabase();
-        if (!supabase) return [];
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return [];
-
-        // OPTIMIZATION: Pagination & Batch Signing
-        // 1. Fetch only recent images first (FILTERED BY USER ID FOR PRIVACY)
-        const { data, error } = await supabase
-            .from('images')
-            .select('*')
-            .eq('user_id', user.id) // 🔒 CRITICAL: Filter by user ID for privacy
-            .order('created_at', { ascending: false })
-            .limit(10); // Start with 10 for instant load
-
-        if (error || !data) return [];
-
-        // 2. Separate Storage Paths vs Legacy Base64
-        const pathsToSign: string[] = [];
-        const pathMap = new Map<string, string>(); // Helper to map row ID to signed URL
-
-        data.forEach((row: any) => {
-            const path = row.image_url;
-            if (path && !path.startsWith('data:') && !path.startsWith('http')) {
-                pathsToSign.push(path);
-            }
-        });
-
-        // 3. Batch Sign (1 Request instead of N)
-        if (pathsToSign.length > 0) {
-            const { data: signedData } = await supabase
-                .storage
-                .from('generated-images')
-                .createSignedUrls(pathsToSign, 3600);
-
-            if (signedData) {
-                signedData.forEach(item => {
-                    if (item.signedUrl) {
-                        pathMap.set(item.path || item.error || '', item.signedUrl);
-                    }
-                });
-            }
+        if (!supabase) {
+            console.log('❌ getHistory: Supabase não configurado');
+            return [];
         }
+        console.log('✅ getHistory: Supabase configurado');
 
-        // 4. Construct Result
-        return data.map((row: any) => {
-            let finalUrl = row.image_url;
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+            console.error('❌ getHistory: Erro ao buscar sessão:', sessionError);
+            return [];
+        }
+        
+        console.log('✅ getHistory: Sessão encontrada');
+        console.log('📡 getHistory: Chamando backend /api/history...');
 
-            // If it's a Storage Path, get from map
-            if (!row.image_url.startsWith('data:') && !row.image_url.startsWith('http')) {
-                // Try exact match or match by filename
-                finalUrl = pathMap.get(row.image_url) || row.image_url;
+        try {
+            // Use backend endpoint instead of direct Supabase query
+            const response = await fetch('http://localhost:3001/api/history', {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('❌ getHistory: Backend error:', errorData);
+                return [];
             }
 
-            return {
-                id: row.id,
-                url: finalUrl,
-                prompt: row.prompt,
-                businessInfo: row.business_info,
-                createdAt: new Date(row.created_at).getTime()
-            };
-        });
+            const { images } = await response.json();
+            console.log(`✅ getHistory: Backend retornou ${images?.length || 0} imagens`);
+
+            return images || [];
+        } catch (error) {
+            console.error('❌ getHistory: Fetch error:', error);
+            return [];
+        }
     },
 
     // NEW: Fetch all plan settings (combined limits and details from single table now)

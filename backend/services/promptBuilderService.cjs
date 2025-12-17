@@ -277,53 +277,178 @@ function buildPrompt(businessInfo, niche, selectedStyle) {
     const cleanInstagram = businessInfo.instagram ? cleanSocial(businessInfo.instagram) : '';
     const cleanFacebook = businessInfo.facebook ? cleanSocial(businessInfo.facebook) : '';
     
-    // Montar texto exato que deve aparecer
-    const cleanEmail = businessInfo.email ? businessInfo.email.replace(/@/g, ' at ') : '';
+    // Preparar serviços se existirem
+    const servicesText = businessInfo.services && businessInfo.services.length > 0 
+        ? businessInfo.services.join(' • ') 
+        : '';
     
-    const exactText = `
-EMPRESA: ${businessInfo.companyName}
-
-SERVIÇOS: ${cleanedDetails}
-
-ENDEREÇO: ${businessInfo.addressStreet}, ${businessInfo.addressNumber} - ${businessInfo.addressNeighborhood}
-CIDADE: ${businessInfo.addressCity}
-
-CONTATO:
-WhatsApp: ${formattedPhone}
-${cleanEmail ? `Email: ${cleanEmail}` : ''}
-${cleanInstagram ? `Instagram: ${cleanInstagram}` : ''}
-${cleanFacebook ? `Facebook: ${cleanFacebook}` : ''}
-${businessInfo.website ? `Site: ${businessInfo.website}` : ''}
-    `.trim();
+    // Preparar promoção se existir
+    const promotionText = businessInfo.promotion || '';
+    const priceText = businessInfo.price ? `R$ ${businessInfo.price}` : '';
     
-    // PROMPT OTIMIZADO
+    // PROMPT ULTRA-DETALHADO COM GRID LAYOUT PROFISSIONAL
     const prompt = `
-Generate a professional square advertising flyer (1:1 ratio) with EXACT Brazilian Portuguese text.
+Create a PROFESSIONAL VERTICAL ADVERTISING FLYER (3:4 aspect ratio, 1500x2000px) for a Brazilian business.
 
-CRITICAL REQUIREMENTS:
-1. DO NOT CREATE 3D MOCKUPS - create a flat design flyer ONLY
-2. DO NOT MODIFY OR INVENT TEXT - use exactly the text provided below
-3. ALL TEXT MUST BE IN BRAZILIAN PORTUGUESE (pt-BR)
-4. Use clean, modern typography with high readability
-5. Create clear visual hierarchy: Business name > Services > Contact info
-6. Background must be SIMPLE and CLEAN (solid color or subtle gradient)
-7. Include minimalist decorative elements related to ${niche} business
-8. Ensure ALL text is clearly legible and properly aligned
-9. Square format with content using 90% of space
+⚠️ CRITICAL LAYOUT RULES - FOLLOW EXACTLY:
 
-EXACT TEXT TO INCLUDE (in Brazilian Portuguese):
-${exactText}
+═══════════════════════════════════════════════════════════════
+📐 GRID STRUCTURE (MANDATORY):
+═══════════════════════════════════════════════════════════════
 
-DESIGN STYLE:
-- Modern minimalist aesthetic
-- Professional color scheme for ${niche} business
-- High contrast for perfect text legibility
-- Clean layout with proper spacing
-- NO 3D elements or mockup effects
-- NO complex backgrounds or scenes
-- Text must be perfectly readable
+The flyer MUST be divided into 3 CLEAR SECTIONS with proper spacing:
 
-The flyer should look professional, modern, and attractive for a ${niche} business in Brazil.
+┌─────────────────────────────────────────┐
+│  SECTION 1: HEADER (Top 25%)            │  ← Company name + logo
+├─────────────────────────────────────────┤
+│  SECTION 2: MAIN CONTENT (Middle 50%)   │  ← Visual + Services
+├─────────────────────────────────────────┤
+│  SECTION 3: FOOTER (Bottom 25%)         │  ← Contact info
+└─────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════
+📋 SECTION 1 - HEADER (Top 25%):
+═══════════════════════════════════════════════════════════════
+
+- Background: Solid color or subtle gradient (${NICHE_VISUAL_STYLES[niche]?.colors[0] || 'professional blue'})
+- Company Name: "${businessInfo.companyName}"
+  * Font: Bold, modern, LARGE (72-96pt)
+  * Position: Centered horizontally, vertically centered in this section
+  * Color: High contrast with background
+  * NO other text in this section
+
+═══════════════════════════════════════════════════════════════
+🎨 SECTION 2 - MAIN CONTENT (Middle 50%):
+═══════════════════════════════════════════════════════════════
+
+BACKGROUND:
+- Style: ${NICHE_VISUAL_STYLES[niche]?.mood || 'professional and modern'}
+- Elements: ${NICHE_VISUAL_STYLES[niche]?.elements.slice(0, 2).join(', ') || 'modern professional elements'}
+- Quality: Photorealistic, high-quality, well-composed
+- IMPORTANT: Background elements must NOT overlap with text areas
+
+TEXT CONTENT (Left-aligned, clear hierarchy):
+
+${servicesText ? `
+🔹 SERVICES (if applicable):
+"${servicesText}"
+- Font: Medium weight, 36-48pt
+- Position: Upper portion of this section
+- Background: Semi-transparent overlay for readability
+- Spacing: Generous padding around text
+` : ''}
+
+${promotionText ? `
+🎁 PROMOTION:
+"${promotionText}"
+- Font: Bold, 42-54pt
+- Position: Middle of this section
+- Style: Eye-catching, highlighted box or badge
+- Color: Accent color that stands out
+` : ''}
+
+${priceText ? `
+💰 PRICE:
+"${priceText}"
+- Font: Extra bold, 60-72pt
+- Position: Prominent, easy to spot
+- Style: Price tag or badge design
+` : ''}
+
+${cleanedDetails ? `
+📝 DESCRIPTION:
+"${cleanedDetails}"
+- Font: Regular weight, 28-36pt
+- Position: Below services/promotion
+- Max lines: 3-4 lines
+- Readability: High contrast, clear background
+` : ''}
+
+═══════════════════════════════════════════════════════════════
+📞 SECTION 3 - FOOTER (Bottom 25%):
+═══════════════════════════════════════════════════════════════
+
+BACKGROUND: Solid dark color or complementary to header
+
+CONTACT INFORMATION (Well-organized, easy to read):
+
+📍 ADDRESS:
+"${businessInfo.addressStreet}, ${businessInfo.addressNumber}"
+"${businessInfo.addressNeighborhood} - ${businessInfo.addressCity}"
+- Font: Regular, 24-28pt
+- Icon: Location pin
+- Position: Top of footer section
+
+📱 PHONE/WHATSAPP:
+"${formattedPhone}"
+- Font: Bold, 32-36pt
+- Icon: Phone or WhatsApp
+- Position: Below address
+- Highlight: Make this stand out (it's primary contact)
+
+${businessInfo.email ? `
+📧 EMAIL:
+"${businessInfo.email}"
+- Font: Regular, 22-26pt
+- Icon: Email envelope
+- Position: Below phone
+` : ''}
+
+${cleanInstagram || cleanFacebook || businessInfo.website ? `
+🌐 SOCIAL MEDIA (Horizontal row):
+${cleanInstagram ? `• Instagram: @${cleanInstagram}` : ''}
+${cleanFacebook ? `• Facebook: ${cleanFacebook}` : ''}
+${businessInfo.website ? `• Site: ${businessInfo.website}` : ''}
+- Font: Regular, 20-24pt
+- Icons: Social media icons next to each
+- Position: Bottom of footer
+- Layout: Horizontal, evenly spaced
+` : ''}
+
+═══════════════════════════════════════════════════════════════
+🎨 DESIGN REQUIREMENTS:
+═══════════════════════════════════════════════════════════════
+
+✅ DO:
+- Use a professional color scheme for ${SUPPORTED_NICHES[niche] || niche} business
+- Ensure ALL text is perfectly legible (high contrast)
+- Use proper spacing and margins (minimum 40px padding on all sides)
+- Create clear visual hierarchy (name > services > contact)
+- Use icons to make contact info scannable
+- Maintain consistent typography throughout
+- Make the layout clean, organized, and professional
+- Ensure background elements enhance, not distract from text
+
+❌ DON'T:
+- DO NOT create 3D mockups or physical flyer representations
+- DO NOT overlap text with busy background areas
+- DO NOT use more than 3 font families
+- DO NOT make text smaller than 20pt
+- DO NOT place important info near edges
+- DO NOT use low-contrast color combinations
+- DO NOT create cluttered or chaotic layouts
+- DO NOT modify, translate, or invent any text content
+
+═══════════════════════════════════════════════════════════════
+🎯 FINAL QUALITY CHECKLIST:
+═══════════════════════════════════════════════════════════════
+
+Before finalizing, ensure:
+✓ All text is in Brazilian Portuguese (pt-BR)
+✓ Company name is the most prominent element
+✓ Contact info is clearly visible and organized
+✓ Layout follows the 3-section grid structure
+✓ No text is cut off or outside the canvas
+✓ Background doesn't interfere with text readability
+✓ Design looks professional and print-ready
+✓ All provided information is included and accurate
+
+═══════════════════════════════════════════════════════════════
+
+NICHE: ${SUPPORTED_NICHES[niche] || niche}
+STYLE: ${selectedStyle?.name || 'Modern Professional'}
+LANGUAGE: Brazilian Portuguese (pt-BR)
+FORMAT: Vertical flyer, 3:4 ratio, ready for digital sharing and printing
     `.trim();
     
     return prompt;

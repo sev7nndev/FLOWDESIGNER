@@ -35,6 +35,7 @@ interface GalleryModalProps {
   onClose: () => void;
   onDownload: (img: GeneratedImage) => void;
   onDelete: (img: GeneratedImage) => void;
+  isLoading?: boolean;
 }
 
 const GalleryImage: React.FC<{
@@ -97,13 +98,20 @@ const GalleryImage: React.FC<{
   );
 };
 
-export const GalleryModal: React.FC<GalleryModalProps> = ({ history, onClose, onDownload, onDelete }) => {
+export const GalleryModal: React.FC<GalleryModalProps> = ({ history, onClose, onDownload, onDelete, isLoading = false }) => {
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
 
   return (
     <>
       <ModalWrapper title={`Minha Galeria (${history.length})`} onClose={onClose}>
-        {history.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-20">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-gray-400 font-medium">Carregando histórico...</p>
+            </div>
+          </div>
+        ) : history.length === 0 ? (
           <div className="text-center py-20 text-gray-500">
             <ImageIcon size={48} className="mx-auto mb-4 opacity-20" />
             <p>Nenhuma arte gerada ainda.</p>

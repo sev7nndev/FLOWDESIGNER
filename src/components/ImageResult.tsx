@@ -9,7 +9,7 @@ interface ImageResultProps {
 
 export const ImageResult: React.FC<ImageResultProps> = ({ image, onDownload }) => {
   return (
-    <div className="group relative rounded-2xl overflow-hidden bg-surface border border-white/5 shadow-2xl animate-fade-in max-w-[420px] mx-auto hover:shadow-[0_0_50px_rgba(139,92,246,0.3)] transition-shadow duration-500">
+    <div className="group relative rounded-2xl overflow-hidden bg-surface border border-white/5 shadow-2xl animate-fade-in max-w-[320px] mx-auto hover:shadow-[0_0_50px_rgba(139,92,246,0.3)] transition-shadow duration-500">
       {/* 9:16 Aspect Ratio Container (Stories/Flyer) */}
       <div className="aspect-[9/16] w-full relative overflow-hidden bg-black/50">
         <img

@@ -145,7 +145,7 @@ const AppContent: React.FC = () => {
   // Generation Logic Hook
   const {
     form, state, handleInputChange, handleLogoUpload, handleGenerate, loadExample, loadHistory, downloadImage,
-    selectedStyle, setSelectedStyle, handleEnhancePrompt, isEnhancing, deleteHistoryItem
+    selectedStyle, setSelectedStyle, handleEnhancePrompt, isEnhancing, deleteHistoryItem, isLoadingHistory
   } = useGeneration(user, refreshUsage, openUpgradeModal);
 
   // Landing Images Hook (Used by LandingPage and DevPanel)
@@ -276,12 +276,15 @@ const AppContent: React.FC = () => {
     return () => clearTimeout(emergencyTimer);
   }, []);
 
-
+  // Load history when user logs in
+  // TEMPORARILY DISABLED: Auto-load causing issues
+  /*
   useEffect(() => {
     if (user) {
       loadHistory();
     }
   }, [user, loadHistory]);
+  */
 
   const handleLogout = async () => {
     const supabase = getSupabase();
@@ -475,6 +478,8 @@ const AppContent: React.FC = () => {
               showGallery={showGallery}
               setShowGallery={setShowGallery}
               onDelete={deleteHistoryItem}
+              isLoadingHistory={isLoadingHistory}
+              loadHistory={loadHistory}
             />
           </div>
         </div>

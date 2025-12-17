@@ -19,7 +19,23 @@ interface LandingPageProps {
   isLandingImagesLoading: boolean;
 }
 
-// Hardcoded fallback data (used if DB is empty or loading fails) - NOW OPTIMIZED
+// Lightweight base64 placeholders for INSTANT load (will be replaced by real images)
+const INSTANT_PLACEHOLDERS: FlyerMockupProps[] = [
+  {
+    bg: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='600'%3E%3Crect fill='%23667eea' width='400' height='600'/%3E%3Ctext x='50%25' y='50%25' font-size='24' fill='white' text-anchor='middle' dominant-baseline='middle'%3ECarregando...%3C/text%3E%3C/svg%3E",
+    title: "Carregando...",
+  },
+  {
+    bg: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='600'%3E%3Crect fill='%23764ba2' width='400' height='600'/%3E%3Ctext x='50%25' y='50%25' font-size='24' fill='white' text-anchor='middle' dominant-baseline='middle'%3ECarregando...%3C/text%3E%3C/svg%3E",
+    title: "Carregando...",
+  },
+  {
+    bg: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='600'%3E%3Crect fill='%23f093fb' width='400' height='600'/%3E%3Ctext x='50%25' y='50%25' font-size='24' fill='white' text-anchor='middle' dominant-baseline='middle'%3ECarregando...%3C/text%3E%3C/svg%3E",
+    title: "Carregando...",
+  },
+];
+
+// Hardcoded fallback data (used if DB is empty or loading fails)
 const FALLBACK_FLYERS: FlyerMockupProps[] = [
   {
     bg: "https://akynbiixxcftxgvjpjxu.supabase.co/storage/v1/object/public/landing-carousel/landing-carousel/5146d02c-6299-4fd7-aac1-a2fa4032254c.jpeg",
@@ -84,10 +100,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
     fetchPlans();
   }, []);
 
-  const carouselItems: FlyerMockupProps[] = landingImages.length > 0 ? landingImages.map((img: LandingImage) => ({
-    bg: img.url,
-    title: "Arte Gerada por IA",
-  })) : FALLBACK_FLYERS;
+  // Show instant placeholders while loading, then real images
+  const carouselItems: FlyerMockupProps[] = isLandingImagesLoading 
+    ? INSTANT_PLACEHOLDERS 
+    : (landingImages.length > 0 ? landingImages.map((img: LandingImage) => ({
+        bg: img.url,
+        title: "Arte Gerada por IA",
+      })) : FALLBACK_FLYERS);
 
   const marqueeContent = [...carouselItems, ...carouselItems];
 
@@ -169,6 +188,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 key={`${item.bg}-${idx}`}
                 bg={item.bg}
                 title={item.title}
+                priority={idx < 3} // Primeiras 3 imagens carregam com prioridade
               />
             ))}
           </div>

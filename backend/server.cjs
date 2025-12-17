@@ -78,7 +78,8 @@ if (missingVars.length > 0) {
 
 console.log('? All required environment variables present');
 
-// Global Client
+
+// Global Client (Simple configuration - no extra overhead)
 const globalSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY);
 
 // GenAI
@@ -236,7 +237,7 @@ app.get('/api/check-quota', async (req, res) => {
       global: { headers: { Authorization: req.headers.authorization } }
     });
 
-    // 1. Get User Role
+    // Get User Role
     const { data: profile } = await globalSupabase
       .from('profiles')
       .select('role')
@@ -245,59 +246,40 @@ app.get('/api/check-quota', async (req, res) => {
 
     const role = profile?.role || 'free';
 
-    // 2. Check if user has unlimited generation (dev/owner/admin)
+    // Check if user has unlimited generation (dev/owner/admin)
     const hasUnlimitedGeneration = role === 'owner' || role === 'dev' || role === 'admin';
 
     if (hasUnlimitedGeneration) {
-      // Dev/Owner/Admin have unlimited generation
-      console.log(`✅ Unlimited generation for ${role}:`, user.id);
       return res.json({
         status: 'ALLOWED',
-        usage: {
-          current_usage: 0,
-          plan_id: role
-        },
-        plan: {
-          id: role,
-          max_images_per_month: 999999, // Unlimited
-          price: 0
-        },
-        message: `Geração ilimitada para ${role.toUpperCase()}`
+        usage: { current_usage: 0, plan_id: role },
+        plan: { id: role, max_images_per_month: 999999, price: 0 }
       });
     }
 
-    // 3. Get Usage for regular users (free/starter/pro)
+    // Get Usage for regular users (free/starter/pro)
     const { data: usageData } = await globalSupabase
       .from('user_usage')
-      .select('*')
+      .select('images_generated')
       .eq('user_id', user.id)
       .single();
 
     const currentUsage = usageData?.images_generated || 0;
 
-    // 4. Get Plan Limits (Fetch from DB or hardcode fallback)
+    // Get Plan Limits
     const { data: planSettings } = await globalSupabase
       .from('plan_settings')
-      .select('*')
+      .select('max_images_per_month, price')
       .eq('id', role)
       .single();
 
-    // Fallback limits if DB fetch fails (should match frontend/DB defaults)
     const limit = planSettings?.max_images_per_month || (role === 'pro' ? 50 : (role === 'starter' ? 20 : 3));
-
     const status = currentUsage >= limit ? 'BLOCKED' : 'ALLOWED';
 
     res.json({
       status,
-      usage: {
-        current_usage: currentUsage,
-        plan_id: role
-      },
-      plan: {
-        id: role,
-        max_images_per_month: limit,
-        price: planSettings?.price || 0
-      }
+      usage: { current_usage: currentUsage, plan_id: role },
+      plan: { id: role, max_images_per_month: limit, price: planSettings?.price || 0 }
     });
 
 
@@ -680,11 +662,49 @@ app.post('/api/register', authLimiter, async (req, res) => {
   }
 });
 
+// 6. User: Get History (Workaround for browser Supabase client hanging)
+app.get('/api/history', async (req, res) => {
+  try {
+    const user = await getAuthUser(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+
+    console.log('📡 /api/history: Fetching history for user:', user.id);
+
+    // Fetch user's images
+    const { data: images, error } = await globalSupabase
+      .from('images')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error('❌ /api/history: Error fetching images:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    // Map database fields to frontend format
+    const mappedImages = images?.map(img => ({
+      id: img.id,
+      url: img.image_url, // Map image_url to url
+      prompt: img.prompt,
+      businessInfo: img.business_info,
+      createdAt: new Date(img.created_at).getTime()
+    })) || [];
+
+    console.log(`✅ /api/history: Returning ${mappedImages.length} images`);
+    res.json({ images: mappedImages });
+  } catch (e) {
+    console.error('❌ /api/history: Exception:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // 7. User: Delete Image
 app.delete('/api/images/:id', async (req, res) => {
   try {
     const user = await getAuthUser(req);
-    if (!user) return res.status(401).json({ error: 'N�o autorizado' });
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
 
     const { id } = req.params;
 
@@ -692,6 +712,7 @@ app.delete('/api/images/:id', async (req, res) => {
       global: { headers: { Authorization: req.headers.authorization } }
     });
 
+    // Delete the image (NO counter decrement - user already paid for the generation)
     const { error } = await globalSupabase
       .from('images')
       .delete()
@@ -699,6 +720,15 @@ app.delete('/api/images/:id', async (req, res) => {
       .eq('user_id', user.id);
 
     if (error) throw error;
+
+    // ⚠️ IMPORTANT: We do NOT decrement the counter here!
+    // Reason: Users are charged per GENERATION, not per saved image.
+    // If we decremented, users could:
+    // 1. Generate 50 images (hit limit)
+    // 2. Delete all 50 images (counter goes back to 0)
+    // 3. Generate 50 more images for free (exploit!)
+    // 
+    // The counter represents "images generated this month", not "images currently saved".
 
     res.json({ success: true });
 

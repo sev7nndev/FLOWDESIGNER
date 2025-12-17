@@ -25,7 +25,7 @@ export const ImageResultSkeleton: React.FC = () => {
   const step = LOADING_STEPS[currentStep];
 
   return (
-    <div className="max-w-[420px] mx-auto animate-fade-in relative">
+    <div className="max-w-[320px] mx-auto animate-fade-in relative">
 
       {/* Container Principal com Efeito de Vidro */}
       <div className="relative rounded-3xl overflow-hidden bg-black/40 border border-white/10 shadow-2xl backdrop-blur-sm">

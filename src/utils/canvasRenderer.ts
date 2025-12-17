@@ -193,38 +193,9 @@ export const renderLayoutToCanvas = async (imageSrc: string, layoutData: LayoutD
             const h = canvas.height;
             const scaleFactor = w / 1000;
 
-            // 2. DRAW IMAGE (COVER MODE - Perfectly Integrated)
-            const imgAspect = img.width / img.height;
-            const canvasAspect = w / h;
-            let dw, dh, dx, dy;
-
-            if (imgAspect > canvasAspect) {
-                // Image too wide
-                dh = h; dw = h * imgAspect;
-                dx = (w - dw) / 2; dy = 0;
-            } else {
-                // Image too tall
-                dw = w; dh = w / imgAspect;
-                dx = 0; dy = (h - dh) / 2;
-            }
-            ctx.drawImage(img, dx, dy, dw, dh);
-
-            // 3. SEAMLESS GRADIENT OVERLAY (The "Blend")
-            // Instead of a hard card, we use a smooth darkness acting as a base for text
-            const grad = ctx.createLinearGradient(0, h * 0.4, 0, h);
-            grad.addColorStop(0, "rgba(0,0,0,0)");      // Transparent top
-            grad.addColorStop(0.5, "rgba(0,0,0,0.6)");  // Start darkening
-            grad.addColorStop(0.8, "rgba(0,0,0,0.9)");  // Dark area for text
-            grad.addColorStop(1, "rgba(0,0,0,1)");      // Solid black bottom
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, h * 0.4, w, h * 0.6);
-
-            // Top Gradient for Logo visibility
-            const topGrad = ctx.createLinearGradient(0, 0, 0, h * 0.3);
-            topGrad.addColorStop(0, "rgba(0,0,0,0.8)");
-            topGrad.addColorStop(1, "rgba(0,0,0,0)");
-            ctx.fillStyle = topGrad;
-            ctx.fillRect(0, 0, w, h * 0.3);
+            // 2. DRAW IMAGE (DIRECT MODE - Pure AI Art)
+            // Simply draw the image to fill the entire canvas without any effects
+            ctx.drawImage(img, 0, 0, w, h);
 
             // 4. RENDER ELEMENTS with ADVANCED EFFECTS
             const drawChromeText = (text: string, x: number, y: number, font: string) => {
