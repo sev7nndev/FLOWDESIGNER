@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://flow-backend-pjcq.onrender.com/api/$1"
+      "destination": "https://flow-backend-pjcg.onrender.com/api/$1"
     }
   ]
 }
