@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { GeneratedImage, GenerationState, GenerationStatus, BusinessInfo, User, QuotaStatus, QuotaCheckResponse, ArtStyle } from '../types';
 import { api } from '../services/api';
 import { PLACEHOLDER_EXAMPLES } from '../constants';
@@ -136,6 +136,11 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
             setIsLoadingHistory(false);
         }
     }, [user]);
+
+    // Reset history loaded flag when user changes (login/logout)
+    useEffect(() => {
+        historyLoadedRef.current = false;
+    }, [user?.id]);
 
     const handleGenerate = useCallback(async () => {
         // Guard against race conditions - prevent duplicate requests
