@@ -2,7 +2,7 @@ import { GeneratedImage, BusinessInfo, LandingImage, QuotaCheckResponse, Editabl
 import { getSupabase } from "./supabaseClient";
 
 // URL do Backend - usa variável de ambiente ou fallback para Render
-export const BACKEND_URL = import.meta.env.VITE_API_URL || "https://flow-backend-pjcq.onrender.com";
+export const BACKEND_URL = import.meta.env.VITE_API_URL || "https://flow-backend-pjcg.onrender.com";
 
 export const api = {
     generate: async (businessInfo: BusinessInfo, artStyle: ArtStyle, retryCount = 0): Promise<GeneratedImage> => {
