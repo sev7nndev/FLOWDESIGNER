@@ -1316,6 +1316,34 @@ app.get('/api/admin/payment-logs', async (req, res) => {
   }
 });
 
+// 1.1 DELETE PAYMENT LOG (For Admin to remove test transactions)
+app.delete('/api/admin/payment-logs/:id', async (req, res) => {
+  try {
+    const user = await getAuthUser(req);
+    const { data: profile } = await globalSupabase.from('profiles').select('role').eq('id', user.id).single();
+    
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'owner' && profile.role !== 'dev')) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    const { id } = req.params;
+    
+    const { error } = await globalSupabase
+      .from('payment_logs')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    console.log(`🗑️ Payment log ${id} deleted by ${user.email}`);
+    res.json({ success: true, message: 'Transação removida com sucesso' });
+
+  } catch (error) {
+    console.error('Error deleting payment log:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 2. TEST WEBHOOK (Simulation)
 app.post('/api/test-webhook', async (req, res) => {
   console.log('🧪 [TEST WEBHOOK] Recebido:', req.body);

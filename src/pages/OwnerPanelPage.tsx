@@ -214,6 +214,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
     const [selectedPlanForModal, setSelectedPlanForModal] = useState<'free' | 'starter' | 'pro'>('starter');
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'dashboard' | 'settings'>('dashboard');
+    const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
 
     const supabase = getSupabase();
 
@@ -353,6 +354,30 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
         }
     };
 
+    const handleDeletePayment = async (paymentId: string) => {
+        if (!confirm('Tem certeza que deseja remover esta transação do histórico?')) return;
+        
+        setDeletingPaymentId(paymentId);
+        try {
+            const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+            if (!token) throw new Error("Não autenticado");
+
+            const response = await fetch(`${BACKEND_URL}/api/admin/payment-logs/${paymentId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) throw new Error("Falha ao remover transação");
+
+            toast.success("Transação removida com sucesso!");
+            loadRevenue(); // Refresh payments list
+        } catch (error: any) {
+            toast.error(error.message);
+        } finally {
+            setDeletingPaymentId(null);
+        }
+    };
+
     // Helper for BRL
     const formatBRL = (value: number) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -468,7 +493,8 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
                                                     <th className="text-left py-3 px-4 text-gray-500">Data</th>
                                                     <th className="text-left py-3 px-4 text-gray-500">Cliente</th>
                                                     <th className="text-left py-3 px-4 text-gray-500">Valor</th>
-                                                    <th className="text-right py-3 px-4 text-gray-500">Status</th>
+                                                    <th className="text-left py-3 px-4 text-gray-500">Status</th>
+                                                    <th className="text-right py-3 px-4 text-gray-500">Ações</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -483,17 +509,31 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
                                                         <td className="py-3 px-4 text-green-400 font-medium">
                                                             {formatBRL(Number(payment.amount))}
                                                         </td>
-                                                        <td className="py-3 px-4 text-right">
+                                                        <td className="py-3 px-4">
                                                             <span className={`px-2 py-1 rounded text-xs ${payment.status === 'approved' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
                                                                 }`}>
                                                                 {payment.status}
                                                             </span>
                                                         </td>
+                                                        <td className="py-3 px-4 text-right">
+                                                            <button
+                                                                onClick={() => handleDeletePayment(payment.id)}
+                                                                disabled={deletingPaymentId === payment.id}
+                                                                className="p-2 hover:bg-red-500/10 rounded-lg transition-colors text-gray-400 hover:text-red-400 disabled:opacity-50"
+                                                                title="Remover transação"
+                                                            >
+                                                                {deletingPaymentId === payment.id ? (
+                                                                    <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                                                                ) : (
+                                                                    <Trash2 size={16} />
+                                                                )}
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                 ))}
                                                 {payments.length === 0 && (
                                                     <tr>
-                                                        <td colSpan={4} className="py-6 text-center text-gray-600">Nenhuma venda recente</td>
+                                                        <td colSpan={5} className="py-6 text-center text-gray-600">Nenhuma venda recente</td>
                                                     </tr>
                                                 )}
                                             </tbody>
