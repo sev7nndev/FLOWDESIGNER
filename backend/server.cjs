@@ -47,6 +47,12 @@ const logQA = (entry) => {
 };
 
 // Middleware
+// Debug Middleware: Log all requests (First thing!)
+app.use((req, res, next) => {
+  console.log(`📡 [INCOMING] ${req.method} ${req.url} | Origin: ${req.headers.origin}`);
+  next();
+});
+
 // Middleware
 const allowedOrigins = [
   'http://localhost:5173',
@@ -57,21 +63,18 @@ const allowedOrigins = [
   /\.vercel\.app$/
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
+};
 
-// Enable Pre-flight across the board
-app.options('*', cors());
+app.use(cors(corsOptions));
 
-// Debug Middleware: Log all requests
-app.use((req, res, next) => {
-  console.log(`📡 [INCOMING] ${req.method} ${req.url} | Origin: ${req.headers.origin}`);
-  next();
-});
+// Enable Pre-flight across the board (MUST use same options for credentials)
+app.options('*', cors(corsOptions));
+
 
 // Root Route (Vital for Health Checks)
 app.get('/', (req, res) => {
