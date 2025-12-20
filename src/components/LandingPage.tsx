@@ -224,7 +224,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
         </section>
 
         {/* How It Works Section */}
-        <section className="py-24 px-6 bg-zinc-900/30 border-y border-white/5">
+        <section className="py-24 px-6 bg-zinc-900/30 border-y border-white/5" style={{ contain: 'layout style' }}>
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16">
               <span className="text-secondary text-xs font-bold uppercase tracking-widest">Processo</span>
@@ -232,7 +232,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {howItWorksSteps.map((step, index) => (
-                <div key={index} className="text-center p-6 bg-zinc-950/50 rounded-2xl border border-white/10 transition-all hover:border-white/20 hover:-translate-y-1">
+                <div key={index} className="text-center p-6 bg-zinc-950/50 rounded-2xl border border-white/10 transition-colors hover:border-white/20">
                   <div className="flex items-center justify-center h-16 w-16 rounded-full bg-zinc-800 mb-6 mx-auto border border-white/10">
                     {step.icon}
                   </div>
