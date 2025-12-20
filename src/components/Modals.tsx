@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { GeneratedImage, User, UserRole, QuotaCheckResponse, QuotaStatus, EditablePlan } from '../../types';
-import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download, Zap, ArrowLeft, Trash2 } from 'lucide-react';
+import { X, Image as ImageIcon, Info, User as UserIcon, Mail, Save, CheckCircle2, Download, Zap, ArrowLeft, Trash2, Eye, EyeOff, Lock } from 'lucide-react';
 import { Button } from './Button';
 import { api } from '../../services/api';
 import { toast } from 'sonner';
+import { authService } from '../../services/authService';
 
 // --- Generic Modal Wrapper ---
 interface ModalWrapperProps {
@@ -186,6 +187,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  
+  // Password change states
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -209,6 +220,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
       setStatusMessage({ type: 'error', message: 'Falha ao salvar. Tente novamente.' });
     }
     setIsLoading(false);
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+      toast.error('As senhas não coincidem!');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error('A nova senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      // Verify current password by attempting to sign in
+      await authService.login(user?.email || '', currentPassword);
+      
+      // Update to new password
+      await authService.updatePassword(newPassword);
+      
+      toast.success('Senha alterada com sucesso!');
+      setShowPasswordSection(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao alterar senha. Verifique sua senha atual.');
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const roleDisplay: Record<UserRole, { name: string, color: string }> = {
@@ -289,6 +333,122 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, user, upd
             Salvar Alterações
           </Button>
         </form>
+
+        {/* Password Change Section */}
+        <div className="p-6 bg-zinc-900/50 border border-white/10 rounded-xl shadow-lg space-y-4">
+          <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            <h4 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Lock size={18} className="text-primary" />
+              Segurança
+            </h4>
+            {!showPasswordSection && (
+              <Button
+                variant="secondary"
+                onClick={() => setShowPasswordSection(true)}
+                className="h-9 text-sm"
+              >
+                Trocar Senha
+              </Button>
+            )}
+          </div>
+
+          {showPasswordSection && (
+            <form onSubmit={handlePasswordChange} className="space-y-4 animate-fade-in">
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                  Senha Atual
+                </label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    required
+                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 pr-10 text-white focus:border-primary outline-none text-sm"
+                    placeholder="Digite sua senha atual"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                  Nova Senha
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 pr-10 text-white focus:border-primary outline-none text-sm"
+                    placeholder="Mínimo 6 caracteres"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                  Confirmar Nova Senha
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 pr-10 text-white focus:border-primary outline-none text-sm"
+                    placeholder="Digite novamente"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowPasswordSection(false);
+                    setCurrentPassword('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                  }}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  isLoading={isChangingPassword}
+                  className="flex-1"
+                >
+                  Alterar Senha
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </ModalWrapper>
   );

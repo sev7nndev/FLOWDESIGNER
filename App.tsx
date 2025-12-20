@@ -171,7 +171,7 @@ const AppContent: React.FC = () => {
     setView('PLANS');
   }, []);
 
-  const fetchAuthUser = (supabaseUser: any) => {
+  const fetchAuthUser = useCallback((supabaseUser: any) => {
     const newAuthUser: AuthUser = {
       id: supabaseUser.id,
       email: supabaseUser.email || '',
@@ -185,7 +185,7 @@ const AppContent: React.FC = () => {
       setView('APP');
     }
     setSelectedPlanId(null);
-  };
+  }, [selectedPlanId]);
 
   // Init Auth & History
   useEffect(() => {
@@ -287,12 +287,12 @@ const AppContent: React.FC = () => {
   }, [user, loadHistory]);
   */
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     const supabase = getSupabase();
     if (supabase) await supabase.auth.signOut();
     setAuthUser(null);
     setView('LANDING');
-  };
+  }, []);
 
   // --- RENDER VIEWS ---
 

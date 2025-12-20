@@ -387,7 +387,7 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
         <div className="min-h-screen bg-black text-white p-4 md:p-8 font-sans">
             <div className="max-w-7xl mx-auto">
                 {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 border-b border-white/10 pb-6">
+                <div className="flex flex-col mb-8 gap-4 border-b border-white/10 pb-6">
                     <div>
                         <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">
                             Painel Administrativo
@@ -395,31 +395,40 @@ export const OwnerPanelPage: React.FC<OwnerPanelPageProps> = ({ onBack }) => {
                         <p className="text-gray-400 text-sm mt-1">Visão geral do sistema e gerenciamento</p>
                     </div>
 
-                    <div className="flex gap-4">
-                        <Button
-                            variant="secondary"
-                            onClick={() => setActiveTab('dashboard')}
-                            className={`${activeTab === 'dashboard' ? 'bg-white/10 text-white' : 'text-gray-400 opacity-60'}`}
-                            icon={<LayoutDashboard size={18} />}
-                        >
-                            Visão Geral
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            onClick={() => setActiveTab('settings')}
-                            className={`${activeTab === 'settings' ? 'bg-white/10 text-white' : 'text-gray-400 opacity-60'}`}
-                            icon={<Settings size={18} />}
-                        >
-                            Configurações
-                        </Button>
-                        <div className="h-10 w-px bg-white/10 mx-2"></div>
-                        <Button
-                            variant="danger"
-                            onClick={onBack}
-                            icon={<LogOut size={18} />}
-                        >
-                            Voltar pro App
-                        </Button>
+                    {/* Tab Buttons - Full width on mobile, inline on desktop */}
+                    <div className="flex flex-col md:flex-row gap-3 md:gap-4 md:items-center md:justify-between">
+                        <div className="flex gap-2 md:gap-4">
+                            <Button
+                                variant="secondary"
+                                onClick={() => setActiveTab('dashboard')}
+                                className={`flex-1 md:flex-none ${activeTab === 'dashboard' ? 'bg-white/10 text-white' : 'text-gray-400 opacity-60'}`}
+                                icon={<LayoutDashboard size={18} />}
+                            >
+                                <span className="hidden md:inline">Visão Geral</span>
+                                <span className="md:hidden">Dashboard</span>
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                onClick={() => setActiveTab('settings')}
+                                className={`flex-1 md:flex-none ${activeTab === 'settings' ? 'bg-white/10 text-white' : 'text-gray-400 opacity-60'}`}
+                                icon={<Settings size={18} />}
+                            >
+                                <span className="hidden md:inline">Configurações</span>
+                                <span className="md:hidden">Config</span>
+                            </Button>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                            <div className="hidden md:block h-10 w-px bg-white/10"></div>
+                            <Button
+                                variant="danger"
+                                onClick={onBack}
+                                icon={<LogOut size={18} />}
+                                className="w-full md:w-auto"
+                            >
+                                Voltar pro App
+                            </Button>
+                        </div>
                     </div>
                 </div>
 

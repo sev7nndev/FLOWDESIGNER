@@ -459,15 +459,18 @@ export const DevPanelPage: React.FC<DevPanelPageProps> = ({ user, onBackToApp, o
             <div className="max-w-7xl mx-auto px-4 md:px-6 relative z-10">
 
                 {/* Header da Página */}
-                <div className="flex items-center justify-between border-b border-primary/50 pb-4 mb-8">
-                    <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-                        <Code size={28} className="text-primary" /> Painel do Desenvolvedor
+                <div className="flex flex-col gap-4 border-b border-primary/50 pb-4 mb-8">
+                    <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-3">
+                        <Code size={24} className="text-primary md:w-7 md:h-7" /> 
+                        <span className="hidden md:inline">Painel do Desenvolvedor</span>
+                        <span className="md:hidden">Dev Panel</span>
                     </h1>
-                    <div className="flex items-center gap-4">
-                        <Button variant="secondary" onClick={onBackToApp} icon={<ArrowLeft size={16} />}>
-                            Voltar para o App
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-4">
+                        <Button variant="secondary" onClick={onBackToApp} icon={<ArrowLeft size={16} />} className="w-full md:w-auto">
+                            <span className="hidden md:inline">Voltar para o App</span>
+                            <span className="md:hidden">Voltar</span>
                         </Button>
-                        <Button variant="danger" onClick={onLogout} icon={<LogOut size={16} />}>
+                        <Button variant="danger" onClick={onLogout} icon={<LogOut size={16} />} className="w-full md:w-auto">
                             Logout
                         </Button>
                     </div>

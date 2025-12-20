@@ -43,7 +43,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
 
         {/* Logo */}
-        <div className="flex items-center gap-3 z-50">
+        <div className="flex items-center gap-3 z-[250]">
           <div className="bg-primary/20 p-1.5 rounded-lg border border-primary/20">
             <Sparkles size={18} className="text-primary" />
           </div>
@@ -52,7 +52,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
 
         {/* Mobile Menu Toggle */}
         <button
-          className="md:hidden z-50 p-2 text-gray-300 hover:text-white"
+          className="md:hidden z-[250] p-2 text-gray-300 hover:text-white"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -114,7 +114,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
 
         {/* Mobile Navigation Content */}
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 bg-zinc-950/95 backdrop-blur-3xl z-40 flex flex-col pt-24 px-6 md:hidden animate-fade-in">
+          <div className="fixed inset-0 bg-zinc-950/95 backdrop-blur-3xl z-[200] flex flex-col pt-24 px-6 md:hidden animate-fade-in">
             <div className="flex flex-col gap-4">
 
               <div className="flex items-center gap-3 pb-6 border-b border-white/10">

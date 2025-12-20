@@ -135,7 +135,7 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
             console.log('🏁 loadHistory: Setting isLoadingHistory to false');
             setIsLoadingHistory(false);
         }
-    }, [user]);
+    }, [user, isLoadingHistory]);
 
     // Reset history loaded flag when user changes (login/logout)
     useEffect(() => {
@@ -255,7 +255,7 @@ export const useGeneration = (user: User | null, refreshUsage: () => void, openU
         } finally {
             setIsEnhancing(false);
         }
-    }, [form.details]);
+    }, [form.details, form]);
 
     // NEW: Delete from history
     const deleteHistoryItem = useCallback(async (image: GeneratedImage) => {

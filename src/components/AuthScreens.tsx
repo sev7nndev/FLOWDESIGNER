@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../components/Button';
-import { Sparkles, ArrowLeft, CheckCircle2, Zap, DollarSign } from 'lucide-react';
+import { Sparkles, ArrowLeft, CheckCircle2, Zap, DollarSign, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { GoogleIcon } from './GoogleIcon';
 import { User, EditablePlan } from '../../types'; // Import User type and EditablePlan
@@ -20,6 +20,9 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -90,6 +93,96 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
 
   const selectedPlan = selectedPlanId ? plans.find(p => p.id === selectedPlanId) : null;
   const isPaidPlan = selectedPlanId && selectedPlanId !== 'free';
+
+  // --- MODAL DE ESQUECEU A SENHA ---
+  if (showForgotPassword) {
+    const [resetEmail, setResetEmail] = useState('');
+    const [resetLoading, setResetLoading] = useState(false);
+    const [resetError, setResetError] = useState('');
+    const [resetSuccess, setResetSuccess] = useState(false);
+
+    const handlePasswordReset = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setResetError('');
+      setResetLoading(true);
+
+      try {
+        await authService.resetPassword(resetEmail);
+        setResetSuccess(true);
+      } catch (err: any) {
+        setResetError(err.message || 'Erro ao enviar email de recuperação.');
+      } finally {
+        setResetLoading(false);
+      }
+    };
+
+    if (resetSuccess) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative">
+          <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] pointer-events-none" />
+          <div className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative z-10 animate-fade-in text-center">
+            <CheckCircle2 size={48} className="text-green-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-white">Email Enviado!</h2>
+            <p className="text-gray-400 mt-4">
+              Enviamos um link de recuperação para <strong>{resetEmail}</strong>. 
+              Verifique sua caixa de entrada e spam.
+            </p>
+            <Button 
+              onClick={() => { setShowForgotPassword(false); setIsLogin(true); }} 
+              variant="secondary" 
+              className="w-full h-12 rounded-lg mt-8"
+            >
+              Voltar para o Login
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative">
+        <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] pointer-events-none" />
+        <div className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative z-10 animate-fade-in">
+          <button 
+            onClick={() => setShowForgotPassword(false)} 
+            className="absolute top-8 left-8 text-gray-500 hover:text-white"
+          >
+            <ArrowLeft size={20} />
+          </button>
+
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary mb-3">
+              <Sparkles size={24} />
+            </div>
+            <h2 className="text-2xl font-bold text-white">Recuperar Senha</h2>
+            <p className="text-gray-500 text-sm mt-2">
+              Digite seu email para receber o link de recuperação.
+            </p>
+          </div>
+
+          <form onSubmit={handlePasswordReset} className="space-y-4">
+            <div>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Email</label>
+              <input
+                type="email"
+                required
+                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary outline-none"
+                placeholder="seu@email.com"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+              />
+            </div>
+
+            {resetError && <p className="text-red-400 text-xs text-center">{resetError}</p>}
+
+            <Button type="submit" isLoading={resetLoading} className="w-full h-12 rounded-lg">
+              Enviar Link de Recuperação
+            </Button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   // --- TELA DE SUCESSO PÓS-CADASTRO ---
   if (successMessage) {
@@ -187,15 +280,45 @@ export const AuthScreens: React.FC<AuthScreensProps> = ({ onSuccess, onBack, sel
 
           <div>
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Senha</label>
-            <input
-              type="password"
-              required
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary outline-none"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password: e.target.value })}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 pr-10 text-white focus:border-primary outline-none"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password: e.target.value })}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
+
+          {isLogin && (
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-white/10 bg-black/50 text-primary focus:ring-primary focus:ring-offset-0"
+                />
+                <span className="text-sm text-gray-400">Lembrar-me</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm text-primary hover:text-primary/80 transition-colors"
+              >
+                Esqueceu a senha?
+              </button>
+            </div>
+          )}
 
           {error && <p className="text-red-400 text-xs text-center">{error}</p>}
 

@@ -90,4 +90,34 @@ export const authService = {
       throw new Error(error.message || 'Falha ao autenticar com o Google.');
     }
   },
+
+  resetPassword: async (email: string): Promise<void> => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Erro ao enviar email de recuperação.');
+    }
+  },
+
+  updatePassword: async (newPassword: string): Promise<void> => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      throw new Error("Erro de conexão: O serviço de autenticação não está disponível.");
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Erro ao atualizar senha.');
+    }
+  },
 };
