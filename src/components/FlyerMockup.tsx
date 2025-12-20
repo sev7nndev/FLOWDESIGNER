@@ -13,6 +13,7 @@ const FlyerMockupComponent: React.FC<FlyerMockupProps> = ({ bg, title, priority 
         src={bg}
         loading={priority ? 'eager' : 'lazy'}
         decoding="async"
+        fetchPriority={priority ? 'high' : 'low'}
         className="w-full h-full object-contain"
         alt={title}
         style={{ willChange: 'auto' }}

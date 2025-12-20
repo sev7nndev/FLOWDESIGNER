@@ -375,8 +375,27 @@ const useShaderBackground = () => {
 
     window.addEventListener('resize', resize);
 
+    // PERFORMANCE: Pause animation when tab is not visible
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab is hidden - pause animation
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = undefined;
+        }
+      } else {
+        // Tab is visible - resume animation
+        if (!animationFrameRef.current) {
+          loop(performance.now());
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }

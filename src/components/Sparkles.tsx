@@ -27,7 +27,7 @@ export const SparklesCore = (props: ParticlesProps) => {
     maxSize = 1,
     speed = 1,
     particleColor = "#FFFFFF",
-    particleDensity = 100,
+    particleDensity = 40, // PERFORMANCE: Reduced from 100 to 40 (60% reduction)
   } = props;
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -128,6 +128,11 @@ export const SparklesCore = (props: ParticlesProps) => {
         ref={canvasRef}
         id={id}
         className="w-full h-full block"
+        style={{ 
+          willChange: 'transform',
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden'
+        }}
       />
     </motion.div>
   );
