@@ -121,7 +121,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
               backdropFilter: 'none'
             }}
           >
-            <div className="flex flex-col gap-4 bg-zinc-950 p-6 rounded-2xl h-full overflow-y-auto">
+            <div className="flex flex-col gap-4">
 
               <div className="flex items-center gap-3 pb-6 border-b border-white/10 bg-zinc-900 p-4 rounded-xl">
                 <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center">
