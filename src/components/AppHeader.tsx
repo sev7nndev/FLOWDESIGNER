@@ -123,7 +123,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
           >
             <div className="flex flex-col gap-4">
 
-              <div className="flex items-center gap-3 pb-6 border-b border-white/10">
+              <div className="flex items-center gap-3 pb-6 border-b border-white/10 bg-zinc-900 p-4 rounded-xl">
                 <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center">
                   <UserIcon size={24} className="text-gray-300" />
                 </div>
@@ -135,10 +135,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 bg-zinc-950 p-4 rounded-xl">
                 <button
                   onClick={() => { onShowPlans(); closeMenu(); }}
-                  className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${isBlocked ? 'bg-red-900/20 border-red-500/30 text-red-400' : 'bg-white/5 border-white/10 text-white'}`}
+                  className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${isBlocked ? 'bg-red-900 border-red-500/30 text-red-400' : 'bg-zinc-800 border-white/10 text-white'}`}
                 >
                   <Zap size={24} className="mb-2" />
                   <span className="text-sm font-bold">Plano: {(profileRole === 'dev' || profileRole === 'owner') ? '∞' : `${currentUsage}/${maxImages}`}</span>
@@ -146,7 +146,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
 
                 <button
                   onClick={() => { onShowSettings(); closeMenu(); }}
-                  className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 transition-all active:scale-95"
+                  className="flex flex-col items-center justify-center p-4 rounded-2xl bg-zinc-800 border border-white/10 text-gray-300 transition-all active:scale-95"
                 >
                   <Settings size={24} className="mb-2" />
                   <span className="text-sm font-bold">Configurações</span>
@@ -154,14 +154,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
               </div>
 
               {(isOwner || isAdminOrDev) && (
-                <div className="space-y-2 mt-2">
+                <div className="space-y-2 mt-2 bg-zinc-950 p-4 rounded-xl">
                   {isOwner && (
-                    <button onClick={() => { onShowSaaSPanel(); closeMenu(); }} className="w-full p-4 rounded-xl bg-purple-900/20 border border-purple-500/30 text-purple-300 flex items-center gap-3">
+                    <button onClick={() => { onShowSaaSPanel(); closeMenu(); }} className="w-full p-4 rounded-xl bg-purple-900 border border-purple-500/30 text-purple-300 flex items-center gap-3">
                       <CreditCard size={20} /> Painel SaaS
                     </button>
                   )}
                   {isAdminOrDev && (
-                    <button onClick={() => { onShowDevPanel(); closeMenu(); }} className="w-full p-4 rounded-xl bg-cyan-900/20 border border-cyan-500/30 text-cyan-300 flex items-center gap-3">
+                    <button onClick={() => { onShowDevPanel(); closeMenu(); }} className="w-full p-4 rounded-xl bg-cyan-900 border border-cyan-500/30 text-cyan-300 flex items-center gap-3">
                       <Code size={20} /> Painel Dev
                     </button>
                   )}
@@ -170,7 +170,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
 
               <button
                 onClick={onLogout}
-                className="w-full mt-auto mb-8 p-4 bg-red-600/10 border border-red-600/30 text-red-500 font-bold rounded-xl flex items-center justify-center gap-2"
+                className="w-full mt-auto mb-8 p-4 bg-red-900 border border-red-600/30 text-red-400 font-bold rounded-xl flex items-center justify-center gap-2"
               >
                 <LogOut size={20} /> Sair da Conta
               </button>
