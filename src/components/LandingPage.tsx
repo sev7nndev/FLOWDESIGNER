@@ -64,21 +64,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
-  const lastScrollY = useRef(0);
 
   useEffect(() => {
+    let ticking = false;
+    let lastScrollY = 0;
+
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
 
-      setScrolled(currentScrollY > 10);
+          setScrolled(currentScrollY > 10);
 
-      if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
-        setHeaderVisible(false);
-      } else {
-        setHeaderVisible(true);
+          if (currentScrollY > lastScrollY && currentScrollY > 100) {
+            setHeaderVisible(false);
+          } else {
+            setHeaderVisible(true);
+          }
+
+          lastScrollY = currentScrollY;
+          ticking = false;
+        });
+
+        ticking = true;
       }
-
-      lastScrollY.current = currentScrollY;
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
