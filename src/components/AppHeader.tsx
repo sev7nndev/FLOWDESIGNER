@@ -115,7 +115,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ user, profileRole, onLogou
         {isMobileMenuOpen && (
           <div 
             className="fixed inset-0 z-[200] flex flex-col pt-24 px-6 md:hidden animate-fade-in border-t border-white/10"
-            style={{ backgroundColor: '#09090b' }}
+            style={{ 
+              backgroundColor: '#09090b',
+              opacity: 1,
+              backdropFilter: 'none'
+            }}
           >
             <div className="flex flex-col gap-4">
 
