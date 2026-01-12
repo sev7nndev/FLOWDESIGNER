@@ -20,6 +20,8 @@ import { SplashScreen } from './src/components/SplashScreen';
 import QADashboard from './src/pages/QADashboard';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { OwnerPanelPage } from './src/pages/OwnerPanelPage';
+import { SERVICE_SUSPENDED } from './constants';
+import { ServiceSuspendedBanner } from './src/components/ServiceSuspendedBanner';
 
 // Lazy Load Dev Panel only (Owner Panel now loads directly for faster access)
 const DevPanelPage = React.lazy(() => import('./src/pages/DevPanelPage').then(module => ({ default: module.DevPanelPage })));
@@ -301,6 +303,12 @@ const AppContent: React.FC = () => {
     return <SplashScreen />;
   }
 
+  // 🔴 SERVICE SUSPENSION LOCKOUT 🔴
+  // Global lockout that overrides all other views + landing page
+  if (SERVICE_SUSPENDED) {
+    return <ServiceSuspendedBanner />;
+  }
+
   if (view === 'LANDING') {
     return (
       <div className="app-container">
@@ -415,7 +423,6 @@ const AppContent: React.FC = () => {
   }
 
   // MAIN APP UI (Protected) - Redirect to landing if not logged in
-  // MAIN APP UI (Protected) - Redirect to landing if not logged in
   if (!user) {
     // CASE 1: User is authenticated but Profile is still loading -> Show Splash, Don't Redirect
     if (authUser) {
@@ -426,6 +433,7 @@ const AppContent: React.FC = () => {
     setView('LANDING');
     return <SplashScreen />;
   }
+
 
   return (
     <div className="app-container min-h-screen text-gray-100 font-sans selection:bg-primary/30 overflow-x-hidden relative">

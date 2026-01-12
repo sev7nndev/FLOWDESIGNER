@@ -1,5 +1,7 @@
 import { BusinessInfo } from "./types";
 
+export const SERVICE_SUSPENDED = true;
+
 export const PLACEHOLDER_EXAMPLES: BusinessInfo[] = [
   {
     companyName: "Calors Automóveis",
