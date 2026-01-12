@@ -1,6 +1,6 @@
 import { BusinessInfo } from "./types";
 
-export const SERVICE_SUSPENDED = true;
+export const SERVICE_SUSPENDED = false;
 
 export const PLACEHOLDER_EXAMPLES: BusinessInfo[] = [
   {
